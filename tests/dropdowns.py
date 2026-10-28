@@ -7,7 +7,8 @@ def source(name):
  text=(root/name).read_text()
  return '\n'.join(x for x in text.splitlines() if not x.startswith('local ') or ('=require(' not in x and '= require(' not in x))
 host=r'''
-local Enum={Font={Gotham='Gotham'},AutomaticSize={Y='Y'},ScrollingDirection={Y='Y'},SortOrder={LayoutOrder='LayoutOrder'},TextTruncate={None='None'},KeyCode={Escape='Escape'}}
+local Enum={Font={Gotham='Gotham'},TextXAlignment={Left='Left'},AutomaticSize={Y='Y'},ScrollingDirection={Y='Y'},SortOrder={LayoutOrder='LayoutOrder'},TextTruncate={None='None'},KeyCode={Escape='Escape'}}
+local UDim={new=function(scale,offset) return {Scale=scale or 0,Offset=offset or 0} end}
 local UDim2={new=function(xs,xo,ys,yo) return {X={Scale=xs,Offset=xo},Y={Scale=ys,Offset=yo}} end}
 function UDim2.fromOffset(x,y) return UDim2.new(0,x,0,y) end
 function UDim2.fromScale(x,y) return UDim2.new(x,0,y,0) end
@@ -34,7 +35,8 @@ function E.new(class,props,parent)
 end
 function E.text(parent,text) return E.new('TextLabel',{Text=text},parent) end
 function E.button(parent,text) return E.new('TextButton',{Text=text},parent) end
-function E.fit() end function E.corner() end function E.list() end function E.pad() end
+function E.icon(parent,value) return E.new('TextLabel',{Text=value},parent) end
+function E.fit() end function E.corner() end function E.list() end function E.pad() return {} end
 local Input={} local function Animate() end
 '''
 tests=r'''
@@ -54,8 +56,10 @@ local p=panel()
 local grid=find(p,function(c) return c.ClassName=='UIGridLayout' end)
 check(grid.CellSize.X.Scale==.5,'desktop uses two columns')
 check(#multi.Popup.Buttons==4,'options rendered')
+check(multi.Popup.Buttons[1].Check.Visible and not multi.Popup.Buttons[2].Check.Visible,'initial selection owns an independent visible check icon')
 byText(p,'Ocean').Activated:Fire()
 check(#multi:GetValue()==2 and calls==1,'multi click updates value and callback')
+check(multi.Popup.Buttons[2].Check.Visible,'selection updates its outline check icon')
 check(multi.Popup.Cleanup~=nil,'multi selection keeps popup open')
 local query=find(p,function(c) return c.ClassName=='TextBox' end)
 query.Text='des' query:GetPropertyChangedSignal('Text'):Fire()

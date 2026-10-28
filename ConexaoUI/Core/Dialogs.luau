@@ -63,7 +63,8 @@ function Dialogs.new(w)
    E.corner(panel,20) w.Theme:Bind(panel,'BackgroundColor3','Surface')
    local stroke=E.new('UIStroke',{Thickness=1,Transparency=.2},panel) w.Theme:Bind(stroke,'Color','Border')
    d.Title=E.text(panel,'',18) d.Title.Position=UDim2.fromOffset(18,16) d.Title.Size=UDim2.new(1,-84,0,38) d.Title.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(d.Title,'TextColor3','Text')
-   local close=E.button(panel,'×') close.Size=UDim2.fromOffset(38,38) close.Position=UDim2.new(1,-54,0,16) w.Theme:Bind(close,'BackgroundColor3','SurfaceHover') d.CloseButton=close
+   local close=E.button(panel,'') close.Size=UDim2.fromOffset(38,38) close.Position=UDim2.new(1,-54,0,16) w.Theme:Bind(close,'BackgroundColor3','SurfaceHover') d.CloseButton=close
+   local closeIcon=E.icon(close,'close') closeIcon.AnchorPoint=Vector2.new(.5,.5) closeIcon.Position=UDim2.fromScale(.5,.5) closeIcon.Size=UDim2.fromOffset(18,18) w.Theme:Bind(closeIcon,'TextColor3','Text')
    local content=E.scroll(panel) content.Position=UDim2.fromOffset(0,66) content.Size=UDim2.new(1,0,1,-78) d.Content=content
    d.Body=E.text(content,'',14) d.Body.Size=UDim2.new(1,0,0,0) d.Body.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(d.Body,'TextColor3','MutedText')
    d.Actions=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},content) E.list(d.Actions,10)

@@ -6,14 +6,14 @@ local Group=require(script.Parent.Parent.Components.Group)
 local Settings={}
 local themeNames={'Conexão Dark','Violeta','Dourado','Aurora','Oceano','Rosa','Noite','Monocromático'}
 local presets={
- ['Conexão Dark']={Background=Color3.fromRGB(17,19,23),Surface=Color3.fromRGB(26,29,34),SurfaceHover=Color3.fromRGB(38,41,47),Primary=Color3.fromRGB(228,195,123)},
- ['Violeta']={Background=Color3.fromRGB(22,18,32),Surface=Color3.fromRGB(36,29,49),SurfaceHover=Color3.fromRGB(49,39,67),Primary=Color3.fromRGB(158,126,221)},
- ['Dourado']={Background=Color3.fromRGB(23,21,17),Surface=Color3.fromRGB(36,33,27),SurfaceHover=Color3.fromRGB(51,46,36),Primary=Color3.fromRGB(224,184,100)},
- ['Aurora']={Background=Color3.fromRGB(13,24,27),Surface=Color3.fromRGB(20,39,43),SurfaceHover=Color3.fromRGB(28,55,58),Primary=Color3.fromRGB(75,185,164)},
- ['Oceano']={Background=Color3.fromRGB(12,21,35),Surface=Color3.fromRGB(21,35,55),SurfaceHover=Color3.fromRGB(29,49,75),Primary=Color3.fromRGB(83,149,211)},
- ['Rosa']={Background=Color3.fromRGB(29,18,30),Surface=Color3.fromRGB(45,29,46),SurfaceHover=Color3.fromRGB(64,39,64),Primary=Color3.fromRGB(207,126,181)},
- ['Noite']={Background=Color3.fromRGB(14,14,30),Surface=Color3.fromRGB(25,24,48),SurfaceHover=Color3.fromRGB(38,35,68),Primary=Color3.fromRGB(132,119,210)},
- ['Monocromático']={Background=Color3.fromRGB(19,21,24),Surface=Color3.fromRGB(30,33,38),SurfaceHover=Color3.fromRGB(45,49,55),Primary=Color3.fromRGB(184,204,227)},
+ ['Conexão Dark']={Background=Color3.fromRGB(13,10,28),Surface=Color3.fromRGB(29,25,56),SurfaceHover=Color3.fromRGB(47,36,82),Primary=Color3.fromRGB(160,80,255)},
+ ['Violeta']={Background=Color3.fromRGB(17,12,31),Surface=Color3.fromRGB(40,29,65),SurfaceHover=Color3.fromRGB(65,43,101),Primary=Color3.fromRGB(175,131,255)},
+ ['Dourado']={Background=Color3.fromRGB(20,15,12),Surface=Color3.fromRGB(44,33,27),SurfaceHover=Color3.fromRGB(75,54,35),Primary=Color3.fromRGB(255,211,92)},
+ ['Aurora']={Background=Color3.fromRGB(7,21,26),Surface=Color3.fromRGB(14,45,51),SurfaceHover=Color3.fromRGB(22,72,76),Primary=Color3.fromRGB(37,239,190)},
+ ['Oceano']={Background=Color3.fromRGB(7,16,32),Surface=Color3.fromRGB(16,38,64),SurfaceHover=Color3.fromRGB(25,62,96),Primary=Color3.fromRGB(54,186,255)},
+ ['Rosa']={Background=Color3.fromRGB(27,12,28),Surface=Color3.fromRGB(53,27,54),SurfaceHover=Color3.fromRGB(86,41,80),Primary=Color3.fromRGB(255,117,190)},
+ ['Noite']={Background=Color3.fromRGB(11,11,30),Surface=Color3.fromRGB(29,27,63),SurfaceHover=Color3.fromRGB(48,42,101),Primary=Color3.fromRGB(142,115,255)},
+ ['Monocromático']={Background=Color3.fromRGB(11,15,22),Surface=Color3.fromRGB(29,36,47),SurfaceHover=Color3.fromRGB(48,59,76),Primary=Color3.fromRGB(218,231,255)},
 }
 function Settings.create(w,o)
  o=o or {}
@@ -51,7 +51,7 @@ function Settings.create(w,o)
  local refreshGallery=function() end
  local function add(kind,key,name,default,props,apply)
   props=props or {} props.Id='@ui/'..key props.Name=name props.Default=default props.Callback=apply
-  local c=create((key=='scale' or key=='transparency' or key=='dim' or key=='key') and 'Appearance' or 'Colors',kind,props) controls[key]=c defaults[key]=default return c
+  local c=create((key=='scale' or key=='transparency' or key=='dim' or key=='key' or key=='effects') and 'Appearance' or 'Colors',kind,props) controls[key]=c defaults[key]=default return c
  end
  local function syncColors()
   for key,themeKey in pairs({accent='Primary',background='Background'}) do
@@ -114,6 +114,7 @@ function Settings.create(w,o)
  add('Slider','scale','Tamanho da janela (%)',w.ScalePercent,{Min=0,Max=100,Suffix='%'},function(value) w:SetScale(value) end)
  add('Slider','transparency','Transparência (%)',math.floor(w.Transparency*100+.5),{Min=0,Max=100,Suffix='%'},function(value) w:SetTransparency(value/100) end)
  add('Slider','dim','Escurecer o jogo (%)',0,{Min=0,Max=100,Suffix='%'},function(value) w:SetDim(value/100) end)
+ add('Toggle','effects','Efeitos de luz',w.Effects and w.Effects.Enabled~=false or false,nil,function(value) w:SetEffects(value) end)
  add('ColorPicker','accent','Cor de destaque','#'..w.Theme.Values.Primary:ToHex(),nil,function(value) w:SetTheme({Primary=value}) end)
  add('ColorPicker','background','Cor de fundo','#'..w.Theme.Values.Background:ToHex(),nil,function(value) w:SetTheme({Background=value}) end)
  local function gradient()
@@ -133,6 +134,7 @@ function Settings.create(w,o)
   w:SetScale(controls.scale:GetValue()) w:SetTransparency(controls.transparency:GetValue()/100)
   w:SetTheme({Primary=controls.accent.Color,Background=controls.background.Color})
   w.ToggleKey=Enum.KeyCode[controls.key:GetValue()] w:SetDim(controls.dim:GetValue()/100) gradient() refreshGallery()
+  w:SetEffects(controls.effects:GetValue())
  end
  apply()
  defaults.accent='#'..initialTheme.Primary:ToHex() defaults.background='#'..initialTheme.Background:ToHex()

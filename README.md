@@ -1,8 +1,8 @@
-# Conexão UI · 2.0.0
+# Conexão UI · 2.1.0
 
-Biblioteca de interface Roblox em Luau, com módulos locais e versão em arquivo único. Visual inspirado nas referências fornecidas: janela escura, navegação lateral com ícones, cards com bordas finas, botões discretos e destaque dourado. O Dashboard mostra o jogador e o estado da própria interface. Não inclui funcionalidades específicas de jogos.
+Biblioteca de interface Roblox em Luau, com módulos locais e versão em arquivo único. Visual inspirado nas referências fornecidas: janela escura, navegação lateral com ícones, cards com bordas finas, botões com gradiente, destaque violeta e bordas luminosas. O Dashboard mostra o jogador e o estado da própria interface. Não inclui funcionalidades específicas de jogos.
 
-[Veja as prévias e as mudanças visuais da 2.0](docs/VISUAL.md). As imagens são representações aproximadas das propriedades do código, não capturas do Roblox.
+[Veja as prévias e as mudanças visuais da 2.1](docs/VISUAL.md). As imagens são representações aproximadas das propriedades do código, não capturas do Roblox.
 
 ## Library e script: o que executar
 
@@ -12,7 +12,7 @@ Biblioteca de interface Roblox em Luau, com módulos locais e versão em arquivo
 
 `CreateWindow` inclui o Dashboard do jogador (avatar, nome, usuário e executor identificado) e o sistema de configurações pronto. Os controles do seu hub são definidos pelas chamadas do seu script.
 
-## Visual 2.0 e perfil automático
+## Visual 2.1 e perfil automático
 
 Ao criar uma janela, a library já mostra um Dashboard com avatar real do Roblox, DisplayName, `@username`, executor identificado e perfil ativo. O mesmo avatar aparece no rodapé da sidebar. Nenhuma linha de código adicional é necessária no script para montar esse painel.
 
@@ -20,9 +20,9 @@ A identificação do executor usa `identifyexecutor` ou `getexecutorname`, quand
 
 `Home = false` desativa explicitamente o Dashboard automático; `ShowProfile = false` oculta o rodapé. Os controles e funções do jogo continuam sendo criados pelo seu script.
 
-Os campos têm larguras limitadas por tipo. Botões comuns usam fundo neutro e contorno; use `Variant = "Primary"` para destaque preenchido. Switches compactos mostram apenas a cápsula e o marcador azul claro. Sliders usam trilho fino e valor editável. O seletor de cor mostra uma amostra pequena e abre seu editor em um painel separado. Grupos e colunas calculam altura pelo `UIListLayout.AbsoluteContentSize`; a grade de temas reserva espaço para todas as suas linhas.
+A 2.1 aumenta o contraste dos oito temas, usa rótulos maiores e títulos em negrito, acrescenta gradientes aos cards e troca os ícones internos por desenhos com alinhamento comum. Os campos têm larguras limitadas por tipo. Botões comuns e `Variant = "Primary"` usam preenchimento de destaque com brilho suave; `Variant = "Secondary"` usa fundo neutro e contorno. Switches compactos mostram apenas a cápsula e o marcador azul claro. Sliders usam trilho fino e valor editável. O seletor de cor mostra uma amostra pequena e abre seu editor em um painel separado. Grupos e colunas calculam altura pelo `UIListLayout.AbsoluteContentSize`; a grade de temas reserva espaço para todas as suas linhas.
 
-Sem `Scale` explícito nem tamanho salvo, a janela escolhe um tamanho inicial limitado a aproximadamente 1120 × 740 px em monitores grandes. O controle de 0–100% continua disponível nas configurações. O demo 2.0 usa o arquivo de preferências `conexao_demo_visual_v2` para que temas e tamanhos salvos no demo antigo não escondam as mudanças. Preferências dos seus outros scripts continuam no arquivo de cada projeto.
+Sem `Scale` explícito nem tamanho salvo, a janela escolhe um tamanho inicial limitado a aproximadamente 1120 × 740 px em monitores grandes. O controle de 0–100% continua disponível nas configurações. O demo 2.1 usa o arquivo de preferências `conexao_demo_visual_v21` para que temas e tamanhos salvos no demo antigo não escondam as mudanças. Preferências dos seus outros scripts continuam no arquivo de cada projeto. Se um projeto existente restaurar as cores anteriores, use **Restaurar aparência padrão** na aba Interface; isso preserva as escolhas dos controles do aplicativo.
 
 ## Exemplos: comece aqui
 
@@ -69,7 +69,7 @@ local tab = window:CreateTab({Name = 'Principal', Icon = 'house'})
 tab:CreateToggle({Name = 'Meu recurso', Callback = function(value) print(value) end})
 ```
 
-A área **Interface** já contém oito temas em cartões com prévias e borda de seleção (Conexão Dark, Violeta, Dourado, Aurora, Oceano, Rosa, Noite e Monocromático), tamanho 0–100%, transparência, cor de destaque/fundo, escurecimento do jogo atrás da janela, gradiente com cores e ângulo, tecla de abrir/fechar e restauração da aparência com confirmação. A área **Config** possui gerenciamento de perfis: criar, escolher o ativo, salvar, excluir com confirmação, restaurar da lixeira e importar/exportar JSON, além dos controles de carregamento e salvamento automáticos. O painel usa duas colunas em telas largas e uma em telas menores. As preferências são aplicadas antes de `CreateWindow` retornar.
+A área **Interface** já contém oito temas em cartões com prévias e borda de seleção (Conexão Dark, Violeta, Dourado, Aurora, Oceano, Rosa, Noite e Monocromático), tamanho 0–100%, transparência, cor de destaque/fundo, escurecimento do jogo atrás da janela, gradiente com cores e ângulo, efeitos de luz, tecla de abrir/fechar e restauração da aparência com confirmação. A área **Config** possui gerenciamento de perfis: criar, escolher o ativo, salvar, excluir com confirmação, restaurar da lixeira e importar/exportar JSON, além dos controles de carregamento e salvamento automáticos. O painel usa duas colunas em telas largas e uma em telas menores. As preferências são aplicadas antes de `CreateWindow` retornar.
 
 `window.SettingsTab` expõe a aba pronta. Ela aparece no final da navegação; o Dashboard automático é a página inicial. Com `Home = false`, a primeira aba do autor passa a ser a inicial. Use `window:SelectTab(tab)` para escolher outra página. Na área Config, o card da esquerda concentra seleção, ativação e salvamento; o da direita contém criação, exclusão, restauração e transferência de perfis. A biblioteca não cria ações específicas de jogos, webhook, server hop ou otimização de gráficos: essas funções pertencem às abas/callbacks do aplicativo que usa a library.
 
@@ -125,7 +125,7 @@ Propriedades aceitam a forma com inicial maiúscula ou minúscula: `Name`/`name`
 
 ### Ícones
 
-`Icon` aceita um ID numérico, `"rbxassetid://123"`, um símbolo ou estes nomes locais: `house`, `home`, `settings`, `user`, `star`, `search`, `palette`, `info`, `bolt`. IDs de imagem precisam estar acessíveis ao cliente Roblox. Os nomes locais são símbolos de texto, não uma biblioteca externa de ícones.
+`Icon` aceita um ID numérico, `"rbxassetid://123"`, um símbolo ou estes nomes locais: `house`, `home`, `settings`, `user`, `star`, `search`, `palette`, `info`, `bolt`. IDs de imagem precisam estar acessíveis ao cliente Roblox. Os nomes locais usam desenhos de contorno em um espaço de 24 × 24, feitos com objetos de GUI. Eles não dependem de glifos de fonte nem de downloads. Também estão disponíveis `warning`, `check`, `chevron`, `close`, `minus` e `arrow`. Símbolos personalizados continuam usando a fonte do cliente.
 
 Os cartões de tema são botões reais: ao selecionar, o tema é aplicado e a escolha é salva. A grade adapta-se a uma, duas ou quatro colunas. Os sliders usam marcador circular e campo numérico editável; respeitam limites e incremento também ao digitar.
 
@@ -305,7 +305,11 @@ window:SetTransparency(0.2) -- 0 opaco, 1 transparente; fundo e linhas de contro
 window:SetGradient({Color3.fromRGB(55,42,75), Color3.fromRGB(16,18,22)}, 35)
 ```
 
-Na criação, `Theme` aceita uma tabela com substituições; ausente ou `"Dark"` usa o tema padrão. `SetTheme` atualiza os elementos vinculados sem recriar páginas. `PrimaryText` define a cor do texto sobre o destaque preenchido; se omitido, é calculado a partir de `Primary` para manter contraste. Gradientes de cards podem ter cores próprias; não são substituídos automaticamente pelo tema. Os controles da aba Configurações já salvam as personalizações sem callbacks definidos pelo autor do script. Setters chamados diretamente pelo aplicativo continuam disponíveis; `SetScale` e `SetTransparency` também sincronizam os respectivos controles nativos. Para outras mudanças feitas por código, atualize o controle em `window.SettingsControls` quando precisar persistir a escolha (por exemplo, `window.SettingsControls.accent:SetValue(cor)`).
+Na criação, `Theme` aceita uma tabela com substituições; ausente ou `"Dark"` usa o tema padrão. `SetTheme` atualiza os elementos vinculados sem recriar páginas. `PrimaryText` define a cor do texto sobre o destaque preenchido; se omitido, é calculado a partir de `Primary` para manter contraste. Gradientes de cards podem ter cores próprias; não são substituídos automaticamente pelo tema. Os controles da aba Configurações já salvam as personalizações sem callbacks definidos pelo autor do script. Setters chamados diretamente pelo aplicativo continuam disponíveis; `SetScale`, `SetTransparency` e `SetEffects` também sincronizam os respectivos controles nativos. Para outras mudanças feitas por código, atualize o controle em `window.SettingsControls` quando precisar persistir a escolha (por exemplo, `window.SettingsControls.accent:SetValue(cor)`).
+
+### Luz e movimento
+
+A borda possui dois rastros luminosos, o halo acompanha a janela e os botões preenchidos recebem um brilho suave que atravessa o preenchimento. A animação não altera posição nem tamanho da janela. Use `Effects = false` na criação ou `window:SetEffects(false)` para desativar. A escolha também fica disponível em **Interface → Efeitos de luz** e participa do salvamento automático. `Theme.Highlight` controla a segunda cor dos rastros; `Primary` e `Secondary` controlam os demais destaques.
 
 ## Dashboard configurável
 
@@ -351,7 +355,7 @@ Notificações incluem fila, ícones, tipos Info/Success/Warning/Error, ações,
 ```
 ConexaoUI/
   init.luau
-  Core/        Window, Options, Theme, Animation, Elements, Input, Cleanup, Storage, Identity, Notifications, Dialogs
+  Core/        Window, Options, Theme, Icons, Effects, Animation, Elements, Input, Cleanup, Storage, Identity, Notifications, Dialogs
   Components/  Factory, Group, RowLayout, DropdownPanel, ColorPanel e entradas por componente
   Pages/       Overview, Dashboard, Settings, Profiles
   Examples/    Demo.client.luau, Minimal.client.luau
@@ -360,7 +364,7 @@ tools/         bundle.py, render_preview.py
 tests/         Persistência, configurações, componentes, lifecycle e geometria
 ```
 
-As entradas por componente delegam ao factory compartilhado para manter uma única implementação de ciclo de vida, callbacks e persistência. As páginas são mantidas durante a navegação. Não há polling contínuo; os eventos globais de input são desconectados ao destruir seus controles. Reexecutar com o mesmo `Id` remove a interface anterior e dispara a limpeza da janela anterior.
+As entradas por componente delegam ao factory compartilhado para manter uma única implementação de ciclo de vida, callbacks e persistência. As páginas são mantidas durante a navegação. As luzes usam uma conexão de renderização por janela, pausam quando a janela fica oculta/minimizada e são desativadas pelo controle Efeitos de luz. A destruição desconecta tanto essa conexão quanto os eventos globais de input. Reexecutar com o mesmo `Id` remove a interface anterior e dispara a limpeza da janela anterior.
 
 Requer Python 3 apenas para gerar os arquivos de distribuição:
 
@@ -386,7 +390,7 @@ Para revisar proporções fora do Roblox, `tools/render_preview.py` executa a di
 
 Executado neste ambiente: compilação Luau e testes da distribuição real com serviços/elementos simulados. Cobrem persistência e restauração, falhas de arquivos, perfis, configurações nativas, sliders, cores, dropdowns, notificações, popups e destruição. A demo completa também é iniciada e encerrada no host simulado. Um modelo aproximado de geometria cobre cinco resoluções, tamanho inicial, cabeçalho, larguras dos campos, altura das grades e isolamento do editor de cores. Os testes não validam o motor Roblox, seu codec JSON real nem a aparência.
 
-**O motor Roblox não foi executado neste ambiente.** A 2.0 foi revisada também com representações aproximadas das propriedades de GUI, disponíveis em [Visual](docs/VISUAL.md). Elas usam fonte substituta e avatar ilustrativo. Ainda é necessário verificar o resultado no cliente real, incluindo:
+**O motor Roblox não foi executado neste ambiente.** A 2.1 foi revisada também com representações aproximadas das propriedades de GUI, disponíveis em [Visual](docs/VISUAL.md). Elas usam fonte substituta e avatar ilustrativo. Ainda é necessário verificar o resultado no cliente real, incluindo:
 
 - Abrir, fechar, restaurar, minimizar e reexecutar com o mesmo Id.
 - Arrastar usando mouse e toque; redimensionar/rotacionar a tela.
@@ -400,4 +404,4 @@ Executado neste ambiente: compilação Luau e testes da distribuição real com 
 - Fila de popups com várias opções, confirmação, cancelamento e textos extensos.
 - Destruição sem conexões remanescentes e modal bloqueando o fundo.
 
-A pesquisa do header filtra componentes na subpágina ativa de Configurações e nos controles criados pela API; não pesquisa textos internos do dashboard. A posição arrastada, aba ativa e estado minimizado não são persistidos. Teclados virtuais, glifos de ícones e permissões de assets variam por dispositivo e requerem validação no cliente real. Em janelas extremamente pequenas, a rolagem mantém os controles disponíveis; textos extensos de botões podem ser truncados. O layout do dashboard foi preparado para os cards curtos mostrados na referência, não para artigos extensos.
+A pesquisa do header filtra componentes na subpágina ativa de Configurações e nos controles criados pela API; não pesquisa textos internos do dashboard. A posição arrastada, aba ativa e estado minimizado não são persistidos. Teclados virtuais, símbolos personalizados e permissões de assets variam por dispositivo e requerem validação no cliente real. Em janelas extremamente pequenas, a rolagem mantém os controles disponíveis; textos extensos de botões podem ser truncados. O layout do dashboard foi preparado para os cards curtos mostrados na referência, não para artigos extensos.

@@ -12,13 +12,14 @@ function Group.new(tab,options,parent)
  tab.Cleanup:Add(group.Cleanup)
  local root=E.new('Frame',{Name=group.Name,BackgroundTransparency=w.Transparency,BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},parent or tab.Page)
  E.corner(root,20) E.pad(root,16) local rootLayout=E.list(root,6) E.fit(root,rootLayout,group.Cleanup,32) w.Theme:Bind(root,'BackgroundColor3','Surface')
- local border=E.new('UIStroke',{Thickness=1,Transparency=.5},root) w.Theme:Bind(border,'Color','Border')
+ E.new('UIGradient',{Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(150,174,226)),Rotation=70},root)
+ local border=E.new('UIStroke',{Thickness=1,Transparency=.3},root) w.Theme:Bind(border,'Color','Border')
  group.Instance=root
  local header=E.button(root,'') header.Name='GroupHeader' header.Size=UDim2.new(1,0,0,38) header.BackgroundTransparency=1 local headerStroke=header:FindFirstChildOfClass('UIStroke') if headerStroke then headerStroke:Destroy() end
- local icon=E.icon(header,o.Icon or 'star') icon.Position=UDim2.fromOffset(0,7)
+ local icon=E.icon(header,o.Icon or 'star') icon.AnchorPoint=Vector2.new(.5,.5) icon.Position=UDim2.new(0,12,.5,0)
  w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
  local label=E.text(header,group.Name,13) label.Font=Enum.Font.GothamBold label.Position=UDim2.fromOffset(32,0) label.Size=UDim2.new(1,-60,1,0) w.Theme:Bind(label,'TextColor3','Text')
- local arrow=E.text(header,'⌄',18) arrow.Position=UDim2.new(1,-22,0,0) arrow.Size=UDim2.new(0,22,1,0) w.Theme:Bind(arrow,'TextColor3','MutedText')
+ local arrow=E.icon(header,'chevron') arrow.AnchorPoint=Vector2.new(.5,.5) arrow.Position=UDim2.new(1,-10,.5,0) arrow.Size=UDim2.fromOffset(16,16) w.Theme:Bind(arrow,'TextColor3','MutedText')
  local body=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},root) local bodyLayout=E.list(body,0) E.fit(body,bodyLayout,group.Cleanup,0)
  group.Page=body
  if o.Description then
@@ -26,7 +27,7 @@ function Group.new(tab,options,parent)
  end
  function group:SetCollapsed(value)
   if self.Dead then return end self.Collapsed=value==true
-  body.Visible=not self.Collapsed arrow.Text=self.Collapsed and '›' or '⌄'
+  body.Visible=not self.Collapsed arrow.Rotation=self.Collapsed and -90 or 0
   if self.Collapsed then for _,control in ipairs(self.Members) do if control.Popup then control:Close() end end end
  end
  function group:SetValue(value) self.Name=tostring(value) label.Text=self.Name end
@@ -43,7 +44,7 @@ function Group.new(tab,options,parent)
   end
   root.Visible=query=='' or titleMatch or any
   body.Visible=not self.Collapsed or query~=''
-  arrow.Text=body.Visible and '⌄' or '›'
+  arrow.Rotation=body.Visible and 0 or -90
  end
  function group:Destroy()
   if self.Dead then return end self.Dead=true self.Cleanup:Destroy()

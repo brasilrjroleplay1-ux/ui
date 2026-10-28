@@ -6,7 +6,7 @@ cli=sys.argv[1] if len(sys.argv)>1 else '/workspace/tools/luau/luau'
 def source(name):
  return '\n'.join(line for line in (root/name).read_text().splitlines() if not (line.startswith('local ') and ('= require(' in line or '=require(' in line)))
 host=r'''
-local Enum={SortOrder={LayoutOrder='LayoutOrder'},VerticalAlignment={Bottom='Bottom'},AutomaticSize={Y='Y'},ScrollingDirection={Y='Y'},TextTruncate={AtEnd='AtEnd'},KeyCode={Escape='Escape'},EasingStyle={Linear='Linear'}}
+local Enum={Font={GothamBold='GothamBold'},SortOrder={LayoutOrder='LayoutOrder'},VerticalAlignment={Bottom='Bottom'},AutomaticSize={Y='Y'},ScrollingDirection={Y='Y'},TextTruncate={AtEnd='AtEnd'},KeyCode={Escape='Escape'},EasingStyle={Linear='Linear'}}
 local UDim2={new=function(xs,xo,ys,yo) return {X={Scale=xs or 0,Offset=xo or 0},Y={Scale=ys or 0,Offset=yo or 0}} end}
 function UDim2.fromOffset(x,y) return UDim2.new(0,x,0,y) end
 function UDim2.fromScale(x,y) return UDim2.new(x,0,y,0) end
@@ -85,14 +85,14 @@ local reasons={}
 local n=manager:Notify({Title='Saved',Content='Text',Kind='Success',Duration=2,OnClose=function(reason) table.insert(reasons,reason) end})
 local queued=manager:Notify({Content='Next',Duration=0})
 check(n.State=='Visible' and queued.State=='Queued','notifications respect capacity and queue')
-check(n.Icon.Text=='✓' and n.Fill.BackgroundColor3=='Success','semantic icon and theme are applied')
+check(n.Icon.Text=='check' and n.Fill.BackgroundColor3=='Success','semantic outline icon and theme are applied')
 advance(1) n:Pause() advance(10)
 check(n.State=='Visible' and math.abs(n.Remaining-1)<.001,'pause preserves remaining duration')
 n:Resume() advance(1.2)
 check(n.State=='Closed' and queued.State=='Visible' and reasons[1]=='timeout','timeout closes once and promotes queued notification')
 advance(100) check(queued.State=='Visible','zero duration remains until dismissed')
 queued:Update({Title='Updated',Content='Updated body',Kind='Error',Actions={{Name='Try',Close=false,Callback=function(h) h:SetValue('Action result') end}}})
-check(queued.Title.Text=='Updated' and queued.Body.Text=='Updated body' and queued.Icon.Text=='×','live content/kind update')
+check(queued.Title.Text=='Updated' and queued.Body.Text=='Updated body' and queued.Icon.Text=='close','live content/kind update')
 child(queued.Actions,'Try').Activated:Fire()
 check(queued.State=='Visible' and queued.Body.Text=='Action result','nonclosing action can update notification')
 queued:Update({Duration=1}) advance(1.2) check(queued.State=='Closed','updated duration resets timer')

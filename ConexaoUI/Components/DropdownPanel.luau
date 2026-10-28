@@ -17,7 +17,8 @@ function Panel.new(w,o)
   local value=o.GetValue()
   for _,entry in ipairs(self.Buttons) do
    local selected=if o.Multi then table.find(value or {},entry.Value)~=nil else value==entry.Value
-   entry.Button.Text=(selected and '✓  ' or '')..tostring(entry.Value)
+   entry.Button.Text=tostring(entry.Value) entry.Check.Visible=selected
+   w.Theme:Bind(entry.Check,'TextColor3',selected and 'PrimaryText' or 'Text')
    w.Theme:Bind(entry.Button,'BackgroundColor3',selected and 'Primary' or 'SurfaceHover')
    w.Theme:Bind(entry.Stroke,'Color',selected and 'Primary' or 'Border')
    w.Theme:Bind(entry.Button,'TextColor3',selected and 'PrimaryText' or 'Text')
@@ -39,9 +40,11 @@ function Panel.new(w,o)
   local stroke=E.new('UIStroke',{Thickness=1,Transparency=.15},panel) w.Theme:Bind(stroke,'Color','Border')
   local title=E.text(panel,o.Title or 'Selecionar',18) title.Position=UDim2.fromOffset(18,14) title.Size=UDim2.new(1,-80,0,26) title.ZIndex=152 w.Theme:Bind(title,'TextColor3','Text')
   local subtitle=E.text(panel,o.Multi and 'Selecione uma ou mais opções' or 'Selecione uma opção',12) subtitle.Position=UDim2.fromOffset(18,42) subtitle.Size=UDim2.new(1,-36,0,22) subtitle.ZIndex=152 w.Theme:Bind(subtitle,'TextColor3','MutedText')
-  local exit=E.button(panel,'×') exit.Size=UDim2.fromOffset(42,42) exit.Position=UDim2.new(1,-56,0,12) exit.ZIndex=152 w.Theme:Bind(exit,'BackgroundColor3','Surface')
-  local query=E.new('TextBox',{Text='',PlaceholderText='⌕  Pesquisar opções…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=14,BorderSizePixel=0,Size=UDim2.new(1,-32,0,44),Position=UDim2.fromOffset(16,78),Visible=o.Searchable,ZIndex=152},panel)
-  E.corner(query,12) E.pad(query,12) w.Theme:Bind(query,'BackgroundColor3','Surface') w.Theme:Bind(query,'TextColor3','Text')
+  local exit=E.button(panel,'') exit.Size=UDim2.fromOffset(42,42) exit.Position=UDim2.new(1,-56,0,12) exit.ZIndex=152 w.Theme:Bind(exit,'BackgroundColor3','Surface')
+  local closeIcon=E.icon(exit,'close') closeIcon.AnchorPoint=Vector2.new(.5,.5) closeIcon.Position=UDim2.fromScale(.5,.5) closeIcon.Size=UDim2.fromOffset(18,18) w.Theme:Bind(closeIcon,'TextColor3','Text')
+  local query=E.new('TextBox',{Text='',PlaceholderText='Pesquisar opções…',TextXAlignment=Enum.TextXAlignment.Left,ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=15,BorderSizePixel=0,Size=UDim2.new(1,-32,0,44),Position=UDim2.fromOffset(16,78),Visible=o.Searchable,ZIndex=152},panel)
+  E.corner(query,12) local queryPadding=E.pad(query,12) queryPadding.PaddingLeft=UDim.new(0,40) w.Theme:Bind(query,'BackgroundColor3','Surface') w.Theme:Bind(query,'TextColor3','Text')
+  local searchIcon=E.icon(query,'search') searchIcon.AnchorPoint=Vector2.new(.5,.5) searchIcon.Position=UDim2.new(0,-22,.5,0) searchIcon.Size=UDim2.fromOffset(20,20) w.Theme:Bind(searchIcon,'TextColor3','MutedText')
   local listTop=o.Searchable and 134 or 78
   local list=E.new('ScrollingFrame',{BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollingDirection=Enum.ScrollingDirection.Y,Position=UDim2.fromOffset(16,listTop),Size=UDim2.new(1,-32,1,-listTop-80),ZIndex=152},panel)
   local grid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(10,10),SortOrder=Enum.SortOrder.LayoutOrder},list)
@@ -63,8 +66,10 @@ function Panel.new(w,o)
    for index,value in ipairs(self.Options) do
     if tostring(value):lower():find(query.Text:lower(),1,true) then
      local b=E.button(list,tostring(value)) b.LayoutOrder=index b.ZIndex=153 b.TextWrapped=true b.TextTruncate=Enum.TextTruncate.None
+     E.new('UIPadding',{PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,30)},b)
+     local mark=E.icon(b,'check') mark.AnchorPoint=Vector2.new(.5,.5) mark.Position=UDim2.new(1,15,.5,0) mark.Size=UDim2.fromOffset(18,18)
      local border=E.new('UIStroke',{Thickness=1,Transparency=.15},b)
-     table.insert(self.Buttons,{Value=value,Button=b,Stroke=border})
+     table.insert(self.Buttons,{Value=value,Button=b,Stroke=border,Check=mark})
      items:Add(function() w.Theme:Forget(b) b:Destroy() end)
      items:Add(b.Activated:Connect(function()
       if o.Multi then

@@ -1,9 +1,9 @@
 -- Exemplo separado da library. Studio: LocalScript em StarterPlayerScripts.
 local UI = require(game:GetService("ReplicatedStorage"):WaitForChild("ConexaoUI"))
 local window = UI:CreateWindow({
-    Id = "ConexaoDemo", Title = "CONEXÃO UI", Version = "2.0.0",
+    Id = "ConexaoDemo", Title = "CONEXÃO UI", Version = "2.1.0",
     Subtitle = "Sua conexão. Seu estilo.",
-    Config = {Name = "conexao_demo_visual_v2"},
+    Config = {Name = "conexao_demo_visual_v21"},
 })
 
 -- Início, avatar, nome e executor já são fornecidos pela library.

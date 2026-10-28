@@ -1,3 +1,4 @@
+local Icons=require(script.Parent.Icons)
 local E = {}
 local order=setmetatable({}, {__mode="k"})
 function E.new(class, props, parent)
@@ -37,9 +38,10 @@ function E.text(parent, text, size)
  return E.new('TextLabel',{BackgroundTransparency=1,Text=text or '',TextSize=size or 14,Font=Enum.Font.GothamMedium,TextColor3=Color3.new(1,1,1),TextXAlignment=Enum.TextXAlignment.Left,TextWrapped=true,Size=UDim2.new(1,0,0,24)},parent)
 end
 function E.button(parent, text)
- local b = E.new('TextButton',{Text=text or '',Font=Enum.Font.GothamMedium,TextSize=14,TextColor3=Color3.new(1,1,1),AutoButtonColor=false,TextTruncate=Enum.TextTruncate.AtEnd,BorderSizePixel=0,Size=UDim2.new(1,0,0,44)},parent)
+ local b = E.new('TextButton',{Text=text or '',Font=Enum.Font.GothamMedium,TextSize=15,TextColor3=Color3.new(1,1,1),AutoButtonColor=false,TextTruncate=Enum.TextTruncate.AtEnd,BorderSizePixel=0,Size=UDim2.new(1,0,0,44)},parent)
  E.corner(b,12)
- E.new('UIStroke',{Thickness=1,Transparency=.45,Color=Color3.fromRGB(100,106,117)},b)
+ E.new('UIStroke',{Thickness=1,Transparency=.3,Color=Color3.fromRGB(118,139,186)},b)
+ E.new('UIGradient',{Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(235,241,255)),Rotation=90},b)
  return b
 end
 function E.scroll(parent)
@@ -52,11 +54,15 @@ function E.scroll(parent)
  layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(canvas) canvas()
  return f
 end
-local icons = {house='⌂',home='⌂',settings='⚙',user='○',star='✦',search='⌕',palette='◈',info='i',bolt='ϟ'}
 function E.icon(parent, value)
  if type(value)=='number' or (type(value)=='string' and (value:match('^rbxassetid://') or value:match('^%d+$'))) then
-  return E.new('ImageLabel',{BackgroundTransparency=1,Image=tostring(value):match('^rbxassetid://') and value or 'rbxassetid://'..tostring(value),Size=UDim2.fromOffset(22,22)},parent)
+  return E.new('ImageLabel',{BackgroundTransparency=1,BorderSizePixel=0,Image=tostring(value):match('^rbxassetid://') and value or 'rbxassetid://'..tostring(value),Size=UDim2.fromOffset(24,24)},parent)
  end
- local t=E.text(parent,icons[value] or value or '◈',22) t.Size=UDim2.fromOffset(24,24) t.TextXAlignment=Enum.TextXAlignment.Center return t
+ local vector=Icons.create(E,parent,value or 'star') if vector then return vector end
+ local t=E.text(parent,value or '',22) t.Size=UDim2.fromOffset(24,24) t.TextXAlignment=Enum.TextXAlignment.Center return t
+end
+function E.tint(icon,color)
+ local property=icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3'
+ icon[property]=color Icons.paint(icon,property,color)
 end
 return E

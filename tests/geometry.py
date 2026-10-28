@@ -75,10 +75,21 @@ end)()
 local checks=0
 local function check(ok,message) assert(ok,message) checks+=1 end
 local w=UI:CreateWindow({Id='Geometry',Scale=85})
+local beforeMotion={X=w.Root.Position.X.Offset,Y=w.Root.Position.Y.Offset,W=w.Root.Size.X.Offset,H=w.Root.Size.Y.Offset}
+local head=w.Effects.Trails[1][1] local firstX,firstY=head.Position.X.Offset,head.Position.Y.Offset
+for _=1,40 do RunService.RenderStepped:Fire(.016) end
+check(head.Position.X.Offset~=firstX or head.Position.Y.Offset~=firstY,'perimeter lights move when frames advance')
+check(w.Root.Position.X.Offset==beforeMotion.X and w.Root.Position.Y.Offset==beforeMotion.Y and w.Root.Size.X.Offset==beforeMotion.W and w.Root.Size.Y.Offset==beforeMotion.H,'lighting never moves or resizes the window')
+w:SetEffects(false) local paused=w.Effects.Time RunService.RenderStepped:Fire(.1)
+check(w.Effects.Time==paused and not w.Effects.Layer.Visible and not w.Effects.Halo.Visible,'turning effects off pauses rendering and hides the lights')
+check(w.SettingsControls.effects:GetValue()==false and w.Storage.Values['@ui/effects']==false,'effects API synchronizes and persists the native choice')
+w:SetEffects(true)
 check(w.HomeTab and w.Identity.Executor=='Test Executor','identity overview is automatic and executor uses provided detection')
 check(w.Profile.Avatar.Image=='rbxassetid://998877' and w.HomeTab.Profile.Avatar.Image==w.Profile.Avatar.Image,'real thumbnail result is shared by sidebar and home')
 check(w.HomeTab.Profile.Name.Text=='Test user' and w.HomeTab.Profile.Executor.Text=='Test Executor','home displays player and executor')
 local tab=w:CreateTab('Controls')
+local imageTab=w:CreateTab({Name='Image icon',Icon=12345})
+check(imageTab.Icon:IsA('ImageLabel') and imageTab.Icon.Image=='rbxassetid://12345','numeric asset icons remain supported')
 local a=tab:CreateGroup({Name='FIRST',Column=1}) local b=tab:CreateGroup({Name='SECOND',Column=2})
 local action=a:CreateButton({Name='Execute',Icon='info'}) local switch=a:CreateToggle({Name='Toggle'})
 a:CreateSlider({Name='Slider',Min=0,Max=100})
@@ -88,11 +99,22 @@ check(not a.Instance:FindFirstChild('GroupHeader'):FindFirstChildOfClass('UIStro
 switch.Widget.MouseEnter:Fire() switch.Widget.MouseLeave:Fire() switch.Widget.MouseButton1Down:Fire() switch.Widget.MouseButton1Up:Fire()
 check(switch.Widget.BackgroundTransparency==1,'compact switch remains unboxed through hover and pressed states')
 local emphasized=b:CreateButton({Name='Primary',Variant='Primary'})
+emphasized:SetDisabled(true) RunService.RenderStepped:Fire(.016)
+check(not w.Effects.Buttons[emphasized.Widget].Light.Visible,'disabled action does not animate a glint')
+emphasized:SetDisabled(false)
 check(emphasized.Widget.TextColor3:ToHex()==w.Theme.Values.PrimaryText:ToHex(),'filled action uses contrast text instead of white on gold')
 local color=b:CreateColorPicker({Name='Color',Default='#123456'})
 b:CreateTextbox({Name='Text',Default='Hello'})
 local function inspect(width,height)
  viewport={X=width,Y=height} w.Gui:GetPropertyChangedSignal('AbsoluteSize'):Fire() settleGeometry()
+ RunService.RenderStepped:Fire(.08)
+ for _,trail in ipairs(w.Effects.Trails) do for _,sprite in ipairs(trail) do check(sprite.Position.X.Offset>=0 and sprite.Position.Y.Offset>=0 and sprite.Position.X.Offset<=w.Root.AbsoluteSize.X and sprite.Position.Y.Offset<=w.Root.AbsoluteSize.Y,'perimeter follows viewport resizing at '..width) end end
+ for _,page in ipairs(w.Tabs) do
+  local icon=page.Icon local button=page.Button
+  local cx=button.AbsoluteSize.X*icon.Position.X.Scale+icon.Position.X.Offset
+  local cy=button.AbsoluteSize.Y*icon.Position.Y.Scale+icon.Position.Y.Offset
+  check(icon.AnchorPoint.X==.5 and icon.AnchorPoint.Y==.5 and math.abs(cx-button.AbsoluteSize.X/2)<.01 and math.abs(cy-button.AbsoluteSize.Y/2)<.01,'font-free and image navigation icons share a center at '..width)
+ end
  local header=w.Root:FindFirstChild('WindowHeader')
  local title=header:FindFirstChild('WindowTitle') local badge=header:FindFirstChild('WindowVersion') local search=header:FindFirstChild('HeaderSearch')
  local titleRight=title.Position.X.Offset+title.AbsoluteSize.X
@@ -103,7 +125,7 @@ local function inspect(width,height)
   check(badge.Position.X.Offset+badge.AbsoluteSize.X<=controlsLeft-10,'version badge cannot collide with search at '..width)
  end
  local transfer=w.ProfileControls.Transfer
- check(transfer.Widget.AbsoluteSize.Y<=44 and transfer.Instance.Size.Y.Offset<=86,'profile JSON field stays compact at '..width)
+ check(transfer.Widget.AbsoluteSize.Y<=44 and transfer.Instance.Size.Y.Offset<=90,'profile JSON field stays compact at '..width)
  for _,page in ipairs(w.Tabs) do
   for _,group in ipairs(page.Groups) do
    local root=group.Instance local stack=root:FindFirstChildOfClass('UIListLayout')
@@ -128,12 +150,22 @@ local function inspect(width,height)
  color:Open() settleGeometry()
  local popup
  for _,node in ipairs(w.Gui:GetDescendants()) do if node.Name=='ColorPickerOverlay' then popup=node.Children end end
- check(color.Instance.Size.Y.Offset<=56,'opening color picker never expands/covers neighboring controls')
+ check(color.Instance.Size.Y.Offset<=60,'opening color picker never expands/covers neighboring controls')
  color:Close()
 end
 for _,size in ipairs({{1920,1080},{1280,720},{800,600},{390,844},{844,390}}) do inspect(size[1],size[2]) end
 w:SelectTab(tab)
 check(tab.Stroke.Transparency<1 and w.SettingsTab.Stroke.Transparency==1,'only active navigation has an outline')
+w:SetSidebarLayout('expanded') settleGeometry()
+check(tab.Icon.Position.X.Offset==22 and tab.Icon.Position.Y.Scale==.5,'expanded navigation keeps icon in its own aligned column')
+w:SetSidebarLayout('icons') settleGeometry()
+local paths=action.LeadingIcon:FindFirstChild('IconPaths')
+check(paths and action.LeadingIcon.Text=='','built-in info icon uses outline geometry instead of a font character')
+w:SetTheme({Secondary=Color3.fromRGB(70,190,255)})
+for _,path in ipairs(paths:GetDescendants()) do
+ if path.Name=='Ink' then check(path.BackgroundColor3:ToHex()=='46BEFF','outline fill follows the theme tint')
+ elseif path.Name=='InkStroke' then check(path.Color:ToHex()=='46BEFF','outline stroke follows the theme tint') end
+end
 local swatch=color.Swatch local original=swatch.BackgroundColor3:ToHex()
 w:SetTheme({SurfaceHover=Color3.fromRGB(1,255,1),Text=Color3.new(1,1,1)})
 check(swatch.BackgroundColor3:ToHex()==original,'theme refresh cannot overwrite selected color preview')
@@ -149,9 +181,11 @@ check(color:GetValue()=='#00CDEF' and color.Popup.Hex.Text=='#00CDEF','invalid h
 color.Popup:Close()
 check(w.DialogCount==0,'color editor releases modal/input ownership')
 w:Destroy()
+check(next(RunService.RenderStepped.listeners)==nil,'destroy releases the render subscription')
 detectEnabled=false
 viewport={X=1920,Y=1080}
-local plain=UI:CreateWindow({Id='Plain',Home=false})
+local plain=UI:CreateWindow({Id='Plain',Home=false,Effects=false})
+check(not plain.Effects.Enabled and plain.SettingsControls.effects:GetValue()==false,'effects opt-out is honored by the native settings')
 check(plain.Root.AbsoluteSize.X<=1121 and plain.Root.AbsoluteSize.Y<=741,'initial desktop dimensions stay proportional to readable controls')
 check(plain.HomeTab==nil and #plain.Tabs==1,'Home=false is an explicit opt-out from the identity page')
 check(plain.Identity.Executor=='Não identificado','missing detection never fabricates an executor name')

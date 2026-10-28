@@ -47,7 +47,7 @@ Opcoes:CreateDropdown({
 })
 ```
 
-O resultado usa cards escuros com títulos/ícones, bordas finas e linhas compactas. Em espaço suficiente, o nome fica à esquerda e o controle à direita. Em telas pequenas, o controle ocupa uma linha abaixo do nome para manter uma área de toque utilizável. O dropdown continua abrindo seu painel com pesquisa e seleção.
+O resultado usa cards escuros com gradientes sutis, títulos em negrito, ícones de contorno, bordas finas e linhas compactas. Os ícones internos usam medidas fixas em vez de caracteres da fonte. Em espaço suficiente, o nome fica à esquerda e o controle à direita. Em telas pequenas, o controle ocupa uma linha abaixo do nome para manter uma área de toque utilizável. O dropdown continua abrindo seu painel com pesquisa e seleção.
 
 ## Propriedades do grupo
 

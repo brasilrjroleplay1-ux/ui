@@ -4,7 +4,7 @@ local Cleanup = require(script.Parent.Cleanup)
 local TweenService = game:GetService('TweenService')
 local Notifications = {}
 local kinds = {Info='Primary', Success='Success', Warning='Warning', Error='Error'}
-local symbols = {Info='info', Success='✓', Warning='!', Error='×'}
+local symbols = {Info='info', Success='check', Warning='warning', Error='close'}
 local function duration(value)
  local n=tonumber(value)
  if not n or n~=n then return 5 end
@@ -121,9 +121,10 @@ function Notifications.new(w,config)
    w.Theme:Bind(card,'BackgroundColor3','Surface')
    local border=E.new('UIStroke',{Thickness=1,Transparency=.2},card) w.Theme:Bind(border,'Color','Border')
    local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,36)},card) n.Header=header
-   n.Title=E.text(header,'',14) n.Title.Position=UDim2.fromOffset(34,0) n.Title.Size=UDim2.new(1,-74,1,0) w.Theme:Bind(n.Title,'TextColor3','Text')
-   local close=E.button(header,'×') close.Size=UDim2.fromOffset(32,32) close.Position=UDim2.new(1,-32,0,0) w.Theme:Bind(close,'BackgroundColor3','SurfaceHover')
-   n.Body=E.text(card,'',13) n.Body.Size=UDim2.new(1,0,0,0) n.Body.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(n.Body,'TextColor3','MutedText')
+   n.Title=E.text(header,'',15) n.Title.Font=Enum.Font.GothamBold n.Title.Position=UDim2.fromOffset(34,0) n.Title.Size=UDim2.new(1,-74,1,0) w.Theme:Bind(n.Title,'TextColor3','Text')
+   local close=E.button(header,'') close.Size=UDim2.fromOffset(32,32) close.Position=UDim2.new(1,-32,0,0) w.Theme:Bind(close,'BackgroundColor3','SurfaceHover')
+   local closeIcon=E.icon(close,'close') closeIcon.AnchorPoint=Vector2.new(.5,.5) closeIcon.Position=UDim2.fromScale(.5,.5) closeIcon.Size=UDim2.fromOffset(16,16) w.Theme:Bind(closeIcon,'TextColor3','Text')
+   n.Body=E.text(card,'',14) n.Body.Size=UDim2.new(1,0,0,0) n.Body.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(n.Body,'TextColor3','MutedText')
    n.Actions=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},card) E.list(n.Actions,8)
    n.ActionCleanup=Cleanup.new()
    local rail=E.new('Frame',{BorderSizePixel=0,Size=UDim2.new(1,0,0,3)},card) E.corner(rail,2) w.Theme:Bind(rail,'BackgroundColor3','Border') n.Rail=rail
@@ -138,7 +139,7 @@ function Notifications.new(w,config)
   n.Body.Visible=n.Body.Text~='' n.Rail.Visible=n.Duration>0
   w.Theme:Bind(n.Fill,'BackgroundColor3',semantic)
   if n.Icon then w.Theme:Forget(n.Icon) n.Icon:Destroy() end
-  n.Icon=E.icon(n.Header,o.Icon or symbols[o.Kind] or 'info') n.Icon.Position=UDim2.fromOffset(0,6)
+  n.Icon=E.icon(n.Header,o.Icon or symbols[o.Kind] or 'info') n.Icon.AnchorPoint=Vector2.new(0,.5) n.Icon.Position=UDim2.fromScale(0,.5)
   w.Theme:Bind(n.Icon,n.Icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3',semantic)
   n.ActionCleanup:Destroy() n.ActionCleanup=Cleanup.new()
   n.Actions.Visible=#o.Actions>0

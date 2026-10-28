@@ -12,6 +12,7 @@ local Players=game:GetService('Players')
 local Options=require(script.Parent.Options)
 local Group=require(script.Parent.Parent.Components.Group)
 local Identity=require(script.Parent.Identity)
+local Effects=require(script.Parent.Effects)
 local Window={}
 function Window.new(o)
  o=Options.normalize(o)
@@ -38,25 +39,33 @@ function Window.new(o)
  local root=E.new('CanvasGroup',{ZIndex=2,AnchorPoint=Vector2.new(.5,.5),Position=UDim2.fromScale(.5,.5),Size=UDim2.fromOffset(980,640),BorderSizePixel=0,BackgroundTransparency=w.Transparency},gui)
  w.Root=root w.Theme:Bind(root,'BackgroundColor3','Background') E.corner(root,w.Theme.Values.CornerRadius)
  local border=E.new('UIStroke',{Thickness=1,Transparency=.25},root) w.Theme:Bind(border,'Color','Border')
+ w.Effects=Effects.new(w,o.Effects) clean:Add(w.Effects)
  local scale=E.new('UIScale',{Scale=1},root)
- local header=E.new('Frame',{Name='WindowHeader',BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
- local logo=E.text(header,'ϟ',30) logo.Position=UDim2.fromOffset(18,18) logo.Size=UDim2.fromOffset(30,30) w.Theme:Bind(logo,'TextColor3','Primary')
+ local header=E.new('Frame',{Name='WindowHeader',BackgroundTransparency=.18,BorderSizePixel=0,Size=UDim2.new(1,0,0,64),Active=true},root) w.Theme:Bind(header,'BackgroundColor3','Surface')
+ E.new('UIGradient',{Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(115,137,191)),Rotation=20},header)
+ local logoBadge=E.new('Frame',{Name='Brand',Position=UDim2.fromOffset(16,16),Size=UDim2.fromOffset(32,32),BorderSizePixel=0},header) E.corner(logoBadge,10) w.Theme:Bind(logoBadge,'BackgroundColor3','Primary')
+ local logo=E.icon(logoBadge,'bolt') logo.AnchorPoint=Vector2.new(.5,.5) logo.Position=UDim2.fromScale(.5,.5) logo.Size=UDim2.fromOffset(20,20) w.Theme:Bind(logo,'TextColor3','PrimaryText')
  local name=E.text(header,o.Title or o.Name or 'CONEXÃO UI',18) name.Name='WindowTitle' name.Font=Enum.Font.GothamBold name.TextWrapped=false name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
- local subtitle=E.text(header,o.Subtitle or 'Sua conexão. Seu estilo.',11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
- local versionBadge=E.new('TextLabel',{Name='WindowVersion',Text='v'..(o.Version or '2.0.0'),Font=Enum.Font.GothamMedium,TextSize=10,BorderSizePixel=0,Size=UDim2.fromOffset(64,24),Position=UDim2.fromOffset(210,14)},header) E.corner(versionBadge,8)
- w.Theme:Bind(versionBadge,'BackgroundColor3','SurfaceHover') w.Theme:Bind(versionBadge,'TextColor3','MutedText')
+ local subtitle=E.text(header,o.Subtitle or 'Sua conexão. Seu estilo.',11) subtitle.TextWrapped=false subtitle.TextTruncate=Enum.TextTruncate.AtEnd subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
+ local versionBadge=E.new('TextLabel',{Name='WindowVersion',Text='v'..(o.Version or '2.1.0'),Font=Enum.Font.GothamMedium,TextSize=10,BorderSizePixel=0,Size=UDim2.fromOffset(64,24),Position=UDim2.fromOffset(210,14)},header) E.corner(versionBadge,8)
+ w.Theme:Bind(versionBadge,'BackgroundColor3','SurfaceHover') w.Theme:Bind(versionBadge,'TextColor3','Secondary')
  local headerLine=E.new('Frame',{Size=UDim2.new(1,-24,0,1),Position=UDim2.new(0,12,1,-1),BorderSizePixel=0,BackgroundTransparency=.7},header) w.Theme:Bind(headerLine,'BackgroundColor3','Border')
  local search=E.new('TextBox',{Name='HeaderSearch',Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
- local minimize=E.button(header,'−') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
- local close=E.button(header,'×') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
+ local minimize=E.button(header,'') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
+ local close=E.button(header,'') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
+ for _,entry in ipairs({{minimize,'minus'},{close,'close'}}) do local icon=E.icon(entry[1],entry[2]) icon.AnchorPoint=Vector2.new(.5,.5) icon.Position=UDim2.fromScale(.5,.5) icon.Size=UDim2.fromOffset(18,18) w.Theme:Bind(icon,'TextColor3','Text') end
  local sidebar=E.scroll(root) sidebar.Position=UDim2.fromOffset(0,64) sidebar.Size=UDim2.new(0,176,1,-64)
  local navLine=E.new('Frame',{Name='SidebarDivider',Position=UDim2.fromOffset(63,64),Size=UDim2.new(0,1,1,-64),BorderSizePixel=0,BackgroundTransparency=.7},root) w.Theme:Bind(navLine,'BackgroundColor3','Border')
  local content=E.new('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(176,64),Size=UDim2.new(1,-176,1,-64),ClipsDescendants=true},root)
- local restore=E.button(gui,'ϟ  Conexão') restore.Size=UDim2.fromOffset(132,44) restore.Position=UDim2.new(0,12,1,-56) restore.Visible=false restore.ZIndex=3 w.Theme:Bind(restore,'BackgroundColor3','Primary') w.Theme:Bind(restore,'TextColor3','PrimaryText')
+ local restore=E.button(gui,'Conexão') restore.Size=UDim2.fromOffset(132,44) restore.Position=UDim2.new(0,12,1,-56) restore.Visible=false restore.ZIndex=3 w.Theme:Bind(restore,'BackgroundColor3','Primary') w.Theme:Bind(restore,'TextColor3','PrimaryText')
+ E.new('UIPadding',{PaddingLeft=UDim.new(0,30),PaddingRight=UDim.new(0,8)},restore)
+ local restoreIcon=E.icon(restore,'bolt') restoreIcon.AnchorPoint=Vector2.new(.5,.5) restoreIcon.Position=UDim2.new(0,-10,.5,0) restoreIcon.Size=UDim2.fromOffset(20,20) w.Theme:Bind(restoreIcon,'TextColor3','PrimaryText')
  local profile=E.new('TextButton',{Name='Profile',Text='',AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.fromOffset(64,64),Position=UDim2.new(0,0,1,-64)},root)
  local avatar=E.new('ImageLabel',{Name='Avatar',BackgroundTransparency=1,Size=UDim2.fromOffset(38,38),Position=UDim2.fromOffset(13,13)},profile) E.corner(avatar,19).Name='AvatarMask' w.Identity:BindImage(avatar)
+ local avatarRing=E.new('UIStroke',{Thickness=1.5,Transparency=.12},avatar) w.Theme:Bind(avatarRing,'Color','Primary')
  local profileName=E.text(profile,w.Identity.DisplayName,12) profileName.Position=UDim2.fromOffset(58,11) profileName.Size=UDim2.new(1,-66,0,22) profileName.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileName,'TextColor3','Text')
  local profileExecutor=E.text(profile,w.Identity.Executor,10) profileExecutor.Position=UDim2.fromOffset(58,34) profileExecutor.Size=UDim2.new(1,-66,0,18) profileExecutor.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileExecutor,'TextColor3','MutedText')
+ profileName.TextWrapped=false profileExecutor.TextWrapped=false
  clean:Add(profile.Activated:Connect(function() if w.HomeTab then w:SelectTab(w.HomeTab) end end))
  w.Profile={Avatar=avatar,Name=profileName,Executor=profileExecutor}
  local tooltip=E.text(gui,'',12) tooltip.BackgroundTransparency=.08 tooltip.Size=UDim2.fromOffset(180,32) tooltip.Visible=false tooltip.ZIndex=100 tooltip.TextXAlignment=Enum.TextXAlignment.Center E.corner(tooltip) w.Theme:Bind(tooltip,'BackgroundColor3','Surface') w.Theme:Bind(tooltip,'TextColor3','Text')
@@ -100,10 +109,14 @@ function Window.new(o)
   name.Size=UDim2.fromOffset(math.min(available,measured+4),24)
   versionBadge.Position=UDim2.fromOffset(58+math.min(available,measured+4)+10,14)
   for _,category in ipairs(w.Categories) do category.Visible=not (compact or sidebarIcons) end
-  for _,t in ipairs(w.Tabs) do t.Label.Visible=not (compact or sidebarIcons) end
+  for _,t in ipairs(w.Tabs) do
+   t.Label.Visible=not (compact or sidebarIcons)
+   t.Icon.Position=(compact or sidebarIcons) and UDim2.fromScale(.5,.5) or UDim2.new(0,22,.5,0)
+  end
   for _,t in ipairs(w.Tabs) do if t.Relayout then t.Relayout(width-nav-24) end
    if t.LayoutGroups then t.LayoutGroups(width-nav-24) end end
   clamp()
+  w.Effects:Sync()
  end
  function w:SetScale(percent)
   self.ScalePercent=math.clamp(tonumber(percent) or 78,0,100) self.Storage:Set('@scale',self.ScalePercent)
@@ -113,6 +126,7 @@ function Window.new(o)
  function w:SetVisible(visible)
   if not visible then tooltip.Visible=false if self.CloseDropdown then self.CloseDropdown() end end
   self.Visible=visible==true root.Visible=self.Visible restore.Visible=not self.Visible dim.Visible=self.Visible
+  self.Effects:Sync()
   if self.Visible then root.GroupTransparency=1 Animate(root,{GroupTransparency=0},.18) end
  end
  function w:Minimize(value)
@@ -123,7 +137,13 @@ function Window.new(o)
  end
  function w:SetTheme(values)
   self.Theme:Apply(values)
-  if values.CornerRadius then for _,instance in ipairs(root:GetDescendants()) do if instance:IsA('UICorner') and instance.Name~='AvatarMask' then instance.CornerRadius=UDim.new(0,values.CornerRadius) end end end
+  if values.CornerRadius then for _,instance in ipairs(root:GetDescendants()) do if instance:IsA('UICorner') and instance.Name~='AvatarMask' and instance.Name~='IconMask' and instance.Name~='LightMask' then instance.CornerRadius=UDim.new(0,values.CornerRadius) end end end
+  self.Effects:Sync()
+ end
+ function w:SetEffects(value)
+  self.Effects:SetEnabled(value)
+  local control=self.SettingsControls and self.SettingsControls.effects
+  if control and control:GetValue()~=self.Effects.Enabled then control:SetValue(self.Effects.Enabled,true) end
  end
  function w:SetTransparency(value)
   self.Transparency=math.clamp(tonumber(value) or 0,0,1) root.BackgroundTransparency=self.Transparency
@@ -161,7 +181,9 @@ function Window.new(o)
    if t.Stroke then t.Stroke.Transparency=t==tab and .45 or 1 end
    if t.Icon then self.Theme:Bind(t.Icon,t.Icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3',t==tab and 'Primary' or 'MutedText') end
    self.Theme:Bind(t.Button,'BackgroundColor3',t==tab and 'SurfaceHover' or 'Background')
+   t.Button.BackgroundTransparency=t==tab and 0 or 1
    self.Theme:Bind(t.Indicator,'BackgroundColor3',t==tab and 'Primary' or 'Background')
+   t.Indicator.Visible=t==tab
   end
   self.ActiveTab=tab
   tab.Page.Position=UDim2.fromOffset(0,8) Animate(tab.Page,{Position=UDim2.fromOffset(0,0)})
@@ -174,10 +196,10 @@ function Window.new(o)
   clean:Add(tab.Cleanup)
   local b=E.button(sidebar,'') b.Size=UDim2.new(1,0,0,46) tab.Button=b tab.Stroke=b:FindFirstChildOfClass('UIStroke')
   local indicator=E.new('Frame',{Size=UDim2.new(0,3,1,-16),Position=UDim2.fromOffset(0,8),BorderSizePixel=0},b) E.corner(indicator,2) tab.Indicator=indicator
-  local icon=E.icon(b,opts.Icon or opts.icon or 'house') icon.Position=UDim2.fromOffset(9,11) tab.Icon=icon
+  local icon=E.icon(b,opts.Icon or opts.icon or 'house') icon.AnchorPoint=Vector2.new(.5,.5) icon.Position=UDim2.fromScale(.5,.5) tab.Icon=icon
   local label=E.text(b,opts.Name or opts.name or tab.Id,13) label.Position=UDim2.fromOffset(42,0) label.Size=UDim2.new(1,-46,1,0) w.Theme:Bind(label,'TextColor3','Text') tab.Label=label
   local page=E.scroll(content) page.Visible=false tab.Page=page
-  local pageTitle=E.text(page,opts.Name or tab.Id,22) pageTitle.LayoutOrder=-1000 w.Theme:Bind(pageTitle,'TextColor3','Text')
+  local pageTitle=E.text(page,opts.Name or tab.Id,24) pageTitle.Font=Enum.Font.GothamBold pageTitle.Size=UDim2.new(1,0,0,32) pageTitle.LayoutOrder=-1000 w.Theme:Bind(pageTitle,'TextColor3','Text')
   if opts.Description then local description=E.text(page,opts.Description,12) description.LayoutOrder=-999 description.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(description,'TextColor3','MutedText') end
   tab.Cleanup:Add(function() self.Theme:Forget(b) self.Theme:Forget(page) b:Destroy() page:Destroy() end)
   tab.Cleanup:Add(b.Activated:Connect(function() self:SelectTab(tab) end))

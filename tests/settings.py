@@ -46,6 +46,7 @@ local function window(values)
  function w.Storage:Flush() self.Flushes+=1 return self.Enabled end
  function w:CreateTab(opts) self.Tab={Window=self,Page={AbsoluteSize={X=800}},Button={},Id=opts.Id,Controls={},Internal=opts.Internal,Cleanup={Add=function() end}} table.insert(self.Tabs,self.Tab) return self.Tab end
  function w:SetDim(value) self.Dim=value end
+  function w:SetEffects(value) self.MotionEnabled=value end
  function w:SetScale(value) self.ScalePercent=value end
  function w:SetTransparency(value) self.Transparency=value end
  function w:SetTheme(values) for k,v in pairs(values) do self.Theme.Values[k]=v end end
@@ -76,7 +77,7 @@ check(w.ToggleKey.Name=='RightControl','default key works')
 check(w.Storage.Values['app/feature']==true,'application state preserved')
 w.SettingsControls.scale:SetValue(100) check(w.ScalePercent==100,'built-in scale connected')
 w.SettingsControls.transparency:SetValue(80) check(w.Transparency==.8,'transparency connected')
-w.SettingsControls.theme:SetValue('Dourado') check(w.SettingsControls.accent:GetValue()=='#E0B864','preset updates persisted color controls')
+w.SettingsControls.theme:SetValue('Dourado') check(w.SettingsControls.accent:GetValue()=='#FFD35C','preset updates persisted color controls')
 w.SettingsControls.gradient:SetValue(true) w.SettingsControls.rotation:SetValue(90) check(w.Gradient[2]==90,'gradient controls connected')
 w.SettingsControls.key.Options.Changed(Enum.KeyCode.F8) check(w.ToggleKey.Name=='F8','shortcut change connected')
 local function find(name) for _,c in ipairs(tab.Controls) do if c.Options.Name==name then return c end end error(name) end

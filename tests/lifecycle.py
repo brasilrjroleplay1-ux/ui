@@ -20,6 +20,8 @@ end
 function Color3.new(r,g,b) return Color3.fromRGB(r*255,g*255,b*255) end
 function Color3.fromHex(s) return Color3.fromRGB(tonumber(s:sub(1,2),16),tonumber(s:sub(3,4),16),tonumber(s:sub(5,6),16)) end
 local ColorSequence={new=function(...) return {...} end}
+local NumberSequence={new=function(points) return points end}
+local NumberSequenceKeypoint={new=function(time,value) return {Time=time,Value=value} end}
 local TweenInfo={new=function(...) return {...} end}
 local Enum=setmetatable({}, {__index=function(self,key) local values=setmetatable({}, {__index=function(t,name) local value={_type='EnumItem',Name=name} rawset(t,name,value) return value end}) rawset(self,key,values) return values end})
 local function signal()
@@ -79,9 +81,10 @@ end
 local player=Instance.new('Player') player.DisplayName='Test user'
 local playerGui=Instance.new('PlayerGui') playerGui.Parent=player
 local UIS={InputBegan=signal(),InputChanged=signal(),InputEnded=signal(),GetFocusedTextBox=function() return nil end}
+local RunService={RenderStepped=signal()}
 local tween={Create=function(_,node,_,props) return {Play=function() for key,value in pairs(props) do node[key]=value end end,Cancel=function() end} end}
 local game={PlaceId=123,GetService=function(_,name)
- if name=='Players' then return {LocalPlayer=player} elseif name=='UserInputService' then return UIS elseif name=='TweenService' then return tween elseif name=='HttpService' then return {} end
+ if name=='Players' then return {LocalPlayer=player} elseif name=='UserInputService' then return UIS elseif name=='TweenService' then return tween elseif name=='RunService' then return RunService elseif name=='HttpService' then return {} end
  error(name)
 end}
 local warnings={}
@@ -154,7 +157,7 @@ with tempfile.TemporaryDirectory() as folder:
  demo.write_text(host[:host.rfind('local UI=(function()')]+(root/'dist/Demo.luau').read_text()+'''
 settle()
 assert(#playerGui:GetChildren()==1)
-assert(UI.Version=='2.0.0')
+assert(UI.Version=='2.1.0')
 UI:Destroy()
 assert(#playerGui:GetChildren()==0)
 print('PASS: standalone demo creates and tears down its own UI without external library imports (GUI host mocked)')

@@ -6,7 +6,7 @@ from pathlib import Path
 import argparse,ast,json,subprocess,tempfile,html,shutil
 ROOT=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser()
-parser.add_argument('--page',choices=['home','controls','settings','profiles'],default='controls')
+parser.add_argument('--page',choices=['home','controls','settings','profiles','dropdown'],default='controls')
 parser.add_argument('--width',type=int,default=1440)
 parser.add_argument('--height',type=int,default=960)
 parser.add_argument('--output',default='/tmp/conexao-preview')
@@ -18,6 +18,7 @@ geo=ast.parse((ROOT/'tests/geometry.py').read_text())
 geometry=next(ast.literal_eval(n.value) for n in geo.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='geometry' for t in n.targets))
 host=host.replace('local methods={}','local resolveSize,layoutContent\nlocal methods={}')
 host=host.replace("if key=='AbsoluteSize' then", "if key=='AbsoluteContentSize' and layoutContent then return layoutContent(self) end\n   if key=='AbsoluteSize' and resolveSize then return resolveSize(self) end\n   if key=='AbsoluteSize' then")
+host=host.replace("if key=='AbsolutePosition' then return {X=0,Y=0} end", "if key=='AbsolutePosition' then local p=self.Position local a=self.AnchorPoint or {X=0,Y=0} local s=self.AbsoluteSize return {X=p.X.Scale*viewport.X+p.X.Offset-a.X*s.X,Y=p.Y.Scale*viewport.Y+p.Y.Offset-a.Y*s.Y} end")
 host=host.replace('local UI=(function()\n',geometry+'\nlocal UI=(function()\n')
 setup=r'''
 end)()
@@ -32,16 +33,17 @@ left:CreateToggle({Name='Ativar recurso',Default=true})
 left:CreateToggle({Name='Avisos sonoros',Default=false})
 left:CreateKeybind({Name='Mostrar interface',Default='LeftControl'})
 right:CreateSlider({Name='Intensidade',Default=50,Min=0,Max=100,Suffix='%'})
-right:CreateDropdown({Name='Escolhas',Multi=true,Options={'Floresta','Oceano','Deserto'},Default={'Floresta'}})
-right:CreateColorPicker({Name='Cor de destaque',Default='#E7CA85'})
+local zones=right:CreateDropdown({Name='Escolhas',Multi=true,Options={'Floresta','Oceano','Deserto','Cidade','Montanha','Ilha','Vulcão','Neve','Selva','Lago','Templo','Caverna'},Default={'Floresta'}})
+right:CreateColorPicker({Name='Cor de destaque',Default='#FFD35C'})
 if PAGE=='home' then w:SelectTab(w.HomeTab)
 elseif PAGE=='settings' or PAGE=='profiles' then
  w:SelectTab(w.SettingsTab)
  if PAGE=='profiles' then
   for _,child in ipairs(w.SettingsTab.Page:GetDescendants()) do if child:IsA('TextButton') and child.Text=='Config' then child.Activated:Fire() break end end
  end
-else w:SelectTab(tab) end
+else w:SelectTab(tab) if PAGE=='dropdown' then zones:Open() end end
 settleGeometry()
+for _=1,6 do RunService.RenderStepped:Fire(.08) end
 local function esc(text)
  return '"'..text:gsub('\\','\\\\'):gsub('"','\\"'):gsub('\n','\\n'):gsub('\r','\\r'):gsub('\t','\\t')..'"'
 end
@@ -55,13 +57,18 @@ end
 local function enum(v) return type(v)=='table' and v.Name or v end
 local function color(v) return v and v.ToHex and '#'..v:ToHex() or nil end
 local function dump(node)
- if not node:IsA('GuiObject') or not node.Visible then return nil end
+ if (not node:IsA('GuiObject') and node.ClassName~='ScreenGui') or not node.Visible then return nil end
  local size=node.AbsoluteSize
  local d={class=node.ClassName,name=node.Name,w=size.X,h=size.Y,xs=node.Position.X.Scale,xo=node.Position.X.Offset,ys=node.Position.Y.Scale,yo=node.Position.Y.Offset,ax=node.AnchorPoint and node.AnchorPoint.X or 0,ay=node.AnchorPoint and node.AnchorPoint.Y or 0,bg=color(node.BackgroundColor3) or '#A3A3A3',opacity=1-(node.BackgroundTransparency or 0),order=node.LayoutOrder or 0,text=node.Text or '',font=enum(node.Font),fontSize=node.TextSize or 14,textColor=color(node.TextColor3) or '#000000',textAlign=enum(node.TextXAlignment) or 'Center',textY=enum(node.TextYAlignment) or 'Center',wrap=node.TextWrapped or false,truncate=enum(node.TextTruncate),clip=node.ClipsDescendants or node.ClassName=='ScrollingFrame' or node.ClassName=='CanvasGroup',children={}}
+ d.rotation=node.Rotation or 0
+ d.z=node.ZIndex or 1
+ if node.ClassName=='ScreenGui' then d.opacity=0 d.clip=true end
  if d.class=='TextBox' and d.text=='' then d.text=node.PlaceholderText or '' d.textColor=color(node.PlaceholderColor3) or '#B2B2B2' end
- local corner=node:FindFirstChildOfClass('UICorner') if corner then d.radius=corner.CornerRadius.Offset end
+ local corner=node:FindFirstChildOfClass('UICorner') if corner then d.radius=corner.CornerRadius.Offset+corner.CornerRadius.Scale*math.min(size.X,size.Y) end
  local stroke=node:FindFirstChildOfClass('UIStroke') if stroke then d.borderColor=color(stroke.Color) or '#000000' d.borderWidth=stroke.Thickness or 1 d.borderOpacity=1-(stroke.Transparency or 0) end
+ if stroke then local tint=stroke:FindFirstChildOfClass('UIGradient') if tint and tint.Color then d.borderColor=color(tint.Color[1]) or d.borderColor end end
  local gradient=node:FindFirstChildOfClass('UIGradient') if gradient and gradient.Color then d.gradient={color(gradient.Color[1]),color(gradient.Color[2])} d.gradientAngle=gradient.Rotation or 0 end
+ if gradient and gradient.Transparency then d.alphaStops={} for _,key in ipairs(gradient.Transparency) do table.insert(d.alphaStops,{key.Time,key.Value}) end end
  local p=node:FindFirstChildOfClass('UIPadding')
  if p then d.pl=p.PaddingLeft and p.PaddingLeft.Offset or 0 d.pr=p.PaddingRight and p.PaddingRight.Offset or 0 d.pt=p.PaddingTop and p.PaddingTop.Offset or 0 d.pb=p.PaddingBottom and p.PaddingBottom.Offset or 0 end
  local list=node:FindFirstChildOfClass('UIListLayout')
@@ -69,10 +76,10 @@ local function dump(node)
  local grid=node:FindFirstChildOfClass('UIGridLayout')
  if grid then d.layout='grid' d.gap=grid.CellPadding.X.Offset d.cols=math.max(1,math.floor((size.X+d.gap)/(size.X*grid.CellSize.X.Scale+grid.CellSize.X.Offset+d.gap)+.001)) end
  for _,child in ipairs(node:GetChildren()) do local result=dump(child) if result then table.insert(d.children,result) end end
- if d.layout then table.sort(d.children,function(l,r) return l.order<r.order end) end
+ table.sort(d.children,function(l,r) if not d.layout and l.z~=r.z then return l.z<r.z end return l.order<r.order end)
  return d
 end
-print(encode(dump(w.Root)))
+print(encode(dump(w.Gui)))
 '''.replace('WIDTH',str(a.width)).replace('HEIGHT',str(a.height)).replace('PAGE',json.dumps(a.page))
 with tempfile.TemporaryDirectory() as folder:
  p=Path(folder)/'inspect.luau'
@@ -89,6 +96,10 @@ def tint(base,color):
 def render(n,left,top):
  radius=n.get('radius',0)
  style=[f'left:{left:.2f}px',f'top:{top:.2f}px',f'width:{n["w"]:.2f}px',f'height:{n["h"]:.2f}px',f'border-radius:{radius}px']
+ if n.get('rotation'): style.append(f'transform:rotate({n["rotation"]}deg)')
+ if n.get('alphaStops'):
+  stops=','.join(f'rgba(0,0,0,{1-v}) {t*100}%' for t,v in n['alphaStops'])
+  style.append(f'mask-image:linear-gradient(90deg,{stops})')
  if n.get('gradient') and all(n['gradient']):
   first,last=(rgba(tint(n['bg'],c),n['opacity']) for c in n['gradient'])
   style.append(f'background:linear-gradient({n.get("gradientAngle",0)+90}deg,{first},{last})')
@@ -102,7 +113,8 @@ def render(n,left,top):
   align={'Left':'flex-start','Right':'flex-end'}.get(n['textAlign'],'center')
   valign={'Top':'flex-start','Bottom':'flex-end'}.get(n['textY'],'center')
   weight=650 if n.get('font')=='GothamBold' else 500
-  contents.append(f'<span class="text" style="font-size:{n["fontSize"]}px;line-height:{n["fontSize"]+3}px;color:{n["textColor"]};font-weight:{weight};justify-content:{align};align-items:{valign};white-space:{"normal" if n["wrap"] and n.get("truncate")!="AtEnd" else "nowrap"}">{html.escape(n["text"])}</span>')
+  inset=' '.join(str(n.get(k,0))+'px' for k in ['pt','pr','pb','pl'])
+  contents.append(f'<span class="text" style="inset:{inset};font-size:{n["fontSize"]}px;line-height:{n["fontSize"]+3}px;color:{n["textColor"]};font-weight:{weight};justify-content:{align};align-items:{valign};white-space:{"normal" if n["wrap"] and n.get("truncate")!="AtEnd" else "nowrap"}">{html.escape(n["text"])}</span>')
  pl,pr,pt,pb=(n.get(k,0) for k in ['pl','pr','pt','pb'])
  iw=max(0,n['w']-pl-pr);ih=max(0,n['h']-pt-pb)
  x=y=0
@@ -120,7 +132,8 @@ x=(a.width-data['w'])/2;y=(a.height-data['h'])/2
 page=f'''<!doctype html><html><head><meta charset="utf-8"><style>*{{box-sizing:border-box}}html,body{{margin:0;width:{a.width}px;height:{a.height}px;overflow:hidden;font-family:"DejaVu Sans",sans-serif}}body{{background:radial-gradient(ellipse at 28% 18%,#384341,#202526 65%);}}.node{{position:absolute}}.text{{position:absolute;inset:0;display:flex;overflow:hidden;text-overflow:ellipsis}}.caption{{position:absolute;bottom:8px;width:100%;text-align:center;font-size:11px;color:#89918e;letter-spacing:1px}}</style></head><body>{render(data,x,y)}<div class="caption">PRÉVIA TÉCNICA · INTERPRETAÇÃO DAS PROPRIEDADES LUAU · NÃO É CAPTURA DO ROBLOX</div></body></html>'''
 output.with_suffix('.html').write_text(page)
 # Pillow only: no browser process, font-cache writes or outbound image requests.
-from PIL import Image,ImageDraw,ImageFont,ImageChops
+from PIL import Image,ImageDraw,ImageFont,ImageChops,ImageOps
+import math
 S=2
 canvas=Image.new('RGBA',(a.width*S,a.height*S),(31,36,38,255))
 full_clip=Image.new('L',canvas.size,255)
@@ -140,20 +153,23 @@ def paint(node,left,top,clip):
   base=rgb(node['bg'])
   first=tuple(round(v*base[i]/255) for i,v in enumerate(rgb(node['gradient'][0])[:3]))
   last=tuple(round(v*base[i]/255) for i,v in enumerate(rgb(node['gradient'][1])[:3]))
-  for col in range(w):
-   t=col/max(1,w-1);c=tuple(round(first[i]*(1-t)+last[i]*t) for i in range(3))+(round(node['opacity']*255),)
-   d.line((col,0,col,h),fill=c)
+  angle=math.radians(node.get('gradientAngle',0));dx,dy=math.cos(angle),math.sin(angle);extent=abs(dx)+abs(dy)
+  if first==last: d.rectangle((0,0,w,h),fill=first+(round(node['opacity']*255),))
+  else:
+   stops=bytes(max(0,min(255,round(255*(.5+((col/max(1,w-1)-.5)*dx+(row/max(1,h-1)-.5)*dy)/extent)))) for row in range(h) for col in range(w))
+   layer=ImageOps.colorize(Image.frombytes('L',(w,h),stops),first,last).convert('RGBA');layer.putalpha(round(node['opacity']*255));d=ImageDraw.Draw(layer)
  elif node['opacity']>0: d.rectangle((0,0,w,h),fill=rgb(node['bg'],node['opacity']))
- if node.get('borderWidth'):
-  bw=max(1,round(node['borderWidth']*S))
-  d.rounded_rectangle((0,0,w-1,h-1),radius,outline=rgb(node['borderColor'],node['borderOpacity']),width=bw)
  if node['class']=='ImageLabel':
   d.ellipse((0,0,w-1,h-1),fill='#414852')
   d.ellipse((w*.33,h*.16,w*.67,h*.5),fill='#bdc5cf')
   d.ellipse((w*.2,h*.53,w*.8,h*1.1),fill='#bdc5cf')
+ if node.get('borderWidth'):
+  bw=max(1,round(node['borderWidth']*S))
+  d.rounded_rectangle((0,0,w-1,h-1),radius,outline=rgb(node['borderColor'],node['borderOpacity']),width=bw)
  if node['text']:
   font=ImageFont.truetype(bold if node.get('font')=='GothamBold' else regular,max(1,round(node['fontSize']*S)))
-  text=node['text'];max_width=max(1,w-4*S)
+  pl,pr,pt,pb=(node.get(k,0)*S for k in ['pl','pr','pt','pb'])
+  text=node['text'];max_width=max(1,w-pl-pr-4*S)
   lines=[]
   if node['wrap'] and node.get('truncate')!='AtEnd':
    for paragraph in text.split('\n'):
@@ -167,14 +183,24 @@ def paint(node,left,top,clip):
    while font.getlength(text)>max_width and len(text)>1: text=text[:-2]+'…'
    lines=[text]
   lh=round((node['fontSize']+3)*S)
-  start_y=0 if node['textY']=='Top' else max(0,(h-len(lines)*lh)/2)
+  start_y=pt+(0 if node['textY']=='Top' else max(0,(h-pt-pb-len(lines)*lh)/2))
   for i,line in enumerate(lines):
    length=font.getlength(line)
-   tx=2*S if node['textAlign']=='Left' else max(0,w-length-2*S) if node['textAlign']=='Right' else (w-length)/2
+   tx=pl+2*S if node['textAlign']=='Left' else max(pl,w-pr-length-2*S) if node['textAlign']=='Right' else pl+(w-pl-pr-length)/2
    d.text((tx,start_y+i*lh),line,font=font,fill=rgb(node['textColor']),anchor='lt')
+ if node.get('alphaStops'):
+  points=node['alphaStops'];values=[]
+  for col in range(w):
+   t=col/max(1,w-1);value=points[-1][1]
+   for (ta,va),(tb,vb) in zip(points,points[1:]):
+    if ta<=t<=tb: value=va+(vb-va)*(t-ta)/max(.001,tb-ta);break
+   values.append(max(0,min(255,round((1-value)*255))))
+  layer.putalpha(ImageChops.multiply(layer.getchannel('A'),Image.frombytes('L',(w,h),bytes(values)*h)))
  layer.putalpha(ImageChops.multiply(layer.getchannel('A'),mask))
- screen=Image.new('RGBA',canvas.size);screen.alpha_composite(layer,(x,y))
- screen.putalpha(ImageChops.multiply(screen.getchannel('A'),clip));canvas.alpha_composite(screen)
+ rotated=layer.rotate(-node.get('rotation',0),resample=Image.Resampling.BICUBIC,expand=True) if node.get('rotation') else layer
+ dest_x,dest_y=x-(rotated.width-w)//2,y-(rotated.height-h)//2
+ region=clip.crop((dest_x,dest_y,dest_x+rotated.width,dest_y+rotated.height))
+ rotated.putalpha(ImageChops.multiply(rotated.getchannel('A'),region));canvas.alpha_composite(rotated,(dest_x,dest_y))
  child_clip=clip
  if node['clip']:
   region=Image.new('L',canvas.size);region.paste(mask,(x,y))
