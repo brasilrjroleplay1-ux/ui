@@ -38,12 +38,12 @@ function E.text(parent, text, size)
 end
 function E.button(parent, text)
  local b = E.new('TextButton',{Text=text or '',Font=Enum.Font.GothamMedium,TextSize=14,TextColor3=Color3.new(1,1,1),AutoButtonColor=false,TextTruncate=Enum.TextTruncate.AtEnd,BorderSizePixel=0,Size=UDim2.new(1,0,0,44)},parent)
- E.corner(b,10)
- E.new('UIStroke',{Thickness=1,Transparency=.55,Color=Color3.fromRGB(78,81,91)},b)
+ E.corner(b,12)
+ E.new('UIStroke',{Thickness=1,Transparency=.45,Color=Color3.fromRGB(100,106,117)},b)
  return b
 end
 function E.scroll(parent)
- local f=E.new('ScrollingFrame',{BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.None,Size=UDim2.fromScale(1,1),ScrollingDirection=Enum.ScrollingDirection.Y},parent)
+ local f=E.new('ScrollingFrame',{BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=4,ScrollBarImageColor3=Color3.fromRGB(144,152,166),ScrollBarImageTransparency=.2,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.None,Size=UDim2.fromScale(1,1),ScrollingDirection=Enum.ScrollingDirection.Y},parent)
  E.pad(f,12) local layout=E.list(f,10)
  local function canvas()
   local content=layout.AbsoluteContentSize

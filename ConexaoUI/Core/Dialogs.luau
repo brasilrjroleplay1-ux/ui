@@ -86,7 +86,7 @@ function Dialogs.new(w)
   d.ActionCleanup:Destroy() d.ActionCleanup=Cleanup.new()
   for index,entry in ipairs(o.Options) do
    local b=E.button(d.Actions,entry.Name) b.Size=UDim2.new(1,0,0,48)
-   w.Theme:Bind(b,'BackgroundColor3',entry.Variant=='Destructive' and 'Error' or entry.Variant=='Secondary' and 'SurfaceHover' or 'Primary') w.Theme:Bind(b,'TextColor3','Text')
+   w.Theme:Bind(b,'BackgroundColor3',entry.Variant=='Primary' and 'Primary' or 'SurfaceHover') w.Theme:Bind(b,'TextColor3',entry.Variant=='Primary' and 'PrimaryText' or entry.Variant=='Destructive' and 'Error' or 'Text')
    d.ActionCleanup:Add(function() w.Theme:Forget(b) b:Destroy() end)
    d.ActionCleanup:Add(b.Activated:Connect(function()
     if d.State~='Visible' then return end

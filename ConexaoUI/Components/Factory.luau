@@ -61,24 +61,39 @@ function Factory.create(tab,kind,o)
  local initial=if persistent then w.Storage.Values[id] else nil
  if initial==nil then initial=o.Default end
  local function button(text)
-  local b=E.button(row,text) if not c.Widget then c.Widget=b end w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
-  clean:Add(b.MouseEnter:Connect(function() if not c.Disabled then Animate(b,{BackgroundTransparency=.18}) end end))
-  clean:Add(b.MouseLeave:Connect(function() Animate(b,{BackgroundTransparency=0}) end))
-  clean:Add(b.MouseButton1Down:Connect(function() if not c.Disabled then Animate(b,{BackgroundTransparency=.4},.08) end end))
-  clean:Add(b.MouseButton1Up:Connect(function() Animate(b,{BackgroundTransparency=0},.08) end))
+  local b=E.button(row,text) if not c.Widget then c.Widget=b end b.BackgroundTransparency=.12 w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
+  clean:Add(b.MouseEnter:Connect(function() if not c.Disabled and not c.Unpainted then Animate(b,{BackgroundTransparency=0}) end end))
+  clean:Add(b.MouseLeave:Connect(function() if not c.Unpainted then Animate(b,{BackgroundTransparency=.12}) end end))
+  clean:Add(b.MouseButton1Down:Connect(function() if not c.Disabled and not c.Unpainted then Animate(b,{BackgroundTransparency=.25},.08) end end))
+  clean:Add(b.MouseButton1Up:Connect(function() if not c.Unpainted then Animate(b,{BackgroundTransparency=0},.08) end end))
   return b
  end
  if kind=='Button' then
   title.Visible=false
   local b=button(o.Name or 'Button')
-  w.Theme:Bind(b,'BackgroundColor3',o.Variant=='Destructive' and 'Error' or o.Variant=='Primary' and 'Primary' or 'SurfaceHover')
-  if o.Icon then local icon=E.icon(b,o.Icon) icon.Position=UDim2.new(0,12,.5,-12) end
+  w.Theme:Bind(b,'BackgroundColor3',o.Variant=='Primary' and 'Primary' or 'SurfaceHover')
+  w.Theme:Bind(b,'TextColor3',o.Variant=='Primary' and 'PrimaryText' or o.Variant=='Destructive' and 'Error' or 'Text')
+  if o.Variant=='Destructive' then local stroke=b:FindFirstChildOfClass('UIStroke') if stroke then w.Theme:Bind(stroke,'Color','Error') stroke.Transparency=.35 end end
+  if o.Icon then
+   local compact=o.Compact==true or (o.Compact==nil and tab.Compact)
+   local icon=E.icon(compact and row or b,o.Icon)
+   if compact then c.LeadingIcon=icon else
+    E.new('UIPadding',{PaddingLeft=UDim.new(0,40),PaddingRight=UDim.new(0,12)},b)
+    -- Keep the icon in the inset reserved before the button text.
+    icon.Position=UDim2.new(0,-28,.5,-12)
+   end
+   w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
+  end
   clean:Add(b.Activated:Connect(function() if not c.Disabled then callback() end end))
   function c:SetValue(value) b.Text=tostring(value) end
  elseif kind=='Toggle' then
   local b=button('')
+  if o.Compact==true or (o.Compact==nil and tab.Compact) then
+   c.Unpainted=true b.BackgroundTransparency=1
+   local stroke=b:FindFirstChildOfClass('UIStroke') if stroke then stroke.Transparency=1 end
+  end
   local indicator=E.new('Frame',{Size=UDim2.fromOffset(46,26),Position=UDim2.new(1,-46,.5,-13),BorderSizePixel=0},b) E.corner(indicator,12)
-  local knob=E.new('Frame',{Size=UDim2.fromOffset(20,20),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0},indicator) E.corner(knob,9)
+  local knob=E.new('Frame',{Size=UDim2.fromOffset(20,20),BackgroundColor3=Color3.fromRGB(190,216,238),BorderSizePixel=0},indicator) E.corner(knob,9)
   function c:SetValue(value,silent)
    value=value==true
    w.Theme:Bind(indicator,'BackgroundColor3',value and 'Primary' or 'Border')
@@ -92,14 +107,14 @@ function Factory.create(tab,kind,o)
   local step=o.Increment or o.Step or 1
   assert(maximum>minimum and step>0,'Intervalo ou incremento inválido')
   local line=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},row) c.Widget=line
-  local valueLabel=E.new(kind=='Slider' and 'TextBox' or 'TextLabel',{Text='',Font=Enum.Font.GothamMedium,TextSize=13,BorderSizePixel=0,Size=UDim2.new(0,76,1,0),Position=UDim2.new(1,-76,0,0)},line)
+  local valueLabel=E.new(kind=='Slider' and 'TextBox' or 'TextLabel',{Text='',Font=Enum.Font.GothamMedium,TextSize=13,BorderSizePixel=0,Size=UDim2.new(0,64,1,0),Position=UDim2.new(1,-64,0,0)},line)
   E.corner(valueLabel,10) w.Theme:Bind(valueLabel,'TextColor3','Text') w.Theme:Bind(valueLabel,'BackgroundColor3','SurfaceHover')
-  local track=E.new('Frame',{Active=true,Size=UDim2.new(1,-94,1,0),BackgroundTransparency=1},line)
-  local rail=E.new('Frame',{Size=UDim2.new(1,0,0,6),Position=UDim2.new(0,0,.5,-3),BorderSizePixel=0},track) E.corner(rail,3) w.Theme:Bind(rail,'BackgroundColor3','Border')
+  local track=E.new('Frame',{Active=true,Size=UDim2.new(1,-82,1,0),BackgroundTransparency=1},line)
+  local rail=E.new('Frame',{Size=UDim2.new(1,0,0,4),Position=UDim2.new(0,0,.5,-2),BorderSizePixel=0},track) E.corner(rail,3) w.Theme:Bind(rail,'BackgroundColor3','Border')
   local fill=E.new('Frame',{Size=UDim2.fromScale(0,1),BorderSizePixel=0},rail) E.corner(fill,3) w.Theme:Bind(fill,'BackgroundColor3','Primary')
   local knob
   if kind=='Slider' then
-   knob=E.new('Frame',{AnchorPoint=Vector2.new(.5,.5),Size=UDim2.fromOffset(22,22),Position=UDim2.fromScale(0,.5),BorderSizePixel=0},rail) E.corner(knob,11) w.Theme:Bind(knob,'BackgroundColor3','Text')
+   knob=E.new('Frame',{AnchorPoint=Vector2.new(.5,.5),Size=UDim2.fromOffset(22,22),Position=UDim2.fromScale(0,.5),BorderSizePixel=0},rail) E.corner(knob,11) knob.BackgroundColor3=Color3.fromRGB(190,216,238)
    local stroke=E.new('UIStroke',{Thickness=1,Transparency=.3},knob) w.Theme:Bind(stroke,'Color','Primary')
   end
   local function display() valueLabel.Text=string.format('%g',c.Value)..(o.Suffix or '') end
@@ -186,10 +201,10 @@ function Factory.create(tab,kind,o)
   c:SetValue(initial or o.Key or 'RightControl',true)
  elseif kind=='ColorPicker' then
   local preview=button('')
-  -- This swatch represents a user value; theme refresh must not recolor it.
-  if w.Theme.Bindings and w.Theme.Bindings[preview] then
-   w.Theme.Bindings[preview].BackgroundColor3=nil w.Theme.Bindings[preview].TextColor3=nil
-  end
+  preview.Text=''
+  local swatch=E.new('Frame',{Name='ColorSwatch',Size=UDim2.fromOffset(18,18),Position=UDim2.new(0,10,.5,-9),BorderSizePixel=0},preview) E.corner(swatch,5)
+  c.Swatch=swatch
+  local colorText=E.text(preview,'',11) colorText.Position=UDim2.fromOffset(36,0) colorText.Size=UDim2.new(1,-42,1,0) w.Theme:Bind(colorText,'TextColor3','Text')
   local function parse(value)
    if typeof(value)=='Color3' then return value end
    if type(value)=='string' and value:match('^#?%x%x%x%x%x%x$') then return Color3.fromHex(value:gsub('#','')) end
@@ -201,8 +216,7 @@ function Factory.create(tab,kind,o)
   function c:SetValue(value,silent)
    value=parse(value) if not value then return false end
    self.Color=value self.Value='#'..value:ToHex()
-   preview.BackgroundColor3=value preview.Text=self.Value preview.TextSize=12
-   preview.TextColor3=(value.R*.299+value.G*.587+value.B*.114)>.65 and Color3.fromRGB(20,22,28) or Color3.new(1,1,1)
+   swatch.BackgroundColor3=value colorText.Text=self.Value
    save(self.Value) if not silent then callback(value) end
    if self.Popup then self.Popup:Refresh() end
    return true

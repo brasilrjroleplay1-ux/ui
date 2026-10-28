@@ -6,7 +6,7 @@ local Group=require(script.Parent.Parent.Components.Group)
 local Settings={}
 local themeNames={'Conexão Dark','Violeta','Dourado','Aurora','Oceano','Rosa','Noite','Monocromático'}
 local presets={
- ['Conexão Dark']={Background=Color3.fromRGB(16,18,22),Surface=Color3.fromRGB(28,31,36),SurfaceHover=Color3.fromRGB(40,44,52),Primary=Color3.fromRGB(143,110,247)},
+ ['Conexão Dark']={Background=Color3.fromRGB(17,19,23),Surface=Color3.fromRGB(26,29,34),SurfaceHover=Color3.fromRGB(38,41,47),Primary=Color3.fromRGB(228,195,123)},
  ['Violeta']={Background=Color3.fromRGB(22,18,32),Surface=Color3.fromRGB(36,29,49),SurfaceHover=Color3.fromRGB(49,39,67),Primary=Color3.fromRGB(158,126,221)},
  ['Dourado']={Background=Color3.fromRGB(23,21,17),Surface=Color3.fromRGB(36,33,27),SurfaceHover=Color3.fromRGB(51,46,36),Primary=Color3.fromRGB(224,184,100)},
  ['Aurora']={Background=Color3.fromRGB(13,24,27),Surface=Color3.fromRGB(20,39,43),SurfaceHover=Color3.fromRGB(28,55,58),Primary=Color3.fromRGB(75,185,164)},
@@ -24,7 +24,7 @@ function Settings.create(w,o)
  local nav=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},tab.Page)
  local groups={} local buttons={} local groupLayouts={}
  local function select(name)
-  for key,group in pairs(groups) do group.Visible=key==name w.Theme:Bind(buttons[key],'BackgroundColor3',key==name and 'Primary' or 'Surface') end
+  for key,group in pairs(groups) do group.Visible=key==name w.Theme:Bind(buttons[key],'BackgroundColor3',key==name and 'Primary' or 'Surface') w.Theme:Bind(buttons[key],'TextColor3',key==name and 'PrimaryText' or 'Text') end
  end
  for index,name in ipairs({'Interface','Config'}) do
   local b=E.button(nav,name) b.Size=UDim2.new(.5,-4,1,0) b.Position=UDim2.new((index-1)*.5,(index-1)*8,0,0) buttons[name]=b
@@ -78,7 +78,7 @@ function Settings.create(w,o)
   local preview=E.new('Frame',{BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,Position=UDim2.fromOffset(10,10),Size=UDim2.new(1,-20,0,38)},card) E.corner(preview,10)
   E.new('UIGradient',{Color=ColorSequence.new(palette.Surface,palette.Primary),Rotation=25},preview)
   local bar=E.new('Frame',{BackgroundColor3=palette.Primary,BorderSizePixel=0,Position=UDim2.new(0,10,1,-18),Size=UDim2.new(.45,0,0,6)},preview) E.corner(bar,3)
-  local label=E.text(card,themeName,12) label.Position=UDim2.fromOffset(10,56) label.Size=UDim2.new(1,-20,0,22) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','Text')
+  local label=E.text(card,themeName,11) label.Position=UDim2.fromOffset(10,56) label.Size=UDim2.new(1,-20,0,22) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','Text')
   cards[themeName]={Button=card,Border=border}
   tab.Cleanup:Add(card.Activated:Connect(function() controls.theme:SetValue(themeName) end))
  end
@@ -92,7 +92,7 @@ function Settings.create(w,o)
  tab.ThemeCards=cards
  local function galleryLayout()
   local width=sections.Colors.Page.AbsoluteSize.X
-  local columns=width>=640 and 4 or width>=340 and 2 or 1
+  local columns=width>=440 and 4 or width>=230 and 2 or 1
   grid.CellSize=UDim2.new(1/columns,-10*(columns-1)/columns,0,90)
   gallery.Size=UDim2.new(1,0,0,math.ceil(#themeNames/columns)*100-10)
  end
@@ -137,7 +137,7 @@ function Settings.create(w,o)
  apply()
  defaults.accent='#'..initialTheme.Primary:ToHex() defaults.background='#'..initialTheme.Background:ToHex()
  w.SettingsControls=controls
- create('Appearance','Button',{Name='Restaurar aparência padrão',Variant='Secondary',Callback=function()
+ create('Appearance','Button',{Name='Restaurar aparência padrão',Text='Restaurar',Variant='Secondary',Callback=function()
   w:Confirm({Content='Restaurar apenas a aparência? As escolhas das suas abas serão preservadas.',Callback=function(yes)
    if not yes or w.Destroyed then return end
    w:SetTheme(initialTheme)
@@ -145,10 +145,9 @@ function Settings.create(w,o)
    apply()
   end})
  end})
- create('Config','Section',{Name='ARMAZENAMENTO',Content='Salvamento e restauração de escolhas já fazem parte da library.'})
- local status=create('Config','Paragraph',{Name='Estado do perfil',Content=''})
+ local status=create('Config','Paragraph',{Name='Armazenamento',Content=''})
  local function refresh()
-  status:SetValue('Perfil: '..w.ProfileName..'\n'..(w.Storage.Available and 'Armazenamento disponível.' or 'Sem API de arquivos: escolhas somente em memória.')..(w.Storage.LastError and '\nÚltimo erro: '..w.Storage.LastError or ''))
+  status:SetValue((w.Storage.Available and 'Suas escolhas podem ser salvas neste dispositivo.' or 'Este ambiente não oferece arquivos. As escolhas ficam nesta sessão.')..(w.Storage.LastError and '\nNão foi possível salvar o último perfil.' or ''))
  end
  local auto=create('Config','Toggle',{Id='@ui/autosave',Name='Salvar automaticamente',Default=w.Storage.Enabled,Callback=function(value)
   -- Persist the opt-out before disabling writes, so the next run respects it.
@@ -156,7 +155,6 @@ function Settings.create(w,o)
   w.Storage.Enabled=value if value then w.Storage:Flush() end refresh()
  end})
  w.Storage.Enabled=auto:GetValue()
- create('Config','Button',{Name='Atualizar estado',Variant='Secondary',Callback=refresh})
  function w:LoadProfile(name)
   self.Storage:ActivateProfile(name)
   local snapshot=table.clone(self.Storage.Values)
@@ -181,7 +179,7 @@ function Settings.create(w,o)
   refresh() if self.RefreshProfiles then self.RefreshProfiles() end
   if self.HomeTab then self.HomeTab:Refresh() end
  end
- w.ProfileControls=Profiles.create(w,function(kind,props) props.Persistent=false return create('Profiles',kind,props) end)
+ w.ProfileControls=Profiles.create(w,function(kind,props) props.Persistent=false return create('Profiles',kind,props) end,function(kind,props) props.Persistent=false return create('Config',kind,props) end)
  refresh() select('Interface')
  return tab
 end

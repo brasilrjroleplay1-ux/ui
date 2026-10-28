@@ -80,13 +80,30 @@ check(w.Profile.Avatar.Image=='rbxassetid://998877' and w.HomeTab.Profile.Avatar
 check(w.HomeTab.Profile.Name.Text=='Test user' and w.HomeTab.Profile.Executor.Text=='Test Executor','home displays player and executor')
 local tab=w:CreateTab('Controls')
 local a=tab:CreateGroup({Name='FIRST',Column=1}) local b=tab:CreateGroup({Name='SECOND',Column=2})
-a:CreateButton({Name='Execute'}) a:CreateToggle({Name='Toggle'})
+local action=a:CreateButton({Name='Execute',Icon='info'}) local switch=a:CreateToggle({Name='Toggle'})
 a:CreateSlider({Name='Slider',Min=0,Max=100})
 a:CreateDropdown({Name='Options',Options={'A','B'}})
+check(action.LeadingIcon and action.LeadingIcon.Parent==action.Instance,'button icon belongs to the label area, not on top of action text')
+check(not a.Instance:FindFirstChild('GroupHeader'):FindFirstChildOfClass('UIStroke'),'card header has no duplicate inner outline')
+switch.Widget.MouseEnter:Fire() switch.Widget.MouseLeave:Fire() switch.Widget.MouseButton1Down:Fire() switch.Widget.MouseButton1Up:Fire()
+check(switch.Widget.BackgroundTransparency==1,'compact switch remains unboxed through hover and pressed states')
+local emphasized=b:CreateButton({Name='Primary',Variant='Primary'})
+check(emphasized.Widget.TextColor3:ToHex()==w.Theme.Values.PrimaryText:ToHex(),'filled action uses contrast text instead of white on gold')
 local color=b:CreateColorPicker({Name='Color',Default='#123456'})
 b:CreateTextbox({Name='Text',Default='Hello'})
 local function inspect(width,height)
  viewport={X=width,Y=height} w.Gui:GetPropertyChangedSignal('AbsoluteSize'):Fire() settleGeometry()
+ local header=w.Root:FindFirstChild('WindowHeader')
+ local title=header:FindFirstChild('WindowTitle') local badge=header:FindFirstChild('WindowVersion') local search=header:FindFirstChild('HeaderSearch')
+ local titleRight=title.Position.X.Offset+title.AbsoluteSize.X
+ local controlsLeft=header.AbsoluteSize.X-(search.Visible and 252 or 82)
+ check(titleRight<=controlsLeft-10,'title leaves space for header controls at '..width)
+ if badge.Visible then
+  check(titleRight+9<=badge.Position.X.Offset,'title cannot collide with version badge at '..width)
+  check(badge.Position.X.Offset+badge.AbsoluteSize.X<=controlsLeft-10,'version badge cannot collide with search at '..width)
+ end
+ local transfer=w.ProfileControls.Transfer
+ check(transfer.Widget.AbsoluteSize.Y<=44 and transfer.Instance.Size.Y.Offset<=86,'profile JSON field stays compact at '..width)
  for _,page in ipairs(w.Tabs) do
   for _,group in ipairs(page.Groups) do
    local root=group.Instance local stack=root:FindFirstChildOfClass('UIListLayout')
@@ -111,13 +128,17 @@ local function inspect(width,height)
  color:Open() settleGeometry()
  local popup
  for _,node in ipairs(w.Gui:GetDescendants()) do if node.Name=='ColorPickerOverlay' then popup=node.Children end end
- check(color.Instance.Size.Y.Offset<=52,'opening color picker never expands/covers neighboring controls')
+ check(color.Instance.Size.Y.Offset<=56,'opening color picker never expands/covers neighboring controls')
  color:Close()
 end
 for _,size in ipairs({{1920,1080},{1280,720},{800,600},{390,844},{844,390}}) do inspect(size[1],size[2]) end
-local swatch=color.Widget local original=swatch.BackgroundColor3:ToHex()
+w:SelectTab(tab)
+check(tab.Stroke.Transparency<1 and w.SettingsTab.Stroke.Transparency==1,'only active navigation has an outline')
+local swatch=color.Swatch local original=swatch.BackgroundColor3:ToHex()
 w:SetTheme({SurfaceHover=Color3.fromRGB(1,255,1),Text=Color3.new(1,1,1)})
 check(swatch.BackgroundColor3:ToHex()==original,'theme refresh cannot overwrite selected color preview')
+w:SetTheme({Primary=Color3.fromRGB(30,30,60)})
+check(emphasized.Widget.TextColor3:ToHex()=='FFFFFF','contrast text adapts to a dark primary color')
 color:Open()
 color.Popup.Hex.Text='#ABCDEF' color.Popup.Hex.FocusLost:Fire()
 check(color:GetValue()=='#ABCDEF' and color.Popup.Preview.BackgroundColor3:ToHex()=='ABCDEF','hex editing updates control and preview')
@@ -129,7 +150,9 @@ color.Popup:Close()
 check(w.DialogCount==0,'color editor releases modal/input ownership')
 w:Destroy()
 detectEnabled=false
+viewport={X=1920,Y=1080}
 local plain=UI:CreateWindow({Id='Plain',Home=false})
+check(plain.Root.AbsoluteSize.X<=1121 and plain.Root.AbsoluteSize.Y<=741,'initial desktop dimensions stay proportional to readable controls')
 check(plain.HomeTab==nil and #plain.Tabs==1,'Home=false is an explicit opt-out from the identity page')
 check(plain.Identity.Executor=='Não identificado','missing detection never fabricates an executor name')
 plain:Destroy()

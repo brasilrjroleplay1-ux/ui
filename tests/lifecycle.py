@@ -154,7 +154,7 @@ with tempfile.TemporaryDirectory() as folder:
  demo.write_text(host[:host.rfind('local UI=(function()')]+(root/'dist/Demo.luau').read_text()+'''
 settle()
 assert(#playerGui:GetChildren()==1)
-assert(UI.Version=='1.7.0')
+assert(UI.Version=='2.0.0')
 UI:Destroy()
 assert(#playerGui:GetChildren()==0)
 print('PASS: standalone demo creates and tears down its own UI without external library imports (GUI host mocked)')

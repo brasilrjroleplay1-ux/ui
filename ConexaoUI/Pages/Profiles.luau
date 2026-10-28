@@ -1,17 +1,15 @@
--- Profile management is part of the built-in configuration page.
 local Profiles={}
-function Profiles.create(w,create)
+function Profiles.create(w,create,createConfig)
+ createConfig=createConfig or create
  local store=w.Storage
- local summary=create('Paragraph',{Name='PERFIS',Content=''})
- local selected=create('Dropdown',{Name='Configuração selecionada',Options=store:ListProfiles(),Default=store.Active,Searchable=true})
- local newName=create('Textbox',{Name='Nome do novo perfil',Placeholder='Automático se vazio',MaxLength=48})
- local deleted=create('Dropdown',{Name='Perfis excluídos',Options=store:ListProfiles(true),Searchable=true})
- local transfer=create('Textbox',{Name='Importar / exportar JSON',Placeholder='Cole o JSON aqui para importar, ou exporte um perfil para copiar.',MultiLine=true,MaxLength=262144})
+ local summary=createConfig('Label',{Name='Perfil ativo',Content=''})
+ local selected=createConfig('Dropdown',{Name='Perfil selecionado',Options=store:ListProfiles(),Default=store.Active,Searchable=true})
+ local newName,deleted,transfer
  local function refresh()
   local current=selected:GetValue()
   selected:SetOptions(store:ListProfiles()) selected:SetValue(current or store.Active,true)
-  deleted:SetOptions(store:ListProfiles(true))
-  summary:SetValue('Ativo: '..store.Active..'  ·  Salvos: '..#store:ListProfiles()..(store.SessionOnly and '\nSessão com valores padrão: carregamento automático desativado.' or ''))
+  if deleted then deleted:SetOptions(store:ListProfiles(true)) end
+  summary:SetValue(store.Active..'  ·  '..#store:ListProfiles()..' salvo(s)'..(store.SessionOnly and '\nCarregamento automático desativado.' or ''))
  end
  local function persist(commit)
   local saved
@@ -25,29 +23,32 @@ function Profiles.create(w,create)
    if not ok then w:Notify({Title='Perfis',Content=tostring(err)}) end
   end
  end
- create('Button',{Name='Definir como ativo',Callback=action(function()
+ createConfig('Button',{Name='Definir como ativo',Text='Ativar',Callback=action(function()
   assert(selected:GetValue(),'Selecione um perfil.') w:LoadProfile(selected:GetValue()) persist()
  end)})
- create('Button',{Name='Salvar alterações',Callback=action(function() persist(true) end)})
- create('Toggle',{Name='Carregar automaticamente',Default=store.AutoLoad,Callback=function(value) store.AutoLoad=value persist() end})
- create('Button',{Name='Criar configuração',Callback=action(function()
+ createConfig('Button',{Name='Salvar alterações',Text='Salvar',Callback=action(function() persist(true) end)})
+ createConfig('Toggle',{Name='Carregar automaticamente',Default=store.AutoLoad,Callback=function(value) store.AutoLoad=value persist() end})
+ newName=create('Textbox',{Name='Nome do novo perfil',Placeholder='Automático se vazio',MaxLength=48})
+ create('Button',{Name='Criar configuração',Text='Criar',Callback=action(function()
   local name=store:CreateProfile(newName:GetValue()) selected:SetOptions(store:ListProfiles()) selected:SetValue(name,true) newName:SetValue('',true) persist()
  end)})
- create('Button',{Name='Excluir configuração selecionada',Variant='Destructive',Callback=action(function()
+ create('Button',{Name='Excluir configuração selecionada',Text='Excluir',Variant='Destructive',Callback=action(function()
   local name=selected:GetValue()
   assert(name and name~='Default' and name~=store.Active,'Selecione um perfil diferente do padrão e do ativo.')
-  w:Confirm({Content='Mover "'..name..'" para a lixeira?',Callback=function(yes)
+  w:Confirm({Content='Mover "'..name..'" para a lixeira?',Destructive=true,Callback=function(yes)
    if yes and not w.Destroyed then action(function() store:DeleteProfile(name) selected:SetValue(store.Active,true) persist() end)() end
   end})
  end)})
- create('Button',{Name='Restaurar perfil excluído',Variant='Secondary',Callback=action(function()
+ deleted=create('Dropdown',{Name='Perfis excluídos',Options=store:ListProfiles(true),Searchable=true})
+ create('Button',{Name='Restaurar perfil excluído',Text='Restaurar',Variant='Secondary',Callback=action(function()
   local name=deleted:GetValue() assert(name,'Selecione um perfil excluído.') store:RestoreProfile(name) persist()
  end)})
- create('Button',{Name='Exportar configuração selecionada',Callback=action(function()
+ create('Button',{Name='Exportar configuração selecionada',Text='Exportar',Callback=action(function()
   transfer:SetValue(store:ExportProfile(selected:GetValue() or store.Active),true)
-  w:Notify({Title='Exportação',Content='JSON disponível no campo Importar / exportar. Selecione e copie o texto.'})
+  w:Notify({Title='Exportação',Content='JSON disponível no campo de texto. Selecione e copie.'})
  end)})
- create('Button',{Name='Importar como novo perfil',Callback=action(function()
+ transfer=create('Textbox',{Name='Importar / exportar JSON',Placeholder='Cole o JSON aqui',MaxLength=262144})
+ create('Button',{Name='Importar como novo perfil',Text='Importar',Callback=action(function()
   local name=store:ImportProfile(transfer:GetValue(),newName:GetValue())
   selected:SetOptions(store:ListProfiles()) selected:SetValue(name,true) persist()
  end)})

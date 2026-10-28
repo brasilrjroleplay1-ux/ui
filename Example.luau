@@ -24,7 +24,7 @@ local Window = ConexaoUI:CreateWindow({
     Id = "ConexaoExemploCompleto",
     Title = "CONEXÃO UI",
     Subtitle = "Exemplos de todos os componentes",
-    Version = "1.7.0",
+    Version = "2.0.0",
     Scale = 82,
     ToggleKey = Enum.KeyCode.RightControl,
 })

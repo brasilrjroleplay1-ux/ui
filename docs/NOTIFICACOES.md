@@ -132,7 +132,7 @@ local popup = Window:Popup({
 
 O popup bloqueia cliques e atalhos da library ao fundo, usa uma área rolável para conteúdo/opções e se limita ao tamanho da tela. Aceita de 1 a 10 opções; se omitidas, cria o botão Fechar. Uma opção sem `Value` entrega seu índice, e pode ter seu próprio `Callback(value)` além do callback geral.
 
-`Variant` de opção pode ser `Secondary` ou `Destructive`. Os popups são exibidos um por vez, com até 20 aguardando. Ao abrir um popup, um dropdown aberto é fechado.
+`Variant` de opção pode ser `Primary`, `Secondary` ou `Destructive`. O padrão usa fundo neutro; `Primary` recebe preenchimento de destaque. Os popups são exibidos um por vez, com até 20 aguardando. Ao abrir um popup, um dropdown aberto é fechado.
 
 ```luau
 popup:Update({Title = "Outro título", Content = "Outro texto"})

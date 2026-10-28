@@ -143,7 +143,7 @@ function Notifications.new(w,config)
   n.ActionCleanup:Destroy() n.ActionCleanup=Cleanup.new()
   n.Actions.Visible=#o.Actions>0
   for _,entry in ipairs(o.Actions) do
-   local b=E.button(n.Actions,entry.Name) w.Theme:Bind(b,'BackgroundColor3',semantic) w.Theme:Bind(b,'TextColor3','Text')
+   local b=E.button(n.Actions,entry.Name) w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
    n.ActionCleanup:Add(function() w.Theme:Forget(b) b:Destroy() end)
    n.ActionCleanup:Add(b.Activated:Connect(function()
     if n.State~='Visible' then return end

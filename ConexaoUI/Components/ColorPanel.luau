@@ -54,7 +54,7 @@ function ColorPanel.new(w,o)
   end
   local footer=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,-32,0,40),Position=UDim2.new(0,16,1,-54)},panel)
   local reset=E.button(footer,'Padrão') reset.Size=UDim2.new(.5,-5,1,0) w.Theme:Bind(reset,'BackgroundColor3','Surface')
-  local done=E.button(footer,'Concluir') done.Size=UDim2.new(.5,-5,1,0) done.Position=UDim2.new(.5,5,0,0) w.Theme:Bind(done,'BackgroundColor3','Primary')
+  local done=E.button(footer,'Concluir') done.Size=UDim2.new(.5,-5,1,0) done.Position=UDim2.new(.5,5,0,0) w.Theme:Bind(done,'BackgroundColor3','Primary') w.Theme:Bind(done,'TextColor3','PrimaryText')
   cleanup:Add(reset.Activated:Connect(function() o.SetValue(o.Default) self:Refresh() end))
   cleanup:Add(done.Activated:Connect(close)) cleanup:Add(exit.Activated:Connect(close)) cleanup:Add(scrim.Activated:Connect(close))
   cleanup:Add(UIS.InputBegan:Connect(function(input) if input.KeyCode==Enum.KeyCode.Escape then close() end end))

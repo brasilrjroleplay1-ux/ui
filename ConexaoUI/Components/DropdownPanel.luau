@@ -20,6 +20,7 @@ function Panel.new(w,o)
    entry.Button.Text=(selected and '✓  ' or '')..tostring(entry.Value)
    w.Theme:Bind(entry.Button,'BackgroundColor3',selected and 'Primary' or 'SurfaceHover')
    w.Theme:Bind(entry.Stroke,'Color',selected and 'Primary' or 'Border')
+   w.Theme:Bind(entry.Button,'TextColor3',selected and 'PrimaryText' or 'Text')
   end
  end
  function self:SetOptions(values)
@@ -51,6 +52,7 @@ function Panel.new(w,o)
   for index,entry in ipairs(actions) do
    local b=E.button(footer,entry[1]) b.Size=UDim2.new(1/#actions,-8*(#actions-1)/#actions,1,0) b.Position=UDim2.new((index-1)/#actions,8*(index-1)/#actions,0,0) b.ZIndex=153
    w.Theme:Bind(b,'BackgroundColor3',index==#actions and o.Multi and 'Primary' or 'SurfaceHover')
+   if index==#actions and o.Multi then w.Theme:Bind(b,'TextColor3','PrimaryText') end
    cleanup:Add(b.Activated:Connect(entry[2]))
   end
   local items=Cleanup.new()

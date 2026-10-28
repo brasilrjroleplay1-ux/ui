@@ -71,7 +71,7 @@ function ColorPanel.new(w,o)
   end
   local footer=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,-32,0,40),Position=UDim2.new(0,16,1,-54)},panel)
   local reset=E.button(footer,'Padrão') reset.Size=UDim2.new(.5,-5,1,0) w.Theme:Bind(reset,'BackgroundColor3','Surface')
-  local done=E.button(footer,'Concluir') done.Size=UDim2.new(.5,-5,1,0) done.Position=UDim2.new(.5,5,0,0) w.Theme:Bind(done,'BackgroundColor3','Primary')
+  local done=E.button(footer,'Concluir') done.Size=UDim2.new(.5,-5,1,0) done.Position=UDim2.new(.5,5,0,0) w.Theme:Bind(done,'BackgroundColor3','Primary') w.Theme:Bind(done,'TextColor3','PrimaryText')
   cleanup:Add(reset.Activated:Connect(function() o.SetValue(o.Default) self:Refresh() end))
   cleanup:Add(done.Activated:Connect(close)) cleanup:Add(exit.Activated:Connect(close)) cleanup:Add(scrim.Activated:Connect(close))
   cleanup:Add(UIS.InputBegan:Connect(function(input) if input.KeyCode==Enum.KeyCode.Escape then close() end end))
@@ -122,6 +122,7 @@ function Panel.new(w,o)
    entry.Button.Text=(selected and '✓  ' or '')..tostring(entry.Value)
    w.Theme:Bind(entry.Button,'BackgroundColor3',selected and 'Primary' or 'SurfaceHover')
    w.Theme:Bind(entry.Stroke,'Color',selected and 'Primary' or 'Border')
+   w.Theme:Bind(entry.Button,'TextColor3',selected and 'PrimaryText' or 'Text')
   end
  end
  function self:SetOptions(values)
@@ -153,6 +154,7 @@ function Panel.new(w,o)
   for index,entry in ipairs(actions) do
    local b=E.button(footer,entry[1]) b.Size=UDim2.new(1/#actions,-8*(#actions-1)/#actions,1,0) b.Position=UDim2.new((index-1)/#actions,8*(index-1)/#actions,0,0) b.ZIndex=153
    w.Theme:Bind(b,'BackgroundColor3',index==#actions and o.Multi and 'Primary' or 'SurfaceHover')
+   if index==#actions and o.Multi then w.Theme:Bind(b,'TextColor3','PrimaryText') end
    cleanup:Add(b.Activated:Connect(entry[2]))
   end
   local items=Cleanup.new()
@@ -265,24 +267,39 @@ function Factory.create(tab,kind,o)
  local initial=if persistent then w.Storage.Values[id] else nil
  if initial==nil then initial=o.Default end
  local function button(text)
-  local b=E.button(row,text) if not c.Widget then c.Widget=b end w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
-  clean:Add(b.MouseEnter:Connect(function() if not c.Disabled then Animate(b,{BackgroundTransparency=.18}) end end))
-  clean:Add(b.MouseLeave:Connect(function() Animate(b,{BackgroundTransparency=0}) end))
-  clean:Add(b.MouseButton1Down:Connect(function() if not c.Disabled then Animate(b,{BackgroundTransparency=.4},.08) end end))
-  clean:Add(b.MouseButton1Up:Connect(function() Animate(b,{BackgroundTransparency=0},.08) end))
+  local b=E.button(row,text) if not c.Widget then c.Widget=b end b.BackgroundTransparency=.12 w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
+  clean:Add(b.MouseEnter:Connect(function() if not c.Disabled and not c.Unpainted then Animate(b,{BackgroundTransparency=0}) end end))
+  clean:Add(b.MouseLeave:Connect(function() if not c.Unpainted then Animate(b,{BackgroundTransparency=.12}) end end))
+  clean:Add(b.MouseButton1Down:Connect(function() if not c.Disabled and not c.Unpainted then Animate(b,{BackgroundTransparency=.25},.08) end end))
+  clean:Add(b.MouseButton1Up:Connect(function() if not c.Unpainted then Animate(b,{BackgroundTransparency=0},.08) end end))
   return b
  end
  if kind=='Button' then
   title.Visible=false
   local b=button(o.Name or 'Button')
-  w.Theme:Bind(b,'BackgroundColor3',o.Variant=='Destructive' and 'Error' or o.Variant=='Primary' and 'Primary' or 'SurfaceHover')
-  if o.Icon then local icon=E.icon(b,o.Icon) icon.Position=UDim2.new(0,12,.5,-12) end
+  w.Theme:Bind(b,'BackgroundColor3',o.Variant=='Primary' and 'Primary' or 'SurfaceHover')
+  w.Theme:Bind(b,'TextColor3',o.Variant=='Primary' and 'PrimaryText' or o.Variant=='Destructive' and 'Error' or 'Text')
+  if o.Variant=='Destructive' then local stroke=b:FindFirstChildOfClass('UIStroke') if stroke then w.Theme:Bind(stroke,'Color','Error') stroke.Transparency=.35 end end
+  if o.Icon then
+   local compact=o.Compact==true or (o.Compact==nil and tab.Compact)
+   local icon=E.icon(compact and row or b,o.Icon)
+   if compact then c.LeadingIcon=icon else
+    E.new('UIPadding',{PaddingLeft=UDim.new(0,40),PaddingRight=UDim.new(0,12)},b)
+    -- Keep the icon in the inset reserved before the button text.
+    icon.Position=UDim2.new(0,-28,.5,-12)
+   end
+   w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
+  end
   clean:Add(b.Activated:Connect(function() if not c.Disabled then callback() end end))
   function c:SetValue(value) b.Text=tostring(value) end
  elseif kind=='Toggle' then
   local b=button('')
+  if o.Compact==true or (o.Compact==nil and tab.Compact) then
+   c.Unpainted=true b.BackgroundTransparency=1
+   local stroke=b:FindFirstChildOfClass('UIStroke') if stroke then stroke.Transparency=1 end
+  end
   local indicator=E.new('Frame',{Size=UDim2.fromOffset(46,26),Position=UDim2.new(1,-46,.5,-13),BorderSizePixel=0},b) E.corner(indicator,12)
-  local knob=E.new('Frame',{Size=UDim2.fromOffset(20,20),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0},indicator) E.corner(knob,9)
+  local knob=E.new('Frame',{Size=UDim2.fromOffset(20,20),BackgroundColor3=Color3.fromRGB(190,216,238),BorderSizePixel=0},indicator) E.corner(knob,9)
   function c:SetValue(value,silent)
    value=value==true
    w.Theme:Bind(indicator,'BackgroundColor3',value and 'Primary' or 'Border')
@@ -296,14 +313,14 @@ function Factory.create(tab,kind,o)
   local step=o.Increment or o.Step or 1
   assert(maximum>minimum and step>0,'Intervalo ou incremento inválido')
   local line=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},row) c.Widget=line
-  local valueLabel=E.new(kind=='Slider' and 'TextBox' or 'TextLabel',{Text='',Font=Enum.Font.GothamMedium,TextSize=13,BorderSizePixel=0,Size=UDim2.new(0,76,1,0),Position=UDim2.new(1,-76,0,0)},line)
+  local valueLabel=E.new(kind=='Slider' and 'TextBox' or 'TextLabel',{Text='',Font=Enum.Font.GothamMedium,TextSize=13,BorderSizePixel=0,Size=UDim2.new(0,64,1,0),Position=UDim2.new(1,-64,0,0)},line)
   E.corner(valueLabel,10) w.Theme:Bind(valueLabel,'TextColor3','Text') w.Theme:Bind(valueLabel,'BackgroundColor3','SurfaceHover')
-  local track=E.new('Frame',{Active=true,Size=UDim2.new(1,-94,1,0),BackgroundTransparency=1},line)
-  local rail=E.new('Frame',{Size=UDim2.new(1,0,0,6),Position=UDim2.new(0,0,.5,-3),BorderSizePixel=0},track) E.corner(rail,3) w.Theme:Bind(rail,'BackgroundColor3','Border')
+  local track=E.new('Frame',{Active=true,Size=UDim2.new(1,-82,1,0),BackgroundTransparency=1},line)
+  local rail=E.new('Frame',{Size=UDim2.new(1,0,0,4),Position=UDim2.new(0,0,.5,-2),BorderSizePixel=0},track) E.corner(rail,3) w.Theme:Bind(rail,'BackgroundColor3','Border')
   local fill=E.new('Frame',{Size=UDim2.fromScale(0,1),BorderSizePixel=0},rail) E.corner(fill,3) w.Theme:Bind(fill,'BackgroundColor3','Primary')
   local knob
   if kind=='Slider' then
-   knob=E.new('Frame',{AnchorPoint=Vector2.new(.5,.5),Size=UDim2.fromOffset(22,22),Position=UDim2.fromScale(0,.5),BorderSizePixel=0},rail) E.corner(knob,11) w.Theme:Bind(knob,'BackgroundColor3','Text')
+   knob=E.new('Frame',{AnchorPoint=Vector2.new(.5,.5),Size=UDim2.fromOffset(22,22),Position=UDim2.fromScale(0,.5),BorderSizePixel=0},rail) E.corner(knob,11) knob.BackgroundColor3=Color3.fromRGB(190,216,238)
    local stroke=E.new('UIStroke',{Thickness=1,Transparency=.3},knob) w.Theme:Bind(stroke,'Color','Primary')
   end
   local function display() valueLabel.Text=string.format('%g',c.Value)..(o.Suffix or '') end
@@ -390,10 +407,10 @@ function Factory.create(tab,kind,o)
   c:SetValue(initial or o.Key or 'RightControl',true)
  elseif kind=='ColorPicker' then
   local preview=button('')
-  -- This swatch represents a user value; theme refresh must not recolor it.
-  if w.Theme.Bindings and w.Theme.Bindings[preview] then
-   w.Theme.Bindings[preview].BackgroundColor3=nil w.Theme.Bindings[preview].TextColor3=nil
-  end
+  preview.Text=''
+  local swatch=E.new('Frame',{Name='ColorSwatch',Size=UDim2.fromOffset(18,18),Position=UDim2.new(0,10,.5,-9),BorderSizePixel=0},preview) E.corner(swatch,5)
+  c.Swatch=swatch
+  local colorText=E.text(preview,'',11) colorText.Position=UDim2.fromOffset(36,0) colorText.Size=UDim2.new(1,-42,1,0) w.Theme:Bind(colorText,'TextColor3','Text')
   local function parse(value)
    if typeof(value)=='Color3' then return value end
    if type(value)=='string' and value:match('^#?%x%x%x%x%x%x$') then return Color3.fromHex(value:gsub('#','')) end
@@ -405,8 +422,7 @@ function Factory.create(tab,kind,o)
   function c:SetValue(value,silent)
    value=parse(value) if not value then return false end
    self.Color=value self.Value='#'..value:ToHex()
-   preview.BackgroundColor3=value preview.Text=self.Value preview.TextSize=12
-   preview.TextColor3=(value.R*.299+value.G*.587+value.B*.114)>.65 and Color3.fromRGB(20,22,28) or Color3.new(1,1,1)
+   swatch.BackgroundColor3=value colorText.Text=self.Value
    save(self.Value) if not silent then callback(value) end
    if self.Popup then self.Popup:Refresh() end
    return true
@@ -451,13 +467,13 @@ function Group.new(tab,options,parent)
  local group={Window=w,Id=tab.Id..'/'..id,Name=o.Name or 'Grupo',Cleanup=Cleanup.new(),Members={},Controls=tab.Controls,Compact=o.Compact~=false,IsGroup=true,Collapsed=o.Collapsed==true,Dead=false}
  tab.Cleanup:Add(group.Cleanup)
  local root=E.new('Frame',{Name=group.Name,BackgroundTransparency=w.Transparency,BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},parent or tab.Page)
- E.corner(root,16) E.pad(root,16) local rootLayout=E.list(root,6) E.fit(root,rootLayout,group.Cleanup,32) w.Theme:Bind(root,'BackgroundColor3','Surface')
- local border=E.new('UIStroke',{Thickness=1,Transparency=.3},root) w.Theme:Bind(border,'Color','Border')
+ E.corner(root,20) E.pad(root,16) local rootLayout=E.list(root,6) E.fit(root,rootLayout,group.Cleanup,32) w.Theme:Bind(root,'BackgroundColor3','Surface')
+ local border=E.new('UIStroke',{Thickness=1,Transparency=.5},root) w.Theme:Bind(border,'Color','Border')
  group.Instance=root
- local header=E.button(root,'') header.Size=UDim2.new(1,0,0,38) header.BackgroundTransparency=1
+ local header=E.button(root,'') header.Name='GroupHeader' header.Size=UDim2.new(1,0,0,38) header.BackgroundTransparency=1 local headerStroke=header:FindFirstChildOfClass('UIStroke') if headerStroke then headerStroke:Destroy() end
  local icon=E.icon(header,o.Icon or 'star') icon.Position=UDim2.fromOffset(0,7)
  w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
- local label=E.text(header,group.Name,12) label.Position=UDim2.fromOffset(32,0) label.Size=UDim2.new(1,-60,1,0) w.Theme:Bind(label,'TextColor3','Text')
+ local label=E.text(header,group.Name,13) label.Font=Enum.Font.GothamBold label.Position=UDim2.fromOffset(32,0) label.Size=UDim2.new(1,-60,1,0) w.Theme:Bind(label,'TextColor3','Text')
  local arrow=E.text(header,'⌄',18) arrow.Position=UDim2.new(1,-22,0,0) arrow.Size=UDim2.new(0,22,1,0) w.Theme:Bind(arrow,'TextColor3','MutedText')
  local body=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},root) local bodyLayout=E.list(body,0) E.fit(body,bodyLayout,group.Cleanup,0)
  group.Page=body
@@ -525,7 +541,7 @@ function RowLayout.apply(c,tab,kind,o,row,title,list,padding,cleanup)
  list:Destroy()
  for _,property in ipairs({'PaddingTop','PaddingBottom','PaddingLeft','PaddingRight'}) do padding[property]=UDim.new() end
  c.RowTransparent=true row.BackgroundTransparency=1 row.AutomaticSize=Enum.AutomaticSize.None
- title.AutomaticSize=Enum.AutomaticSize.None title.TextYAlignment=Enum.TextYAlignment.Center title.TextSize=13
+ title.AutomaticSize=Enum.AutomaticSize.None title.TextYAlignment=Enum.TextYAlignment.Center title.TextSize=14
  local separator=E.new('Frame',{Name='Separator',Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BorderSizePixel=0,BackgroundTransparency=.72},row)
  w.Theme:Bind(separator,'BackgroundColor3','Border')
  if kind=='Button' then title.Visible=true c.Widget.Text=o.Text or 'Executar' end
@@ -534,18 +550,20 @@ function RowLayout.apply(c,tab,kind,o,row,title,list,padding,cleanup)
   local width=row.AbsoluteSize.X
   local stacked=(kind=='Slider' or kind=='ProgressBar') and width<410
    or (kind=='Dropdown' or kind=='Textbox') and width<340
-  local height=stacked and 84 or 52
+  local height=stacked and 86 or 56
   local widgetWidth
   if kind=='Toggle' then widgetWidth=54
   elseif kind=='ColorPicker' then widgetWidth=112
   elseif kind=='Button' then widgetWidth=104
   elseif kind=='Keybind' then widgetWidth=126
-  elseif kind=='Slider' or kind=='ProgressBar' then widgetWidth=math.min(300,math.max(200,width*.56))
+  elseif kind=='Slider' or kind=='ProgressBar' then widgetWidth=math.min(280,math.max(200,width*.56))
   else widgetWidth=math.min(230,math.max(140,width*.52)) end
   widgetWidth=math.min(widgetWidth,math.max(44,width-116))
-  title.Position=UDim2.fromOffset(0,0)
-  title.Size=stacked and UDim2.new(1,0,0,28) or UDim2.new(1,-widgetWidth-16,0,52)
-  c.Widget.Position=stacked and UDim2.fromOffset(0,32) or UDim2.new(1,-widgetWidth,0,8)
+  local labelLeft=c.LeadingIcon and 30 or 0
+  title.Position=UDim2.fromOffset(labelLeft,0)
+  title.Size=stacked and UDim2.new(1,-labelLeft,0,28) or UDim2.new(1,-widgetWidth-18-labelLeft,0,56)
+  if c.LeadingIcon then c.LeadingIcon.Position=UDim2.fromOffset(0,stacked and 3 or 17) end
+  c.Widget.Position=stacked and UDim2.fromOffset(0,32) or UDim2.new(1,-widgetWidth,0,10)
   c.Widget.Size=stacked and UDim2.new(1,0,0,44) or UDim2.fromOffset(widgetWidth,36)
   if c.ErrorLabel then
    c.ErrorLabel.Position=UDim2.fromOffset(0,height)
@@ -703,7 +721,7 @@ function Dialogs.new(w)
   d.ActionCleanup:Destroy() d.ActionCleanup=Cleanup.new()
   for index,entry in ipairs(o.Options) do
    local b=E.button(d.Actions,entry.Name) b.Size=UDim2.new(1,0,0,48)
-   w.Theme:Bind(b,'BackgroundColor3',entry.Variant=='Destructive' and 'Error' or entry.Variant=='Secondary' and 'SurfaceHover' or 'Primary') w.Theme:Bind(b,'TextColor3','Text')
+   w.Theme:Bind(b,'BackgroundColor3',entry.Variant=='Primary' and 'Primary' or 'SurfaceHover') w.Theme:Bind(b,'TextColor3',entry.Variant=='Primary' and 'PrimaryText' or entry.Variant=='Destructive' and 'Error' or 'Text')
    d.ActionCleanup:Add(function() w.Theme:Forget(b) b:Destroy() end)
    d.ActionCleanup:Add(b.Activated:Connect(function()
     if d.State~='Visible' then return end
@@ -772,12 +790,12 @@ function E.text(parent, text, size)
 end
 function E.button(parent, text)
  local b = E.new('TextButton',{Text=text or '',Font=Enum.Font.GothamMedium,TextSize=14,TextColor3=Color3.new(1,1,1),AutoButtonColor=false,TextTruncate=Enum.TextTruncate.AtEnd,BorderSizePixel=0,Size=UDim2.new(1,0,0,44)},parent)
- E.corner(b,10)
- E.new('UIStroke',{Thickness=1,Transparency=.55,Color=Color3.fromRGB(78,81,91)},b)
+ E.corner(b,12)
+ E.new('UIStroke',{Thickness=1,Transparency=.45,Color=Color3.fromRGB(100,106,117)},b)
  return b
 end
 function E.scroll(parent)
- local f=E.new('ScrollingFrame',{BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.None,Size=UDim2.fromScale(1,1),ScrollingDirection=Enum.ScrollingDirection.Y},parent)
+ local f=E.new('ScrollingFrame',{BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=4,ScrollBarImageColor3=Color3.fromRGB(144,152,166),ScrollBarImageTransparency=.2,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.None,Size=UDim2.fromScale(1,1),ScrollingDirection=Enum.ScrollingDirection.Y},parent)
  E.pad(f,12) local layout=E.list(f,10)
  local function canvas()
   local content=layout.AbsoluteContentSize
@@ -1011,7 +1029,7 @@ function Notifications.new(w,config)
   n.ActionCleanup:Destroy() n.ActionCleanup=Cleanup.new()
   n.Actions.Visible=#o.Actions>0
   for _,entry in ipairs(o.Actions) do
-   local b=E.button(n.Actions,entry.Name) w.Theme:Bind(b,'BackgroundColor3',semantic) w.Theme:Bind(b,'TextColor3','Text')
+   local b=E.button(n.Actions,entry.Name) w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
    n.ActionCleanup:Add(function() w.Theme:Forget(b) b:Destroy() end)
    n.ActionCleanup:Add(b.Activated:Connect(function()
     if n.State~='Visible' then return end
@@ -1201,22 +1219,25 @@ end
 __modules["Core/Theme"] = function()
 local Theme = {}
 Theme.Default = {
- Background = Color3.fromRGB(16,18,22), Surface = Color3.fromRGB(28,31,36),
- SurfaceHover = Color3.fromRGB(40,44,52), Primary = Color3.fromRGB(143,110,247),
- Secondary = Color3.fromRGB(224,184,100), Text = Color3.fromRGB(244,245,250),
- MutedText = Color3.fromRGB(155,161,177), Border = Color3.fromRGB(58,61,72),
+ Background = Color3.fromRGB(17,19,23), Surface = Color3.fromRGB(26,29,34),
+ SurfaceHover = Color3.fromRGB(38,41,47), Primary = Color3.fromRGB(228,195,123), PrimaryText = Color3.fromRGB(28,27,31),
+ Secondary = Color3.fromRGB(179,165,228), Text = Color3.fromRGB(238,241,246),
+ MutedText = Color3.fromRGB(154,161,174), Border = Color3.fromRGB(85,91,103),
  Success = Color3.fromRGB(105,221,160), Warning = Color3.fromRGB(245,199,100),
  Error = Color3.fromRGB(242,113,131), CornerRadius = 14,
 }
+local function primaryText(color) return (color.R*.299+color.G*.587+color.B*.114)>.6 and Color3.fromRGB(28,27,31) or Color3.new(1,1,1) end
 function Theme.new(overrides)
  local self = {Values = table.clone(Theme.Default), Bindings = {}}
  if type(overrides) == 'table' then for k,v in pairs(overrides) do self.Values[k] = v end end
+ if type(overrides)~='table' or overrides.PrimaryText==nil then self.Values.PrimaryText=primaryText(self.Values.Primary) end
  function self:Bind(instance, property, key)
   instance[property] = self.Values[key]
   self.Bindings[instance] = self.Bindings[instance] or {}
   self.Bindings[instance][property] = key
  end
  function self:Apply(values)
+  if values.Primary and values.PrimaryText==nil then self.Values.PrimaryText=primaryText(values.Primary) end
   for k,v in pairs(values) do if self.Values[k] ~= nil then self.Values[k] = v end end
   for instance, props in pairs(self.Bindings) do
    if instance.Parent == nil then self.Bindings[instance] = nil else
@@ -1254,7 +1275,7 @@ function Window.new(o)
  local player=Players.LocalPlayer
  assert(player,'Conexão UI deve executar no cliente')
  local clean=Cleanup.new()
- local w={Cleanup=clean,Theme=Theme.new(o.Theme),Tabs={},Categories={},Ids={},Transparency=math.clamp(o.Transparency or .08,0,1),Destroyed=false,Capturing=nil}
+ local w={Cleanup=clean,Theme=Theme.new(o.Theme),Tabs={},Categories={},Ids={},Transparency=math.clamp(o.Transparency or .04,0,1),Destroyed=false,Capturing=nil}
  local parent=o.Parent or player:WaitForChild('PlayerGui')
  local guiName=o.Id or 'ConexaoUI'
  local previous=parent:FindFirstChild(guiName)
@@ -1275,16 +1296,20 @@ function Window.new(o)
  w.Root=root w.Theme:Bind(root,'BackgroundColor3','Background') E.corner(root,w.Theme.Values.CornerRadius)
  local border=E.new('UIStroke',{Thickness=1,Transparency=.25},root) w.Theme:Bind(border,'Color','Border')
  local scale=E.new('UIScale',{Scale=1},root)
- local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
+ local header=E.new('Frame',{Name='WindowHeader',BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
  local logo=E.text(header,'ϟ',30) logo.Position=UDim2.fromOffset(18,18) logo.Size=UDim2.fromOffset(30,30) w.Theme:Bind(logo,'TextColor3','Primary')
- local name=E.text(header,o.Title or o.Name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
- local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.7.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
- local search=E.new('TextBox',{Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
+ local name=E.text(header,o.Title or o.Name or 'CONEXÃO UI',18) name.Name='WindowTitle' name.Font=Enum.Font.GothamBold name.TextWrapped=false name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
+ local subtitle=E.text(header,o.Subtitle or 'Sua conexão. Seu estilo.',11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
+ local versionBadge=E.new('TextLabel',{Name='WindowVersion',Text='v'..(o.Version or '2.0.0'),Font=Enum.Font.GothamMedium,TextSize=10,BorderSizePixel=0,Size=UDim2.fromOffset(64,24),Position=UDim2.fromOffset(210,14)},header) E.corner(versionBadge,8)
+ w.Theme:Bind(versionBadge,'BackgroundColor3','SurfaceHover') w.Theme:Bind(versionBadge,'TextColor3','MutedText')
+ local headerLine=E.new('Frame',{Size=UDim2.new(1,-24,0,1),Position=UDim2.new(0,12,1,-1),BorderSizePixel=0,BackgroundTransparency=.7},header) w.Theme:Bind(headerLine,'BackgroundColor3','Border')
+ local search=E.new('TextBox',{Name='HeaderSearch',Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
  local minimize=E.button(header,'−') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
  local close=E.button(header,'×') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
  local sidebar=E.scroll(root) sidebar.Position=UDim2.fromOffset(0,64) sidebar.Size=UDim2.new(0,176,1,-64)
+ local navLine=E.new('Frame',{Name='SidebarDivider',Position=UDim2.fromOffset(63,64),Size=UDim2.new(0,1,1,-64),BorderSizePixel=0,BackgroundTransparency=.7},root) w.Theme:Bind(navLine,'BackgroundColor3','Border')
  local content=E.new('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(176,64),Size=UDim2.new(1,-176,1,-64),ClipsDescendants=true},root)
- local restore=E.button(gui,'ϟ  Conexão') restore.Size=UDim2.fromOffset(132,44) restore.Position=UDim2.new(0,12,1,-56) restore.Visible=false restore.ZIndex=3 w.Theme:Bind(restore,'BackgroundColor3','Primary')
+ local restore=E.button(gui,'ϟ  Conexão') restore.Size=UDim2.fromOffset(132,44) restore.Position=UDim2.new(0,12,1,-56) restore.Visible=false restore.ZIndex=3 w.Theme:Bind(restore,'BackgroundColor3','Primary') w.Theme:Bind(restore,'TextColor3','PrimaryText')
  local profile=E.new('TextButton',{Name='Profile',Text='',AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.fromOffset(64,64),Position=UDim2.new(0,0,1,-64)},root)
  local avatar=E.new('ImageLabel',{Name='Avatar',BackgroundTransparency=1,Size=UDim2.fromOffset(38,38),Position=UDim2.fromOffset(13,13)},profile) E.corner(avatar,19).Name='AvatarMask' w.Identity:BindImage(avatar)
  local profileName=E.text(profile,w.Identity.DisplayName,12) profileName.Position=UDim2.fromOffset(58,11) profileName.Size=UDim2.new(1,-66,0,22) profileName.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileName,'TextColor3','Text')
@@ -1292,7 +1317,9 @@ function Window.new(o)
  clean:Add(profile.Activated:Connect(function() if w.HomeTab then w:SelectTab(w.HomeTab) end end))
  w.Profile={Avatar=avatar,Name=profileName,Executor=profileExecutor}
  local tooltip=E.text(gui,'',12) tooltip.BackgroundTransparency=.08 tooltip.Size=UDim2.fromOffset(180,32) tooltip.Visible=false tooltip.ZIndex=100 tooltip.TextXAlignment=Enum.TextXAlignment.Center E.corner(tooltip) w.Theme:Bind(tooltip,'BackgroundColor3','Surface') w.Theme:Bind(tooltip,'TextColor3','Text')
- w.ScalePercent=math.clamp(tonumber(w.Storage.Values['@scale']) or o.Scale or 78,0,100)
+ local viewport=gui.AbsoluteSize
+ local initialScale=viewport.X<760 and 90 or math.min(86,1120/math.max(1,viewport.X)*100,740/math.max(1,viewport.Y)*100)
+ w.ScalePercent=math.clamp(tonumber(w.Storage.Values['@scale']) or o.Scale or initialScale,0,100)
  w.Minimized=false w.Visible=true
  local function clamp()
   if w.Destroyed then return end
@@ -1316,11 +1343,19 @@ function Window.new(o)
   local height=math.min(viewport.Y,math.max(math.min(viewport.Y,280),viewport.Y*fraction))
   root.Size=UDim2.fromOffset(width,w.Minimized and 64 or height)
   local nav=(compact or sidebarIcons) and 64 or 210
+  navLine.Position=UDim2.fromOffset(nav-1,64)
   local showProfile=o.ShowProfile~=false and not w.Minimized
   profile.Visible=showProfile profile.Size=UDim2.fromOffset(nav,64) profileName.Visible=not (compact or sidebarIcons) profileExecutor.Visible=profileName.Visible
   sidebar.Size=UDim2.new(0,nav,1,showProfile and -128 or -64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
   search.Visible=width>=660 subtitle.Visible=width>=420
-  name.TextSize=compact and 14 or 18 name.Size=UDim2.new(1,search.Visible and -330 or -154,0,24) name.TextTruncate=Enum.TextTruncate.AtEnd
+  name.TextSize=compact and 14 or 18 name.TextTruncate=Enum.TextTruncate.AtEnd
+  versionBadge.Visible=width>=700
+  local available=math.max(30,width-58-(search.Visible and 270 or 96)-(versionBadge.Visible and 76 or 0))
+  local measured=(utf8.len(name.Text) or #name.Text)*name.TextSize*.72
+  local ok,bounds=pcall(function() return game:GetService('TextService'):GetTextSize(name.Text,name.TextSize,name.Font,Vector2.new(10000,40)) end)
+  if ok and bounds then measured=bounds.X end
+  name.Size=UDim2.fromOffset(math.min(available,measured+4),24)
+  versionBadge.Position=UDim2.fromOffset(58+math.min(available,measured+4)+10,14)
   for _,category in ipairs(w.Categories) do category.Visible=not (compact or sidebarIcons) end
   for _,t in ipairs(w.Tabs) do t.Label.Visible=not (compact or sidebarIcons) end
   for _,t in ipairs(w.Tabs) do if t.Relayout then t.Relayout(width-nav-24) end
@@ -1380,6 +1415,8 @@ function Window.new(o)
   if self.CloseDropdown then self.CloseDropdown() end
   for _,t in ipairs(self.Tabs) do
    t.Page.Visible=t==tab
+   if t.Stroke then t.Stroke.Transparency=t==tab and .45 or 1 end
+   if t.Icon then self.Theme:Bind(t.Icon,t.Icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3',t==tab and 'Primary' or 'MutedText') end
    self.Theme:Bind(t.Button,'BackgroundColor3',t==tab and 'SurfaceHover' or 'Background')
    self.Theme:Bind(t.Indicator,'BackgroundColor3',t==tab and 'Primary' or 'Background')
   end
@@ -1392,9 +1429,9 @@ function Window.new(o)
   tab.Id=opts.Id or opts.Name or opts.name or 'Tab'..tostring(#self.Tabs+1)
   for _,existing in ipairs(self.Tabs) do assert(existing.Id~=tab.Id,'Id de aba duplicado: '..tab.Id) end
   clean:Add(tab.Cleanup)
-  local b=E.button(sidebar,'') b.Size=UDim2.new(1,0,0,46) tab.Button=b
+  local b=E.button(sidebar,'') b.Size=UDim2.new(1,0,0,46) tab.Button=b tab.Stroke=b:FindFirstChildOfClass('UIStroke')
   local indicator=E.new('Frame',{Size=UDim2.new(0,3,1,-16),Position=UDim2.fromOffset(0,8),BorderSizePixel=0},b) E.corner(indicator,2) tab.Indicator=indicator
-  local icon=E.icon(b,opts.Icon or opts.icon or 'house') icon.Position=UDim2.fromOffset(9,11)
+  local icon=E.icon(b,opts.Icon or opts.icon or 'house') icon.Position=UDim2.fromOffset(9,11) tab.Icon=icon
   local label=E.text(b,opts.Name or opts.name or tab.Id,13) label.Position=UDim2.fromOffset(42,0) label.Size=UDim2.new(1,-46,1,0) w.Theme:Bind(label,'TextColor3','Text') tab.Label=label
   local page=E.scroll(content) page.Visible=false tab.Page=page
   local pageTitle=E.text(page,opts.Name or tab.Id,22) pageTitle.LayoutOrder=-1000 w.Theme:Bind(pageTitle,'TextColor3','Text')
@@ -1461,7 +1498,7 @@ function Window.new(o)
   return self:Popup({
    Title=opts.Title or 'Confirmar ação',Content=opts.Content or 'Deseja continuar?',
    Cancellable=opts.Cancellable,DismissOnOutside=opts.DismissOnOutside,
-   Options={{Name=opts.ConfirmText or 'Confirmar',Value=true,Variant=opts.Destructive and 'Destructive' or nil},{Name=opts.CancelText or 'Cancelar',Value=false,Variant='Secondary'}},
+   Options={{Name=opts.ConfirmText or 'Confirmar',Value=true,Variant=opts.Destructive and 'Destructive' or 'Primary'},{Name=opts.CancelText or 'Cancelar',Value=false,Variant='Secondary'}},
    Callback=callback and function(value) callback(value==true) end or nil,
   })
  end
@@ -1473,6 +1510,7 @@ function Window.new(o)
   if not processed and (w.DialogCount or 0)==0 and not UIS:GetFocusedTextBox() and not w.Capturing and i.KeyCode==w.ToggleKey then w:SetVisible(not w.Visible) end
  end))
  clean:Add(gui:GetPropertyChangedSignal('AbsoluteSize'):Connect(layout))
+ clean:Add(name:GetPropertyChangedSignal('TextBounds'):Connect(layout))
  clean:Add(search:GetPropertyChangedSignal('Text'):Connect(filter))
  task.defer(function() if not w.Destroyed then layout() w:SetVisible(w.ScalePercent>0) end end)
  return w
@@ -1486,78 +1524,106 @@ local E=__require("Core/Elements")
 local Dashboard={}
 function Dashboard.create(w,o)
  o=o or {}
- local tab=w:CreateTab({Name=o.Name or 'Dashboard',Id=o.Id or 'dashboard',Icon=o.Icon or 'house',Description='Visão geral'})
- local clean=tab.Cleanup
- local hero=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,174)},tab.Page)
- local welcome=E.new('Frame',{BorderSizePixel=0,Size=UDim2.new(.66,-6,1,0),BackgroundColor3=Color3.new(1,1,1)},hero) E.corner(welcome,22)
- local gradient=E.new('UIGradient',{Color=ColorSequence.new(Color3.fromRGB(226,188,104),Color3.fromRGB(124,91,239)),Rotation=24},welcome)
- local avatar=E.new('ImageLabel',{BackgroundColor3=Color3.fromRGB(240,227,204),Size=UDim2.fromOffset(66,66),Position=UDim2.fromOffset(20,24),Image=o.Avatar or '',BorderSizePixel=0},welcome) E.corner(avatar,33)
- local eyebrow=E.text(welcome,'BEM-VINDO DE VOLTA',10) eyebrow.Position=UDim2.fromOffset(102,25) eyebrow.Size=UDim2.new(1,-114,0,20)
- local username=E.text(welcome,o.Username or game:GetService('Players').LocalPlayer.DisplayName,24) username.Position=UDim2.fromOffset(102,51) username.Size=UDim2.new(1,-114,0,38) username.TextTruncate=Enum.TextTruncate.AtEnd
- local badge=E.text(welcome,o.Status or '●  Interface conectada',12) badge.Position=UDim2.fromOffset(24,125) badge.Size=UDim2.new(1,-48,0,22)
- local side=E.new('Frame',{BorderSizePixel=0,BackgroundColor3=Color3.fromRGB(49,52,116),Position=UDim2.new(.66,6,0,0),Size=UDim2.new(.34,-6,1,0)},hero) E.corner(side,22) E.pad(side,18) E.list(side,10)
- local sideTitle=E.text(side,o.SideTitle or 'Conexão UI',17) sideTitle.AutomaticSize=Enum.AutomaticSize.Y
- local sideDesc=E.text(side,o.SideDescription or 'Feita para conectar suas ideias.',12) sideDesc.Size=UDim2.new(1,0,0,0) sideDesc.AutomaticSize=Enum.AutomaticSize.Y
- local action=E.button(side,o.SideActionName or 'Conhecer a library') action.BackgroundColor3=Color3.fromRGB(94,111,250)
- clean:Add(action.Activated:Connect(function() if o.SideAction then local ok,err=pcall(o.SideAction) if not ok then warn(err) end else w:Notify({Title='Conexão UI',Content='Abas, temas e componentes configuráveis em Luau.'}) end end))
- local quick=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,54)},tab.Page)
- local quickGrid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(8,8),SortOrder=Enum.SortOrder.LayoutOrder},quick)
+ local tab=w:CreateTab({Name=o.Name or 'Dashboard',Id=o.Id or 'dashboard',Icon=o.Icon or 'house',Description=o.Description,Internal=o.Internal==true})
+ local cleanup=tab.Cleanup
+ local function card(parent,name)
+  local node=E.new('Frame',{Name=name,BorderSizePixel=0},parent) E.corner(node,20)
+  w.Theme:Bind(node,'BackgroundColor3','Surface')
+  local stroke=E.new('UIStroke',{Thickness=1,Transparency=.5},node) w.Theme:Bind(stroke,'Color','Border')
+  return node
+ end
+ local hero=E.new('Frame',{Name='WelcomeRow',BackgroundTransparency=1,Size=UDim2.new(1,0,0,176)},tab.Page)
+ local welcome=E.new('Frame',{Name='Welcome',BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,Size=UDim2.new(.66,-6,1,0)},hero) E.corner(welcome,22)
+ local gradient=E.new('UIGradient',{Color=ColorSequence.new(Color3.fromRGB(210,181,119),Color3.fromRGB(140,115,200)),Rotation=25},welcome)
+ local avatar=E.new('ImageLabel',{Name='PlayerAvatar',Size=UDim2.fromOffset(74,74),Position=UDim2.fromOffset(22,26),BackgroundColor3=Color3.fromRGB(54,51,65),BorderSizePixel=0,Image=o.Avatar or (w.Identity and w.Identity.Avatar) or ''},welcome)
+ E.corner(avatar,37).Name='AvatarMask'
+ local greeting=E.text(welcome,'BEM-VINDO DE VOLTA',10) greeting.Position=UDim2.fromOffset(115,26) greeting.Size=UDim2.new(1,-135,0,20)
+ local username=E.text(welcome,o.Username or (w.Identity and w.Identity.DisplayName) or 'Jogador',28) username.Font=Enum.Font.GothamBold username.Position=UDim2.fromOffset(115,48) username.Size=UDim2.new(1,-135,0,38) username.TextTruncate=Enum.TextTruncate.AtEnd
+ local handle=E.text(welcome,o.Handle or (w.Identity and '@'..w.Identity.Username) or '',12) handle.Position=UDim2.fromOffset(115,91) handle.Size=UDim2.new(1,-135,0,22)
+ local chip=E.new('TextLabel',{Text=o.Status or o.Executor or (w.Identity and w.Identity.Executor) or 'Conectado',TextColor3=Color3.new(1,1,1),TextSize=11,Font=Enum.Font.GothamMedium,BackgroundColor3=Color3.fromRGB(45,40,53),BackgroundTransparency=.25,BorderSizePixel=0,Position=UDim2.fromOffset(22,132),Size=UDim2.new(1,-44,0,27),TextTruncate=Enum.TextTruncate.AtEnd},welcome) E.corner(chip,9)
+ local side=E.new('Frame',{Name='LibraryCard',BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,Position=UDim2.new(.66,6,0,0),Size=UDim2.new(.34,-6,1,0)},hero) E.corner(side,22)
+ E.new('UIGradient',{Color=ColorSequence.new(Color3.fromRGB(40,49,79),Color3.fromRGB(57,59,107)),Rotation=25},side)
+ local sideTitle=E.text(side,o.SideTitle or 'Conexão UI',19) sideTitle.Font=Enum.Font.GothamBold sideTitle.Position=UDim2.fromOffset(18,20) sideTitle.Size=UDim2.new(1,-36,0,28)
+ local sideText=E.text(side,o.SideDescription or ('Versão '..(w.Version or '2.0.0')..' · Conectado'),12) sideText.Position=UDim2.fromOffset(18,55) sideText.Size=UDim2.new(1,-36,0,32)
+ local sideButton=E.button(side,o.SideActionName or 'Preferências') sideButton.Position=UDim2.new(0,18,1,-58) sideButton.Size=UDim2.new(1,-36,0,38) sideButton.BackgroundColor3=Color3.fromRGB(89,99,163)
+ cleanup:Add(sideButton.Activated:Connect(function()
+  if o.SideAction then local ok,err=pcall(o.SideAction) if not ok then warn(err) end
+  elseif w.SettingsTab then w:SelectTab(w.SettingsTab) end
+ end))
  local actions=o.Actions or {
-  {Name='Configurações',Icon='settings',Callback=function() w:SelectTab(o.SettingsTab or w.SettingsTab) end},
-  {Name='Salvar perfil',Icon='star',Callback=function() w:Notify({Title='Perfil',Content=w:SaveConfig() and 'Configuração salva.' or 'Armazenamento em arquivo indisponível neste ambiente.'}) end},
+  {Name='Configurações',Icon='settings',Callback=function() if w.SettingsTab then w:SelectTab(w.SettingsTab) end end},
+  {Name='Salvar perfil',Icon='star',Callback=function() w:Notify({Title='Perfil',Content=w:SaveConfig() and 'Suas escolhas foram salvas.' or 'Armazenamento em arquivo indisponível.',Kind=w.Storage.Available and 'Success' or 'Warning'}) end},
   {Name='Minimizar',Icon='bolt',Callback=function() w:Minimize(true) end},
  }
- for _,item in ipairs(actions) do
-  local b=E.button(quick,item.Name) w.Theme:Bind(b,'BackgroundColor3','Surface')
-  if item.Icon then local icon=E.icon(b,item.Icon) icon.Position=UDim2.fromOffset(10,15) b.Text='      '..item.Name end
-  clean:Add(b.Activated:Connect(function() local ok,err=pcall(item.Callback) if not ok then warn(err) end end))
+ local quick=E.new('Frame',{Name='QuickActions',BackgroundTransparency=1,Size=UDim2.new(1,0,0,64)},tab.Page)
+ local quickGrid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(12,12),SortOrder=Enum.SortOrder.LayoutOrder},quick)
+ for _,action in ipairs(actions) do
+  local b=E.button(quick,'') E.corner(b,16) w.Theme:Bind(b,'BackgroundColor3','Surface')
+  local square=E.new('Frame',{BackgroundTransparency=.84,BackgroundColor3=w.Theme.Values.Secondary,BorderSizePixel=0,Size=UDim2.fromOffset(34,34),Position=UDim2.fromOffset(14,15)},b) E.corner(square,10)
+  local icon=E.icon(square,action.Icon or 'star') icon.Position=UDim2.fromOffset(5,5) w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
+  local title=E.text(b,action.Name,14) title.Position=UDim2.fromOffset(60,0) title.Size=UDim2.new(1,-74,1,0) w.Theme:Bind(title,'TextColor3','Text')
+  cleanup:Add(b.Activated:Connect(function() local ok,err=pcall(action.Callback) if not ok then warn(err) end end))
  end
- local bottom=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,300)},tab.Page)
- local stats=E.new('Frame',{Size=UDim2.new(.64,-6,1,0),BorderSizePixel=0},bottom) E.corner(stats,20) E.pad(stats,14) w.Theme:Bind(stats,'BackgroundColor3','Surface')
- local statsTitle=E.text(stats,'◷  SESSÃO',12) w.Theme:Bind(statsTitle,'TextColor3','Text')
- local statsContainer=E.new('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(0,40),Size=UDim2.new(1,0,1,-40)},stats)
- local statsGrid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(10,10),CellSize=UDim2.new(.5,-5,0,64),SortOrder=Enum.SortOrder.LayoutOrder},statsContainer)
- local statLabels={} local statCount=0
- for _,item in ipairs(o.Stats or {{Id='profile',Name='PERFIL',Value='Padrão',Icon='user'},{Id='version',Name='VERSÃO',Value='1.0.0',Icon='star'},{Id='theme',Name='TEMA',Value='Conexão Dark',Icon='palette'},{Id='status',Name='STATUS',Value='Pronto',Icon='bolt'},{Id='platform',Name='PLATAFORMA',Value='Adaptável',Icon='settings'},{Id='config',Name='CONFIGURAÇÃO',Value=w.Storage.Available and 'Local' or 'Memória',Icon='info'}}) do
+ local bottom=E.new('Frame',{Name='DashboardPanels',BackgroundTransparency=1,Size=UDim2.new(1,0,0,280)},tab.Page)
+ local stats=card(bottom,'Session') stats.Size=UDim2.new(.65,-6,1,0)
+ local statsTitle=E.text(stats,'SESSÃO',12) statsTitle.Font=Enum.Font.GothamBold statsTitle.Position=UDim2.fromOffset(18,14) statsTitle.Size=UDim2.new(1,-36,0,26) w.Theme:Bind(statsTitle,'TextColor3','Text')
+ local statArea=E.new('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(16,52),Size=UDim2.new(1,-32,1,-68)},stats)
+ local statGrid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(10,10),SortOrder=Enum.SortOrder.LayoutOrder},statArea)
+ local values={} local statCount=0
+ local data=o.Stats or {
+  {Id='username',Name='USUÁRIO',Value=w.Identity and '@'..w.Identity.Username or 'Jogador',Icon='user'},
+  {Id='executor',Name='EXECUTOR',Value=w.Identity and w.Identity.Executor or 'Não identificado',Icon='bolt'},
+  {Id='profile',Name='PERFIL',Value=w.Storage.Active,Icon='star'},
+  {Id='version',Name='VERSÃO',Value=w.Version or '2.0.0',Icon='info'},
+  {Id='config',Name='ARMAZENAMENTO',Value=w.Storage.Available and 'Local' or 'Sessão',Icon='settings'},
+  {Id='status',Name='ESTADO',Value='Conectado',Icon='house'},
+ }
+ for _,item in ipairs(data) do
   statCount+=1
-  local card=E.new('Frame',{BorderSizePixel=0},statsContainer) E.corner(card,14) w.Theme:Bind(card,'BackgroundColor3','SurfaceHover')
-  local icon=E.icon(card,item.Icon or 'star') icon.Position=UDim2.fromOffset(10,20) w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
-  local label=E.text(card,item.Name,9) label.Position=UDim2.fromOffset(42,10) label.Size=UDim2.new(1,-48,0,16) w.Theme:Bind(label,'TextColor3','MutedText')
-  local value=E.text(card,tostring(item.Value),15) value.Position=UDim2.fromOffset(42,29) value.Size=UDim2.new(1,-48,0,24) w.Theme:Bind(value,'TextColor3','Text') statLabels[item.Id or item.Name]=value
+  local tile=card(statArea,'Stat') E.corner(tile,14) w.Theme:Bind(tile,'BackgroundColor3','SurfaceHover')
+  local icon=E.icon(tile,item.Icon or 'star') icon.Position=UDim2.fromOffset(12,26) w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
+  local label=E.text(tile,item.Name,9) label.Position=UDim2.fromOffset(45,13) label.Size=UDim2.new(1,-55,0,17) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','MutedText')
+  local value=E.text(tile,tostring(item.Value),14) value.Font=Enum.Font.GothamBold value.Position=UDim2.fromOffset(45,35) value.Size=UDim2.new(1,-55,0,24) value.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(value,'TextColor3','Text')
+  values[item.Id or item.Name]=value
  end
- local news=E.new('Frame',{Position=UDim2.new(.64,6,0,0),Size=UDim2.new(.36,-6,1,0),BorderSizePixel=0},bottom) E.corner(news,20) E.pad(news,16) E.list(news,12) w.Theme:Bind(news,'BackgroundColor3','Surface')
- local newsTitle=E.text(news,'✦  NOVIDADES',12) w.Theme:Bind(newsTitle,'TextColor3','Secondary')
- for _,item in ipairs(o.News or {{Title='Seu estilo, sua interface',Content='Gradientes, cores e transparência em tempo real.'},{Title='Continue de onde parou',Content='Seu perfil é restaurado automaticamente quando há armazenamento disponível.'}}) do
-  local label=E.text(news,item.Title,13) label.Size=UDim2.new(1,0,0,0) label.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(label,'TextColor3','Text')
-  local body=E.text(news,item.Content,12) body.Size=UDim2.new(1,0,0,0) body.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(body,'TextColor3','MutedText')
+ local news=card(bottom,'News') news.Position=UDim2.new(.65,6,0,0) news.Size=UDim2.new(.35,-6,1,0)
+ local newsTitle=E.text(news,'NOVIDADES',12) newsTitle.Font=Enum.Font.GothamBold newsTitle.Position=UDim2.fromOffset(18,14) newsTitle.Size=UDim2.new(1,-36,0,26) w.Theme:Bind(newsTitle,'TextColor3','Secondary')
+ local newsBody=E.scroll(news) newsBody.Position=UDim2.fromOffset(4,44) newsBody.Size=UDim2.new(1,-8,1,-52)
+ for _,entry in ipairs(o.News or {{Title='Seu estilo, sua interface',Content='Temas, cores e controles configuráveis.'},{Title='Continue de onde parou',Content='Perfis e escolhas podem ser restaurados quando o ambiente oferece arquivos.'}}) do
+  local headline=E.text(newsBody,entry.Title,13) headline.AutomaticSize=Enum.AutomaticSize.Y headline.Size=UDim2.new(1,0,0,0) w.Theme:Bind(headline,'TextColor3','Text')
+  local body=E.text(newsBody,entry.Content,12) body.AutomaticSize=Enum.AutomaticSize.Y body.Size=UDim2.new(1,0,0,0) w.Theme:Bind(body,'TextColor3','MutedText')
  end
  tab.Relayout=function(width)
-  local small=width<540
-  hero.Size=UDim2.new(1,0,0,small and 330 or 174)
-  welcome.Size=small and UDim2.new(1,0,0,174) or UDim2.new(.66,-6,1,0)
-  side.Position=small and UDim2.fromOffset(0,186) or UDim2.new(.66,6,0,0)
-  side.Size=small and UDim2.new(1,0,0,144) or UDim2.new(.34,-6,1,0)
-  local columns=small and 1 or math.max(1,#actions)
-  quickGrid.CellSize=UDim2.new(1/columns,-8*(columns-1)/columns,0,54)
-  quick.Size=UDim2.new(1,0,0,math.ceil(#actions/columns)*62-8)
-  local statColumns=width<360 and 1 or 2
-  statsGrid.CellSize=UDim2.new(1/statColumns,-10*(statColumns-1)/statColumns,0,64)
-  local statsHeight=math.max(180,math.ceil(statCount/statColumns)*74+58)
-  stats.Size=small and UDim2.new(1,0,0,statsHeight) or UDim2.new(.64,-6,1,0)
-  news.Position=small and UDim2.fromOffset(0,statsHeight+12) or UDim2.new(.64,6,0,0)
-  news.Size=small and UDim2.new(1,0,0,300) or UDim2.new(.36,-6,1,0)
-  bottom.Size=UDim2.new(1,0,0,small and statsHeight+312 or 300)
-  avatar.Visible=width>=300
-  username.Position=UDim2.fromOffset(width<300 and 20 or 102,51) username.Size=UDim2.new(1,width<300 and -32 or -114,0,38)
-  eyebrow.Position=UDim2.fromOffset(width<300 and 20 or 102,25) eyebrow.Size=UDim2.new(1,width<300 and -32 or -114,0,20)
+  local small=width<700
+  hero.Size=UDim2.new(1,0,0,small and 344 or 176)
+  welcome.Size=small and UDim2.new(1,0,0,176) or UDim2.new(.66,-6,1,0)
+  side.Position=small and UDim2.fromOffset(0,188) or UDim2.new(.66,6,0,0)
+  side.Size=small and UDim2.new(1,0,0,156) or UDim2.new(.34,-6,1,0)
+  local left=width<360 and 86 or 115
+  avatar.Size=UDim2.fromOffset(width<360 and 48 or 74,width<360 and 48 or 74)
+  greeting.Position=UDim2.fromOffset(left,26) greeting.Size=UDim2.new(1,-left-18,0,20)
+  username.Position=UDim2.fromOffset(left,48) username.Size=UDim2.new(1,-left-18,0,38) username.TextSize=width<360 and 20 or 28
+  handle.Position=UDim2.fromOffset(left,91) handle.Size=UDim2.new(1,-left-18,0,22)
+  local quickColumns=width<500 and 1 or math.max(1,#actions)
+  quickGrid.CellSize=UDim2.new(1/quickColumns,-12*(quickColumns-1)/quickColumns,0,64)
+  quick.Size=UDim2.new(1,0,0,#actions>0 and math.ceil(#actions/quickColumns)*76-12 or 0)
+  local statWidth=small and width-32 or width*.65-44
+  local columns=statWidth>=540 and 3 or statWidth>=320 and 2 or 1
+  statGrid.CellSize=UDim2.new(1/columns,-10*(columns-1)/columns,0,76)
+  local statHeight=math.max(256,math.ceil(statCount/columns)*86-10+68)
+  stats.Size=small and UDim2.new(1,0,0,statHeight) or UDim2.new(.65,-6,1,0)
+  news.Position=small and UDim2.fromOffset(0,statHeight+12) or UDim2.new(.65,6,0,0)
+  news.Size=small and UDim2.new(1,0,0,256) or UDim2.new(.35,-6,1,0)
+  bottom.Size=UDim2.new(1,0,0,small and statHeight+268 or statHeight)
  end
- function tab:SetStat(id,value) assert(statLabels[id],'Stat desconhecida: '..id) statLabels[id].Text=tostring(value) end
- function tab:SetWelcome(values)
-  username.Text=values.Username or username.Text badge.Text=values.Status or badge.Text
-  if values.Avatar then avatar.Image=values.Avatar end
-  if values.Gradient then gradient.Color=ColorSequence.new(values.Gradient[1],values.Gradient[2]) end
+ function tab:SetStat(key,value) assert(values[key],'Campo desconhecido: '..tostring(key)) values[key].Text=tostring(value) end
+ function tab:SetWelcome(options)
+  if options.Username then username.Text=options.Username end
+  if options.Status then chip.Text=options.Status end
+  if options.Avatar then avatar.Image=options.Avatar end
+  if options.Gradient then gradient.Color=ColorSequence.new(options.Gradient[1],options.Gradient[2]) end
  end
- clean:Add(function() w.Theme:Forget(hero) w.Theme:Forget(quick) w.Theme:Forget(bottom) end)
+ tab.Profile={Avatar=avatar,Name=username,Executor=chip,Fields=values}
  tab.Relayout(tab.Page.AbsoluteSize.X-24)
  return tab
 end
@@ -1566,62 +1632,16 @@ return Dashboard
 end
 
 __modules["Pages/Overview"] = function()
--- Built-in client identity page. No game features or fictional game statistics.
-local E=__require("Core/Elements")
+local Dashboard=__require("Pages/Dashboard")
 local Overview={}
 function Overview.create(w,o)
- local info=w.Identity
- local tab=w:CreateTab({Id='@conexao/home',Name=o.HomeTitle or 'Dashboard',Icon='house',Internal=true})
+ local tab=Dashboard.create(w,{Id='@conexao/home',Name=o.HomeTitle or 'Dashboard',Internal=true,Username=w.Identity.DisplayName,Handle='@'..w.Identity.Username,Executor=w.Identity.Executor,SideDescription='Versão '..(w.Version or '2.0.0')..' · Conectado'})
  w.HomeTab=tab tab.Button.LayoutOrder=-500
- local hero=E.new('Frame',{Name='Welcome',Size=UDim2.new(1,0,0,176),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0},tab.Page) E.corner(hero,18)
- local gradient=E.new('UIGradient',{Color=ColorSequence.new(Color3.fromRGB(205,169,99),Color3.fromRGB(114,87,200)),Rotation=24},hero)
- local avatar=E.new('ImageLabel',{Name='PlayerAvatar',Size=UDim2.fromOffset(72,72),Position=UDim2.fromOffset(22,24),BackgroundColor3=Color3.fromRGB(46,41,57),BorderSizePixel=0},hero)
- E.corner(avatar,36).Name='AvatarMask' info:BindImage(avatar)
- local greeting=E.text(hero,'BEM-VINDO DE VOLTA',10) greeting.Position=UDim2.fromOffset(112,26) greeting.Size=UDim2.new(1,-132,0,20)
- local name=E.text(hero,info.DisplayName,26) name.Font=Enum.Font.GothamBold name.Position=UDim2.fromOffset(112,50) name.Size=UDim2.new(1,-132,0,36) name.TextTruncate=Enum.TextTruncate.AtEnd
- local username=E.text(hero,'@'..info.Username,12) username.Position=UDim2.fromOffset(112,90) username.Size=UDim2.new(1,-132,0,22)
- local badge=E.new('TextLabel',{Text=info.Executor,Font=Enum.Font.GothamMedium,TextSize=11,TextColor3=Color3.new(1,1,1),BackgroundColor3=Color3.fromRGB(42,38,53),BackgroundTransparency=.22,BorderSizePixel=0,Position=UDim2.fromOffset(22,134),Size=UDim2.new(1,-44,0,26),TextTruncate=Enum.TextTruncate.AtEnd},hero) E.corner(badge,8)
- local account=tab:CreateGroup({Id='account',Name='JOGADOR',Icon='user',Column=1})
- local system=tab:CreateGroup({Id='system',Name='CONEXÃO UI',Icon='settings',Column=2})
- local values={}
- local function field(group,key,label,value)
-  local row=E.new('Frame',{Name=key,BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},group.Page)
-  local heading=E.text(row,label,12) heading.Size=UDim2.new(.44,-8,1,0) w.Theme:Bind(heading,'TextColor3','MutedText')
-  local text=E.text(row,tostring(value),13) text.Position=UDim2.new(.44,0,0,0) text.Size=UDim2.new(.56,0,1,0) text.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(text,'TextColor3','Text')
-  values[key]=text
- end
- field(account,'username','Usuário','@'..info.Username)
- field(account,'executor','Executor',info.Executor)
- field(account,'userid','ID',info.UserId)
- field(system,'version','Library',w.Version or '1.7.0')
- field(system,'profile','Perfil ativo',w.Storage.Active)
- field(system,'config','Armazenamento',w.Storage.Available and 'Disponível' or 'Só nesta sessão')
- field(system,'status','Estado','Conectado')
- account:CreateButton({Name='Preferências da interface',Text='Abrir',Callback=function() w:SelectTab(w.SettingsTab) end})
- system:CreateButton({Name='Salvar escolhas',Text='Salvar',Callback=function()
-  w:Notify({Title='Perfil',Content=w:SaveConfig() and 'Suas escolhas foram salvas.' or 'Este ambiente não oferece armazenamento em arquivo.',Kind=w.Storage.Available and 'Success' or 'Warning'})
- end})
+ w.Identity:BindImage(tab.Profile.Avatar)
  function tab:Refresh()
-  values.profile.Text=w.Storage.Active values.config.Text=w.Storage.Available and 'Disponível' or 'Só nesta sessão'
+  tab.Profile.Fields.profile.Text=w.Storage.Active
+  tab.Profile.Fields.config.Text=w.Storage.Available and 'Local' or 'Sessão'
  end
- function tab:SetStat(key,value) assert(values[key],'Campo desconhecido: '..tostring(key)) values[key].Text=tostring(value) end
- function tab:SetWelcome(options)
-  if options.Username then name.Text=options.Username end
-  if options.Status then badge.Text=options.Status end
-  if options.Avatar then avatar.Image=options.Avatar end
-  if options.Gradient then gradient.Color=ColorSequence.new(options.Gradient[1],options.Gradient[2]) end
- end
- local function layout(width)
-  local small=width<440
-  avatar.Size=UDim2.fromOffset(small and 48 or 72,small and 48 or 72)
-  avatar.Position=UDim2.fromOffset(18,26)
-  local left=small and 80 or 112
-  greeting.Position=UDim2.fromOffset(left,26) greeting.Size=UDim2.new(1,-left-18,0,20)
-  name.Position=UDim2.fromOffset(left,50) name.Size=UDim2.new(1,-left-18,0,36) name.TextSize=small and 18 or 26
-  username.Position=UDim2.fromOffset(22,100) username.Size=UDim2.new(1,-44,0,22)
- end
- tab.Relayout=layout layout(tab.Page.AbsoluteSize.X-24)
- tab.Profile={Avatar=avatar,Name=name,Executor=badge,Fields=values}
  return tab
 end
 return Overview
@@ -1629,20 +1649,18 @@ return Overview
 end
 
 __modules["Pages/Profiles"] = function()
--- Profile management is part of the built-in configuration page.
 local Profiles={}
-function Profiles.create(w,create)
+function Profiles.create(w,create,createConfig)
+ createConfig=createConfig or create
  local store=w.Storage
- local summary=create('Paragraph',{Name='PERFIS',Content=''})
- local selected=create('Dropdown',{Name='Configuração selecionada',Options=store:ListProfiles(),Default=store.Active,Searchable=true})
- local newName=create('Textbox',{Name='Nome do novo perfil',Placeholder='Automático se vazio',MaxLength=48})
- local deleted=create('Dropdown',{Name='Perfis excluídos',Options=store:ListProfiles(true),Searchable=true})
- local transfer=create('Textbox',{Name='Importar / exportar JSON',Placeholder='Cole o JSON aqui para importar, ou exporte um perfil para copiar.',MultiLine=true,MaxLength=262144})
+ local summary=createConfig('Label',{Name='Perfil ativo',Content=''})
+ local selected=createConfig('Dropdown',{Name='Perfil selecionado',Options=store:ListProfiles(),Default=store.Active,Searchable=true})
+ local newName,deleted,transfer
  local function refresh()
   local current=selected:GetValue()
   selected:SetOptions(store:ListProfiles()) selected:SetValue(current or store.Active,true)
-  deleted:SetOptions(store:ListProfiles(true))
-  summary:SetValue('Ativo: '..store.Active..'  ·  Salvos: '..#store:ListProfiles()..(store.SessionOnly and '\nSessão com valores padrão: carregamento automático desativado.' or ''))
+  if deleted then deleted:SetOptions(store:ListProfiles(true)) end
+  summary:SetValue(store.Active..'  ·  '..#store:ListProfiles()..' salvo(s)'..(store.SessionOnly and '\nCarregamento automático desativado.' or ''))
  end
  local function persist(commit)
   local saved
@@ -1656,29 +1674,32 @@ function Profiles.create(w,create)
    if not ok then w:Notify({Title='Perfis',Content=tostring(err)}) end
   end
  end
- create('Button',{Name='Definir como ativo',Callback=action(function()
+ createConfig('Button',{Name='Definir como ativo',Text='Ativar',Callback=action(function()
   assert(selected:GetValue(),'Selecione um perfil.') w:LoadProfile(selected:GetValue()) persist()
  end)})
- create('Button',{Name='Salvar alterações',Callback=action(function() persist(true) end)})
- create('Toggle',{Name='Carregar automaticamente',Default=store.AutoLoad,Callback=function(value) store.AutoLoad=value persist() end})
- create('Button',{Name='Criar configuração',Callback=action(function()
+ createConfig('Button',{Name='Salvar alterações',Text='Salvar',Callback=action(function() persist(true) end)})
+ createConfig('Toggle',{Name='Carregar automaticamente',Default=store.AutoLoad,Callback=function(value) store.AutoLoad=value persist() end})
+ newName=create('Textbox',{Name='Nome do novo perfil',Placeholder='Automático se vazio',MaxLength=48})
+ create('Button',{Name='Criar configuração',Text='Criar',Callback=action(function()
   local name=store:CreateProfile(newName:GetValue()) selected:SetOptions(store:ListProfiles()) selected:SetValue(name,true) newName:SetValue('',true) persist()
  end)})
- create('Button',{Name='Excluir configuração selecionada',Variant='Destructive',Callback=action(function()
+ create('Button',{Name='Excluir configuração selecionada',Text='Excluir',Variant='Destructive',Callback=action(function()
   local name=selected:GetValue()
   assert(name and name~='Default' and name~=store.Active,'Selecione um perfil diferente do padrão e do ativo.')
-  w:Confirm({Content='Mover "'..name..'" para a lixeira?',Callback=function(yes)
+  w:Confirm({Content='Mover "'..name..'" para a lixeira?',Destructive=true,Callback=function(yes)
    if yes and not w.Destroyed then action(function() store:DeleteProfile(name) selected:SetValue(store.Active,true) persist() end)() end
   end})
  end)})
- create('Button',{Name='Restaurar perfil excluído',Variant='Secondary',Callback=action(function()
+ deleted=create('Dropdown',{Name='Perfis excluídos',Options=store:ListProfiles(true),Searchable=true})
+ create('Button',{Name='Restaurar perfil excluído',Text='Restaurar',Variant='Secondary',Callback=action(function()
   local name=deleted:GetValue() assert(name,'Selecione um perfil excluído.') store:RestoreProfile(name) persist()
  end)})
- create('Button',{Name='Exportar configuração selecionada',Callback=action(function()
+ create('Button',{Name='Exportar configuração selecionada',Text='Exportar',Callback=action(function()
   transfer:SetValue(store:ExportProfile(selected:GetValue() or store.Active),true)
-  w:Notify({Title='Exportação',Content='JSON disponível no campo Importar / exportar. Selecione e copie o texto.'})
+  w:Notify({Title='Exportação',Content='JSON disponível no campo de texto. Selecione e copie.'})
  end)})
- create('Button',{Name='Importar como novo perfil',Callback=action(function()
+ transfer=create('Textbox',{Name='Importar / exportar JSON',Placeholder='Cole o JSON aqui',MaxLength=262144})
+ create('Button',{Name='Importar como novo perfil',Text='Importar',Callback=action(function()
   local name=store:ImportProfile(transfer:GetValue(),newName:GetValue())
   selected:SetOptions(store:ListProfiles()) selected:SetValue(name,true) persist()
  end)})
@@ -1699,7 +1720,7 @@ local Group=__require("Components/Group")
 local Settings={}
 local themeNames={'Conexão Dark','Violeta','Dourado','Aurora','Oceano','Rosa','Noite','Monocromático'}
 local presets={
- ['Conexão Dark']={Background=Color3.fromRGB(16,18,22),Surface=Color3.fromRGB(28,31,36),SurfaceHover=Color3.fromRGB(40,44,52),Primary=Color3.fromRGB(143,110,247)},
+ ['Conexão Dark']={Background=Color3.fromRGB(17,19,23),Surface=Color3.fromRGB(26,29,34),SurfaceHover=Color3.fromRGB(38,41,47),Primary=Color3.fromRGB(228,195,123)},
  ['Violeta']={Background=Color3.fromRGB(22,18,32),Surface=Color3.fromRGB(36,29,49),SurfaceHover=Color3.fromRGB(49,39,67),Primary=Color3.fromRGB(158,126,221)},
  ['Dourado']={Background=Color3.fromRGB(23,21,17),Surface=Color3.fromRGB(36,33,27),SurfaceHover=Color3.fromRGB(51,46,36),Primary=Color3.fromRGB(224,184,100)},
  ['Aurora']={Background=Color3.fromRGB(13,24,27),Surface=Color3.fromRGB(20,39,43),SurfaceHover=Color3.fromRGB(28,55,58),Primary=Color3.fromRGB(75,185,164)},
@@ -1717,7 +1738,7 @@ function Settings.create(w,o)
  local nav=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},tab.Page)
  local groups={} local buttons={} local groupLayouts={}
  local function select(name)
-  for key,group in pairs(groups) do group.Visible=key==name w.Theme:Bind(buttons[key],'BackgroundColor3',key==name and 'Primary' or 'Surface') end
+  for key,group in pairs(groups) do group.Visible=key==name w.Theme:Bind(buttons[key],'BackgroundColor3',key==name and 'Primary' or 'Surface') w.Theme:Bind(buttons[key],'TextColor3',key==name and 'PrimaryText' or 'Text') end
  end
  for index,name in ipairs({'Interface','Config'}) do
   local b=E.button(nav,name) b.Size=UDim2.new(.5,-4,1,0) b.Position=UDim2.new((index-1)*.5,(index-1)*8,0,0) buttons[name]=b
@@ -1771,7 +1792,7 @@ function Settings.create(w,o)
   local preview=E.new('Frame',{BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,Position=UDim2.fromOffset(10,10),Size=UDim2.new(1,-20,0,38)},card) E.corner(preview,10)
   E.new('UIGradient',{Color=ColorSequence.new(palette.Surface,palette.Primary),Rotation=25},preview)
   local bar=E.new('Frame',{BackgroundColor3=palette.Primary,BorderSizePixel=0,Position=UDim2.new(0,10,1,-18),Size=UDim2.new(.45,0,0,6)},preview) E.corner(bar,3)
-  local label=E.text(card,themeName,12) label.Position=UDim2.fromOffset(10,56) label.Size=UDim2.new(1,-20,0,22) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','Text')
+  local label=E.text(card,themeName,11) label.Position=UDim2.fromOffset(10,56) label.Size=UDim2.new(1,-20,0,22) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','Text')
   cards[themeName]={Button=card,Border=border}
   tab.Cleanup:Add(card.Activated:Connect(function() controls.theme:SetValue(themeName) end))
  end
@@ -1785,7 +1806,7 @@ function Settings.create(w,o)
  tab.ThemeCards=cards
  local function galleryLayout()
   local width=sections.Colors.Page.AbsoluteSize.X
-  local columns=width>=640 and 4 or width>=340 and 2 or 1
+  local columns=width>=440 and 4 or width>=230 and 2 or 1
   grid.CellSize=UDim2.new(1/columns,-10*(columns-1)/columns,0,90)
   gallery.Size=UDim2.new(1,0,0,math.ceil(#themeNames/columns)*100-10)
  end
@@ -1830,7 +1851,7 @@ function Settings.create(w,o)
  apply()
  defaults.accent='#'..initialTheme.Primary:ToHex() defaults.background='#'..initialTheme.Background:ToHex()
  w.SettingsControls=controls
- create('Appearance','Button',{Name='Restaurar aparência padrão',Variant='Secondary',Callback=function()
+ create('Appearance','Button',{Name='Restaurar aparência padrão',Text='Restaurar',Variant='Secondary',Callback=function()
   w:Confirm({Content='Restaurar apenas a aparência? As escolhas das suas abas serão preservadas.',Callback=function(yes)
    if not yes or w.Destroyed then return end
    w:SetTheme(initialTheme)
@@ -1838,10 +1859,9 @@ function Settings.create(w,o)
    apply()
   end})
  end})
- create('Config','Section',{Name='ARMAZENAMENTO',Content='Salvamento e restauração de escolhas já fazem parte da library.'})
- local status=create('Config','Paragraph',{Name='Estado do perfil',Content=''})
+ local status=create('Config','Paragraph',{Name='Armazenamento',Content=''})
  local function refresh()
-  status:SetValue('Perfil: '..w.ProfileName..'\n'..(w.Storage.Available and 'Armazenamento disponível.' or 'Sem API de arquivos: escolhas somente em memória.')..(w.Storage.LastError and '\nÚltimo erro: '..w.Storage.LastError or ''))
+  status:SetValue((w.Storage.Available and 'Suas escolhas podem ser salvas neste dispositivo.' or 'Este ambiente não oferece arquivos. As escolhas ficam nesta sessão.')..(w.Storage.LastError and '\nNão foi possível salvar o último perfil.' or ''))
  end
  local auto=create('Config','Toggle',{Id='@ui/autosave',Name='Salvar automaticamente',Default=w.Storage.Enabled,Callback=function(value)
   -- Persist the opt-out before disabling writes, so the next run respects it.
@@ -1849,7 +1869,6 @@ function Settings.create(w,o)
   w.Storage.Enabled=value if value then w.Storage:Flush() end refresh()
  end})
  w.Storage.Enabled=auto:GetValue()
- create('Config','Button',{Name='Atualizar estado',Variant='Secondary',Callback=refresh})
  function w:LoadProfile(name)
   self.Storage:ActivateProfile(name)
   local snapshot=table.clone(self.Storage.Values)
@@ -1874,7 +1893,7 @@ function Settings.create(w,o)
   refresh() if self.RefreshProfiles then self.RefreshProfiles() end
   if self.HomeTab then self.HomeTab:Refresh() end
  end
- w.ProfileControls=Profiles.create(w,function(kind,props) props.Persistent=false return create('Profiles',kind,props) end)
+ w.ProfileControls=Profiles.create(w,function(kind,props) props.Persistent=false return create('Profiles',kind,props) end,function(kind,props) props.Persistent=false return create('Config',kind,props) end)
  refresh() select('Interface')
  return tab
 end
@@ -1888,7 +1907,7 @@ local Dashboard=__require("Pages/Dashboard")
 local Overview=__require("Pages/Overview")
 local Settings=__require("Pages/Settings")
 local Options=__require("Core/Options")
-local Library={Version='1.7.0',Windows={}}
+local Library={Version='2.0.0',Windows={}}
 function Library:CreateWindow(options)
  options=Options.normalize(options)
  local id=options.Id or 'ConexaoUI'
@@ -1916,8 +1935,9 @@ end
 -- Exemplo separado da library. Studio: LocalScript em StarterPlayerScripts.
 local UI=__require("init")
 local window = UI:CreateWindow({
-    Id = "ConexaoDemo", Title = "CONEXÃO UI", Version = "1.7.0",
-    Subtitle = "Sua conexão. Seu estilo.", Scale = 82,
+    Id = "ConexaoDemo", Title = "CONEXÃO UI", Version = "2.0.0",
+    Subtitle = "Sua conexão. Seu estilo.",
+    Config = {Name = "conexao_demo_visual_v2"},
 })
 
 -- Início, avatar, nome e executor já são fornecidos pela library.
@@ -1926,21 +1946,21 @@ local tab = window:CreateTab({Name = "Componentes", Icon = "star", Description =
 local controls = tab:CreateGroup({Id = "controls", Name = "CONTROLES", Icon = "bolt", Column = 1})
 local choices = tab:CreateGroup({Id = "choices", Name = "ESCOLHAS", Icon = "settings", Column = 2})
 
-controls:CreateButton({Name = "Mostrar notificação", Icon = "info", Callback = function()
+controls:CreateButton({Name = "Mostrar notificação", Text = "Mostrar", Icon = "info", Callback = function()
     window:Notify({Title = "Tudo conectado", Content = "Callback executado.", Kind = "Success"})
 end})
 controls:CreateToggle({Id = "demo/notifications", Name = "Notificações", Default = true, Callback = function(value)
-    home:SetStat("status", value and "Ativo" or "Pausado")
+    print("Notificações", value)
 end})
 controls:CreateSlider({Id = "demo/volume", Name = "Volume demonstrativo", Min = 0, Max = 100, Increment = 5, Default = 50, Suffix = "%", Callback = function(value)
     print("Volume", value)
 end})
 controls:CreateTextbox({Id = "demo/nickname", Name = "Apelido", Default = "Visitante", MaxLength = 32,
     Validate = function(value) return #value > 0, "Digite um nome." end,
-    Callback = function(value) home:SetWelcome({Username = value}) end,
+    Callback = function(value) print("Apelido", value) end,
 })
 choices:CreateDropdown({Id = "demo/profile", Name = "Perfil", Options = {"Padrão", "Criativo", "Compacto"}, Default = "Padrão", Callback = function(value)
-    home:SetStat("profile", value or "Nenhum")
+    print("Modo", value)
 end})
 choices:CreateDropdown({Id = "demo/modules", Name = "Módulos visíveis", Multi = true,
     Options = {"Painel", "Estatísticas", "Novidades", "Atalhos", "Notificações", "Aparência", "Perfis", "Ajuda"}, Default = {"Painel"},
@@ -1957,21 +1977,21 @@ choices:CreateProgressBar({Name = "Progresso demonstrativo", Value = 68})
 local feedback = window:CreateTab({Name = "Avisos e popups", Icon = "info"})
 local notices = feedback:CreateGroup({Name = "NOTIFICAÇÕES", Icon = "info", Column = 1})
 local dialogs = feedback:CreateGroup({Name = "POPUPS", Icon = "star", Column = 2})
-notices:CreateButton({Name = "Notificação de sucesso", Callback = function()
+notices:CreateButton({Name = "Notificação de sucesso", Text = "Mostrar", Callback = function()
     window:Notify({Title = "Perfil salvo", Content = "Seu próximo projeto pode usar esse mesmo sistema.", Kind = "Success", Duration = 6})
 end})
-notices:CreateButton({Name = "Aviso com ação", Callback = function()
+notices:CreateButton({Name = "Aviso com ação", Text = "Mostrar", Callback = function()
     window:Notify({Title = "Personalizar interface", Content = "Abra as configurações ou deixe o aviso expirar.", Duration = 8,
         Actions = {{Name = "Abrir configurações", Callback = function() window:SelectTab(window.SettingsTab) end}},
     })
 end})
-dialogs:CreateButton({Name = "Popup com escolhas", Callback = function()
+dialogs:CreateButton({Name = "Popup com escolhas", Text = "Abrir", Callback = function()
     window:Popup({Title = "Escolha uma opção", Content = "Um popup criado pelo script de exemplo.",
         Options = {{Name = "Criativo", Value = "criativo"}, {Name = "Compacto", Value = "compacto"}, {Name = "Voltar", Value = false, Variant = "Secondary"}},
         Callback = function(value) if value then window:Notify({Content = "Escolha: " .. value}) end end,
     })
 end})
-dialogs:CreateButton({Name = "Abrir confirmação", Variant = "Destructive", Callback = function()
+dialogs:CreateButton({Name = "Abrir confirmação", Text = "Abrir", Variant = "Destructive", Callback = function()
     window:Confirm({Content = "Executar esta ação demonstrativa?", Callback = function(confirmed)
         window:Notify({Content = confirmed and "Ação confirmada." or "Cancelada."})
     end})

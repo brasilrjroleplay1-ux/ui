@@ -3,7 +3,7 @@ local Dashboard=require(script.Pages.Dashboard)
 local Overview=require(script.Pages.Overview)
 local Settings=require(script.Pages.Settings)
 local Options=require(script.Core.Options)
-local Library={Version='1.7.0',Windows={}}
+local Library={Version='2.0.0',Windows={}}
 function Library:CreateWindow(options)
  options=Options.normalize(options)
  local id=options.Id or 'ConexaoUI'

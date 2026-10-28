@@ -122,7 +122,7 @@ Principal:CreateSection({
 
 ## 5. Criar Button
 
-O botão executa `Callback` ao clicar. `Variant` pode ser omitido, `Secondary` ou `Destructive`. Use `Disabled = true` para iniciar desativado.
+O botão executa `Callback` ao clicar. `Variant` pode ser omitido, `Primary`, `Secondary` ou `Destructive`. O padrão e `Secondary` usam fundo neutro; `Primary` usa preenchimento de destaque; `Destructive` usa texto e contorno de alerta. Em grupos compactos, `Name` é o rótulo à esquerda e `Text` é o texto da ação à direita (padrão: `Executar`). Use `Disabled = true` para iniciar desativado.
 
 ```luau
 Principal:CreateButton({
