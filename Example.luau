@@ -24,7 +24,7 @@ local Window = ConexaoUI:CreateWindow({
     Id = "ConexaoExemploCompleto",
     Title = "CONEXÃO UI",
     Subtitle = "Exemplos de todos os componentes",
-    Version = "1.5.0",
+    Version = "1.6.0",
     Scale = 82,
     ToggleKey = Enum.KeyCode.RightControl,
 })
@@ -56,6 +56,10 @@ local Informacoes = Window:CreateTab({
     Icon = "info",
 })
 
+-- Grupos visuais: o script escolhe os títulos e a distribuição dos controles.
+local Controles = Principal:CreateGroup({Id = "controls", Name = "CONTROLES", Icon = "bolt", Column = 1})
+local Escolhas = Principal:CreateGroup({Id = "choices", Name = "ESCOLHAS", Icon = "settings", Column = 2})
+
 --// 4. Seção
 
 Principal:CreateSection({
@@ -65,7 +69,7 @@ Principal:CreateSection({
 
 --// 5. Button: normal, secundário e destrutivo
 
-Principal:CreateButton({
+Controles:CreateButton({
     Name = "Botão normal",
     Icon = "bolt",
     Callback = function()
@@ -73,7 +77,7 @@ Principal:CreateButton({
     end,
 })
 
-Principal:CreateButton({
+Controles:CreateButton({
     Name = "Botão secundário",
     Variant = "Secondary",
     Callback = function()
@@ -81,7 +85,7 @@ Principal:CreateButton({
     end,
 })
 
-Principal:CreateButton({
+Controles:CreateButton({
     Name = "Botão destrutivo com confirmação",
     Variant = "Destructive",
     Callback = function()
@@ -96,7 +100,7 @@ Principal:CreateButton({
 
 --// 6. Toggle
 
-local Toggle = Principal:CreateToggle({
+local Toggle = Controles:CreateToggle({
     Id = "exemplo/recurso",
     Name = "Ativar recurso",
     Default = false,
@@ -107,7 +111,7 @@ local Toggle = Principal:CreateToggle({
 
 --// 7. Slider
 
-local Slider = Principal:CreateSlider({
+local Slider = Controles:CreateSlider({
     Id = "exemplo/intensidade",
     Name = "Intensidade",
     Min = 0,
@@ -122,7 +126,7 @@ local Slider = Principal:CreateSlider({
 
 --// 8. Dropdown de seleção única
 
-local Dropdown = Principal:CreateDropdown({
+local Dropdown = Escolhas:CreateDropdown({
     Id = "exemplo/modo",
     Name = "Modo",
     Options = {"Padrão", "Criativo", "Compacto"},
@@ -136,7 +140,7 @@ local Dropdown = Principal:CreateDropdown({
 --// 9. Dropdown de seleção múltipla
 -- Abre o painel com pesquisa, grade, Padrão, Limpar e Selecionar tudo.
 
-Principal:CreateDropdown({
+Escolhas:CreateDropdown({
     Id = "exemplo/paineis",
     Name = "Painéis visíveis",
     Multi = true,

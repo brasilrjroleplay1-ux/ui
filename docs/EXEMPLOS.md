@@ -13,6 +13,7 @@ A aba **Configurações** já é criada com a janela. Você não precisa escreve
 - [Carregar a library](#carregar)
 - [Criar janela](#janela)
 - [Criar categorias e abas com ícones](#abas)
+- [Criar grupos com linhas compactas e colunas](GRUPOS.md)
 - [Criar Section](#secao)
 - [Criar Button](#button)
 - [Criar Toggle](#toggle)
@@ -31,7 +32,7 @@ A aba **Configurações** já é criada com a janela. Você não precisa escreve
 
 Os trechos de componentes usam `Window`, `Principal`, `Campos` e `Informacoes`, criados nos três primeiros passos. Para executar todos juntos, copie o arquivo `Example.luau`. O exemplo só demonstra a interface, com callbacks de console e notificações.
 
-Os nomes de propriedades diferenciam maiúsculas/minúsculas. Esta API usa `Default`, `Min`, `Max`, `Multi` e `Placeholder`; não usa `CurrentValue`, `Range` ou `CurrentOption`.
+As propriedades aceitam a inicial maiúscula ou minúscula (`Name`/`name`, `Callback`/`callback`). Esta API usa `Default`, `Min`, `Max`, `Multi` e `Placeholder`; não usa `CurrentValue`, `Range` ou `CurrentOption`.
 
 <a id="carregar"></a>
 

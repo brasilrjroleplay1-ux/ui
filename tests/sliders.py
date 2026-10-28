@@ -6,6 +6,8 @@ cli=sys.argv[1] if len(sys.argv)>1 else '/workspace/tools/luau/luau'
 factory=(root/'ConexaoUI/Components/Factory.luau').read_text()
 factory='\n'.join(x for x in factory.splitlines() if not x.startswith('local ') or '=require(' not in x)
 cleanup=(root/'ConexaoUI/Core/Cleanup.luau').read_text()
+options=(root/'ConexaoUI/Core/Options.luau').read_text()
+rowlayout='\n'.join(x for x in (root/'ConexaoUI/Components/RowLayout.luau').read_text().splitlines() if '= require(' not in x)
 host=r'''
 local Enum={AutomaticSize={Y='Y'},Font={GothamMedium='GothamMedium'}}
 local UDim2={new=function(xs,xo,ys,yo) return {X={Scale=xs,Offset=xo},Y={Scale=ys,Offset=yo}} end}
@@ -92,5 +94,5 @@ print('PASS: '..checks..' slider/progress/color assertions (GUI/input primitives
 '''
 with tempfile.TemporaryDirectory() as temp:
  p=Path(temp)/'sliders.luau'
- p.write_text(host+'\nlocal Cleanup=(function()\n'+cleanup+'\nend)()\nlocal Factory=(function()\n'+factory+'\nend)()\n'+tests)
+ p.write_text(host+'\nlocal Cleanup=(function()\n'+cleanup+'\nend)()\nlocal Options=(function()\n'+options+'\nend)()\nlocal RowLayout=(function()\n'+rowlayout+'\nend)()\nlocal Factory=(function()\n'+factory+'\nend)()\n'+tests)
  subprocess.run([cli,str(p)],check=True)

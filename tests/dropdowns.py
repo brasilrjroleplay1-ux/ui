@@ -5,7 +5,7 @@ root=Path(__file__).resolve().parents[1]
 cli=sys.argv[1] if len(sys.argv)>1 else '/workspace/tools/luau/luau'
 def source(name):
  text=(root/name).read_text()
- return '\n'.join(x for x in text.splitlines() if not x.startswith('local ') or '=require(' not in x)
+ return '\n'.join(x for x in text.splitlines() if not x.startswith('local ') or ('=require(' not in x and '= require(' not in x))
 host=r'''
 local Enum={Font={Gotham='Gotham'},AutomaticSize={Y='Y'},ScrollingDirection={Y='Y'},SortOrder={LayoutOrder='LayoutOrder'},TextTruncate={None='None'},KeyCode={Escape='Escape'}}
 local UDim2={new=function(xs,xo,ys,yo) return {X={Scale=xs,Offset=xo},Y={Scale=ys,Offset=yo}} end}
@@ -88,5 +88,5 @@ print('PASS: '..checks..' dropdown/popup assertions (GUI/input primitives mocked
 '''
 with tempfile.TemporaryDirectory() as temp:
  p=Path(temp)/'dropdowns.luau'
- p.write_text(host+'\nlocal Cleanup=(function()\n'+source('ConexaoUI/Core/Cleanup.luau')+'\nend)()\nlocal DropdownPanel=(function()\n'+source('ConexaoUI/Components/DropdownPanel.luau')+'\nend)()\nlocal Factory=(function()\n'+source('ConexaoUI/Components/Factory.luau')+'\nend)()\n'+tests)
+ p.write_text(host+'\nlocal Cleanup=(function()\n'+source('ConexaoUI/Core/Cleanup.luau')+'\nend)()\nlocal DropdownPanel=(function()\n'+source('ConexaoUI/Components/DropdownPanel.luau')+'\nend)()\nlocal Options=(function()\n'+source('ConexaoUI/Core/Options.luau')+'\nend)()\nlocal RowLayout=(function()\n'+source('ConexaoUI/Components/RowLayout.luau')+'\nend)()\nlocal Factory=(function()\n'+source('ConexaoUI/Components/Factory.luau')+'\nend)()\n'+tests)
  subprocess.run([cli,str(p)],check=True)

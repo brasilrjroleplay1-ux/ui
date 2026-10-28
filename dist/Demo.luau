@@ -135,27 +135,32 @@ local Input=__require("Core/Input")
 local Animate=__require("Core/Animation")
 local UIS=game:GetService('UserInputService')
 local DropdownPanel=__require("Components/DropdownPanel")
+local Options=__require("Core/Options")
+local RowLayout=__require("Components/RowLayout")
 local Factory={}
 function Factory.create(tab,kind,o)
- o=o or {}
+ o=Options.normalize(o)
+ assert(not tab.Dead,'Aba ou grupo destruído.')
  local w=tab.Window
+ assert(not w.Destroyed,'Janela destruída.')
+ local id=o.Id or tab.Id..'/'..(o.Name or kind)
+ local persistent=o.Persistent~=false and (kind=='Toggle' or kind=='Slider' or kind=='Dropdown' or kind=='Textbox' or kind=='Keybind' or kind=='ColorPicker')
+ if persistent then assert(not w.Ids[id], 'Id duplicado: '..id) end
  local clean=Cleanup.new()
  tab.Cleanup:Add(clean)
  local dead=false
  local row=E.new('Frame',{Name=kind,BackgroundTransparency=w.Transparency,BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},tab.Page)
- E.corner(row,w.Theme.Values.CornerRadius) E.pad(row,12) E.list(row,8)
+ E.corner(row,w.Theme.Values.CornerRadius) local padding=E.pad(row,12) local rowList=E.list(row,8)
  w.Theme:Bind(row,'BackgroundColor3','Surface')
  local title=E.text(row,o.Name or kind,14) title.Size=UDim2.new(1,0,0,0) title.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(title,'TextColor3','Text')
- local c={Instance=row,Disabled=o.Disabled==true,Kind=kind}
- local id=o.Id or tab.Id..'/'..(o.Name or kind)
- local persistent=o.Persistent~=false and (kind=='Toggle' or kind=='Slider' or kind=='Dropdown' or kind=='Textbox' or kind=='Keybind' or kind=='ColorPicker')
+ local c={Instance=row,Disabled=o.Disabled==true,Kind=kind,Name=o.Name or kind,Group=tab.IsGroup and tab or nil}
  c.Persistent=persistent c.Id=id
  c.Default=o.Default
  if c.Default==nil then
   if kind=='Slider' then c.Default=o.Min or 0 elseif kind=='Toggle' then c.Default=false elseif kind=='Textbox' then c.Default='' elseif kind=='Keybind' then c.Default=o.Key or 'RightControl' elseif kind=='ColorPicker' then c.Default='#9070F7' end
  end
- if persistent then assert(not w.Ids[id], 'Id duplicado: '..id) w.Ids[id]=true end
- clean:Add(function() dead=true local index=table.find(tab.Controls,c) if index then table.remove(tab.Controls,index) end if persistent then w.Ids[id]=nil end w.Theme:Forget(row) row:Destroy() end)
+ if persistent then w.Ids[id]=true end
+ clean:Add(function() dead=true local index=table.find(tab.Controls,c) if index then table.remove(tab.Controls,index) end if tab.Members then local at=table.find(tab.Members,c) if at then table.remove(tab.Members,at) end end if persistent then w.Ids[id]=nil end w.Theme:Forget(row) row:Destroy() end)
  local function callback(value)
   if dead then return end
   if o.Callback then
@@ -173,18 +178,20 @@ function Factory.create(tab,kind,o)
   c.Value=value save(value) if not silent then callback(value) end
  end
  function c:GetValue() if type(self.Value)=='table' then return table.clone(self.Value) end return self.Value end
- function c:SetDisabled(value) self.Disabled=value==true if self.Disabled and self.Popup then self.Popup:Close() end row.BackgroundTransparency=self.Disabled and .55 or w.Transparency end
+ function c:SetDisabled(value) self.Disabled=value==true if self.Disabled and self.Popup then self.Popup:Close() end row.BackgroundTransparency=self.RowTransparent and 1 or (self.Disabled and .55 or w.Transparency) end
  function c:Destroy() if dead then return end dead=true clean:Destroy() end
  function c:Update(props)
-  if props.Name then title.Text=props.Name end
+  props=Options.normalize(props)
+  if props.Name then self.Name=props.Name title.Text=props.Name end
   if props.Disabled~=nil then self:SetDisabled(props.Disabled) end
   if props.Value~=nil then self:SetValue(props.Value,props.Silent) end
-  if kind=='Button' and props.Name then self:SetValue(props.Name) end
+  if kind=='Button' and props.Name and not self.RowTransparent then self:SetValue(props.Name) end
+  if w.ApplySearch then w:ApplySearch() end
  end
  local initial=if persistent then w.Storage.Values[id] else nil
  if initial==nil then initial=o.Default end
  local function button(text)
-  local b=E.button(row,text) w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
+  local b=E.button(row,text) if not c.Widget then c.Widget=b end w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
   clean:Add(b.MouseEnter:Connect(function() if not c.Disabled then Animate(b,{BackgroundTransparency=.18}) end end))
   clean:Add(b.MouseLeave:Connect(function() Animate(b,{BackgroundTransparency=0}) end))
   clean:Add(b.MouseButton1Down:Connect(function() if not c.Disabled then Animate(b,{BackgroundTransparency=.4},.08) end end))
@@ -206,7 +213,7 @@ function Factory.create(tab,kind,o)
    value=value==true
    w.Theme:Bind(indicator,'BackgroundColor3',value and 'Primary' or 'Border')
    Animate(knob,{Position=UDim2.fromOffset(value and 17 or 3,3)})
-   b.Text=value and 'Ativado' or 'Desativado' commit(value,silent)
+   b.Text=(o.Compact==true or (o.Compact==nil and tab.Compact)) and '' or (value and 'Ativado' or 'Desativado') commit(value,silent)
   end
   clean:Add(b.Activated:Connect(function() if not c.Disabled then c:SetValue(not c.Value) end end))
   c:SetValue(initial==true,true)
@@ -214,7 +221,7 @@ function Factory.create(tab,kind,o)
   local minimum,maximum=o.Min or 0,o.Max or 100
   local step=o.Increment or o.Step or 1
   assert(maximum>minimum and step>0,'Intervalo ou incremento inválido')
-  local line=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},row)
+  local line=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},row) c.Widget=line
   local valueLabel=E.new(kind=='Slider' and 'TextBox' or 'TextLabel',{Text='',Font=Enum.Font.GothamMedium,TextSize=13,BorderSizePixel=0,Size=UDim2.new(0,76,1,0),Position=UDim2.new(1,-76,0,0)},line)
   E.corner(valueLabel,10) w.Theme:Bind(valueLabel,'TextColor3','Text') w.Theme:Bind(valueLabel,'BackgroundColor3','SurfaceHover')
   local track=E.new('Frame',{Active=true,Size=UDim2.new(1,-94,1,0),BackgroundTransparency=1},line)
@@ -274,8 +281,9 @@ function Factory.create(tab,kind,o)
   c:SetValue(initial,true)
  elseif kind=='Textbox' then
   local box=E.new('TextBox',{Text='',PlaceholderText=o.Placeholder or 'Digite aqui…',ClearTextOnFocus=false,MultiLine=o.MultiLine==true,Size=UDim2.new(1,0,0,o.MultiLine and 140 or 44),Font=Enum.Font.Gotham,TextSize=14,BorderSizePixel=0},row)
+  c.Widget=box
   E.corner(box) w.Theme:Bind(box,'BackgroundColor3','Background') w.Theme:Bind(box,'TextColor3','Text')
-  local errorText=E.text(row,'',12) errorText.Visible=false w.Theme:Bind(errorText,'TextColor3','Error')
+  local errorText=E.text(row,'',12) c.ErrorLabel=errorText errorText.Visible=false w.Theme:Bind(errorText,'TextColor3','Error')
   function c:SetValue(value,silent)
    value=tostring(value or '')
    local n=o.MaxLength or 256
@@ -307,7 +315,7 @@ function Factory.create(tab,kind,o)
   clean:Add(function() if w.Capturing==c then w.Capturing=nil end end)
   c:SetValue(initial or o.Key or 'RightControl',true)
  elseif kind=='ColorPicker' then
-  local preview=button('') local panel=E.new('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),Visible=false},row) E.list(panel,8)
+  local preview=button('') local panel=E.new('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),Visible=false},row) c.Expansion=panel E.list(panel,8)
   local fields={}
   local function parse(v)
    if typeof(v)=='Color3' then return v end
@@ -341,12 +349,80 @@ function Factory.create(tab,kind,o)
   if kind=='Badge' then w.Theme:Bind(row,'BackgroundColor3',o.Color or 'Primary') end
   function c:SetValue(value) self.Value=value body.Text=tostring(value) end
  end
+ RowLayout.apply(c,tab,kind,o,row,title,rowList,padding,clean)
  c:SetDisabled(c.Disabled)
  if persistent and o.FireOnInit~=false and o.Callback and kind~='Keybind' then callback(kind=='ColorPicker' and c.Color or c:GetValue()) end
  table.insert(tab.Controls,c)
+ if tab.Members then table.insert(tab.Members,c) end
+ if w.ApplySearch then w:ApplySearch() end
  return c
 end
 return Factory
+
+end
+
+__modules["Components/Group"] = function()
+local E = __require("Core/Elements")
+local Cleanup = __require("Core/Cleanup")
+local Options = __require("Core/Options")
+local Factory = __require("Components/Factory")
+local Group = {}
+function Group.new(tab,options,parent)
+ local o=Options.normalize(options)
+ local w=tab.Window
+ local id=o.Id or o.Name or 'Group'..tostring(#tab.Groups+1)
+ for _,existing in ipairs(tab.Groups) do assert(existing.Id~=tab.Id..'/'..id,'Id de grupo duplicado: '..id) end
+ local group={Window=w,Id=tab.Id..'/'..id,Name=o.Name or 'Grupo',Cleanup=Cleanup.new(),Members={},Controls=tab.Controls,Compact=o.Compact~=false,IsGroup=true,Collapsed=o.Collapsed==true,Dead=false}
+ tab.Cleanup:Add(group.Cleanup)
+ local root=E.new('Frame',{Name=group.Name,BackgroundTransparency=w.Transparency,BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},parent or tab.Page)
+ E.corner(root,18) E.pad(root,14) E.list(root,4) w.Theme:Bind(root,'BackgroundColor3','Surface')
+ local border=E.new('UIStroke',{Thickness=1,Transparency=.3},root) w.Theme:Bind(border,'Color','Border')
+ group.Instance=root
+ local header=E.button(root,'') header.Size=UDim2.new(1,0,0,38) header.BackgroundTransparency=1
+ local icon=E.icon(header,o.Icon or 'star') icon.Position=UDim2.fromOffset(0,7)
+ w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
+ local label=E.text(header,group.Name,12) label.Position=UDim2.fromOffset(32,0) label.Size=UDim2.new(1,-60,1,0) w.Theme:Bind(label,'TextColor3','Text')
+ local arrow=E.text(header,'⌄',18) arrow.Position=UDim2.new(1,-22,0,0) arrow.Size=UDim2.new(0,22,1,0) w.Theme:Bind(arrow,'TextColor3','MutedText')
+ local body=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},root) E.list(body,0)
+ group.Page=body
+ if o.Description then
+  local description=E.text(body,o.Description,12) description.AutomaticSize=Enum.AutomaticSize.Y description.Size=UDim2.new(1,0,0,0) w.Theme:Bind(description,'TextColor3','MutedText')
+ end
+ function group:SetCollapsed(value)
+  if self.Dead then return end self.Collapsed=value==true
+  body.Visible=not self.Collapsed arrow.Text=self.Collapsed and '›' or '⌄'
+  if self.Collapsed then for _,control in ipairs(self.Members) do if control.Popup then control:Close() end end end
+ end
+ function group:SetValue(value) self.Name=tostring(value) label.Text=self.Name end
+ function group:Update(values)
+  if values.Name then self:SetValue(values.Name) end
+  if values.Collapsed~=nil then self:SetCollapsed(values.Collapsed) end
+ end
+ function group:Filter(query)
+  local titleMatch=self.Name:lower():find(query,1,true)~=nil
+  local any=false
+  for _,control in ipairs(self.Members) do
+   local match=query=='' or titleMatch or control.Name:lower():find(query,1,true)~=nil
+   control.Instance.Visible=match if match then any=true end
+  end
+  root.Visible=query=='' or titleMatch or any
+  body.Visible=not self.Collapsed or query~=''
+  arrow.Text=body.Visible and '⌄' or '›'
+ end
+ function group:Destroy()
+  if self.Dead then return end self.Dead=true self.Cleanup:Destroy()
+  local index=table.find(tab.Groups,self) if index then table.remove(tab.Groups,index) end
+ end
+ for _,kind in ipairs({'Button','Toggle','Slider','Dropdown','Textbox','Keybind','ColorPicker','Paragraph','Label','Divider','Section','Badge','ProgressBar'}) do
+  group['Create'..kind]=function(_,props) assert(not group.Dead,'Grupo destruído.') return Factory.create(group,kind,props) end
+ end
+ group.Cleanup:Add(function() w.Theme:Forget(root) root:Destroy() end)
+ group.Cleanup:Add(header.Activated:Connect(function() group:SetCollapsed(not group.Collapsed) end))
+ group:SetCollapsed(group.Collapsed)
+ table.insert(tab.Groups,group)
+ return group
+end
+return Group
 
 end
 
@@ -359,6 +435,57 @@ end
 __modules["Components/Others"] = function()
 local Factory=__require("Components/Factory")
 return function(tab, kind, options) return Factory.create(tab, kind, options) end
+
+end
+
+__modules["Components/RowLayout"] = function()
+-- Compact rows inside grouped cards. Small screens stack labels above touch controls.
+local E = __require("Core/Elements")
+local RowLayout = {}
+function RowLayout.apply(c,tab,kind,o,row,title,list,padding,cleanup)
+ local compact=o.Compact
+ if compact==nil then compact=tab.Compact end
+ if not compact or not c.Widget or o.MultiLine then return end
+ local w=tab.Window
+ list:Destroy()
+ for _,property in ipairs({'PaddingTop','PaddingBottom','PaddingLeft','PaddingRight'}) do padding[property]=UDim.new() end
+ c.RowTransparent=true row.BackgroundTransparency=1 row.AutomaticSize=Enum.AutomaticSize.None
+ title.AutomaticSize=Enum.AutomaticSize.None title.TextYAlignment=Enum.TextYAlignment.Center
+ local separator=E.new('Frame',{Name='Separator',Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BorderSizePixel=0,BackgroundTransparency=.6},row)
+ w.Theme:Bind(separator,'BackgroundColor3','Border')
+ if kind=='Button' then title.Visible=true c.Widget.Text=o.Text or 'Executar' end
+ local function layout()
+  if not row.Parent then return end
+  local width=row.AbsoluteSize.X
+  local stacked=width<360
+  local base=stacked and 86 or 54
+  title.Size=stacked and UDim2.new(1,0,0,28) or UDim2.new(.42,-12,0,54)
+  title.Position=UDim2.fromOffset(0,0)
+  c.Widget.Position=stacked and UDim2.fromOffset(0,32) or UDim2.new(.42,0,0,5)
+  c.Widget.Size=stacked and UDim2.new(1,0,0,44) or UDim2.new(.58,0,0,44)
+  if kind=='Toggle' and not stacked then
+   c.Widget.Position=UDim2.new(1,-64,0,5) c.Widget.Size=UDim2.fromOffset(64,44)
+   title.Size=UDim2.new(1,-80,0,54)
+  end
+  if c.Expansion then
+   c.Expansion.Position=UDim2.fromOffset(0,base+4)
+   if c.Expansion.Visible then base+=c.Expansion.AbsoluteSize.Y+12 end
+  end
+  if c.ErrorLabel then
+   c.ErrorLabel.Position=UDim2.fromOffset(0,base)
+   if c.ErrorLabel.Visible then base+=28 end
+  end
+  row.Size=UDim2.new(1,0,0,base)
+ end
+ cleanup:Add(row:GetPropertyChangedSignal('AbsoluteSize'):Connect(layout))
+ if c.Expansion then
+  cleanup:Add(c.Expansion:GetPropertyChangedSignal('Visible'):Connect(layout))
+  cleanup:Add(c.Expansion:GetPropertyChangedSignal('AbsoluteSize'):Connect(layout))
+ end
+ if c.ErrorLabel then cleanup:Add(c.ErrorLabel:GetPropertyChangedSignal('Visible'):Connect(layout)) end
+ c.Relayout=layout layout()
+end
+return RowLayout
 
 end
 
@@ -791,6 +918,26 @@ return Notifications
 
 end
 
+__modules["Core/Options"] = function()
+-- Public properties accept Name/name, Callback/callback, etc.; explicit capitalized keys win.
+local Options = {}
+function Options.normalize(value)
+ if value==nil then return {} end
+ if type(value)=='string' then return {Name=value} end
+ assert(type(value)=='table','As opções devem ser uma tabela ou um nome.')
+ local result=table.clone(value)
+ for key,item in pairs(value) do
+  if type(key)=='string' then
+   local canonical=key:sub(1,1):upper()..key:sub(2)
+   if result[canonical]==nil then result[canonical]=item end
+  end
+ end
+ return result
+end
+return Options
+
+end
+
 __modules["Core/Storage"] = function()
 local Http = game:GetService('HttpService')
 local Storage = {}
@@ -961,13 +1108,15 @@ local Notifications=__require("Core/Notifications")
 local Dialogs=__require("Core/Dialogs")
 local UIS=game:GetService('UserInputService')
 local Players=game:GetService('Players')
+local Options=__require("Core/Options")
+local Group=__require("Components/Group")
 local Window={}
 function Window.new(o)
- o=o or {}
+ o=Options.normalize(o)
  local player=Players.LocalPlayer
  assert(player,'Conexão UI deve executar no cliente')
  local clean=Cleanup.new()
- local w={Cleanup=clean,Theme=Theme.new(o.Theme),Tabs={},Ids={},Transparency=math.clamp(o.Transparency or .08,0,1),Destroyed=false,Capturing=nil}
+ local w={Cleanup=clean,Theme=Theme.new(o.Theme),Tabs={},Categories={},Ids={},Transparency=math.clamp(o.Transparency or .08,0,1),Destroyed=false,Capturing=nil}
  local parent=o.Parent or player:WaitForChild('PlayerGui')
  local guiName=o.Id or 'ConexaoUI'
  local previous=parent:FindFirstChild(guiName)
@@ -975,7 +1124,7 @@ function Window.new(o)
  local gui=E.new('ScreenGui',{Name=guiName,ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=o.DisplayOrder or 20,IgnoreGuiInset=false},parent)
  w.Gui=gui
  local config=table.clone(o.Config or {})
- if config.Name==nil then config.Name=(o.Id or o.Title or o.name or guiName):gsub('[^%w_-]','_')..'-'..tostring(game.PlaceId) end
+ if config.Name==nil then config.Name=(o.Id or o.Title or o.Name or guiName):gsub('[^%w_-]','_')..'-'..tostring(game.PlaceId) end
  w.ProfileName=config.Name
  w.Storage=Storage.new(config)
  w.ToggleKey=o.ToggleKey or Enum.KeyCode.RightControl
@@ -989,14 +1138,18 @@ function Window.new(o)
  local scale=E.new('UIScale',{Scale=1},root)
  local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
  local logo=E.text(header,'ϟ',30) logo.Position=UDim2.fromOffset(18,18) logo.Size=UDim2.fromOffset(30,30) w.Theme:Bind(logo,'TextColor3','Primary')
- local name=E.text(header,o.Title or o.name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
- local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.5.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
+ local name=E.text(header,o.Title or o.Name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
+ local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.6.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
  local search=E.new('TextBox',{Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
  local minimize=E.button(header,'−') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
  local close=E.button(header,'×') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
  local sidebar=E.scroll(root) sidebar.Position=UDim2.fromOffset(0,64) sidebar.Size=UDim2.new(0,176,1,-64)
  local content=E.new('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(176,64),Size=UDim2.new(1,-176,1,-64),ClipsDescendants=true},root)
  local restore=E.button(gui,'ϟ  Conexão') restore.Size=UDim2.fromOffset(132,44) restore.Position=UDim2.new(0,12,1,-56) restore.Visible=false restore.ZIndex=3 w.Theme:Bind(restore,'BackgroundColor3','Primary')
+ local profile=E.new('Frame',{Name='Profile',BackgroundTransparency=1,Size=UDim2.fromOffset(64,56),Position=UDim2.new(0,0,1,-56)},root)
+ local avatar=E.icon(profile,o.Avatar or 'user') avatar.Position=UDim2.fromOffset(16,12) avatar.Size=UDim2.fromOffset(32,32) E.corner(avatar,16)
+ w.Theme:Bind(avatar,avatar:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Text')
+ local profileName=E.text(profile,player.DisplayName or player.Name or 'Perfil',12) profileName.Position=UDim2.fromOffset(56,16) profileName.Size=UDim2.new(1,-64,0,24) profileName.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileName,'TextColor3','MutedText')
  local tooltip=E.text(gui,'',12) tooltip.BackgroundTransparency=.08 tooltip.Size=UDim2.fromOffset(180,32) tooltip.Visible=false tooltip.ZIndex=100 tooltip.TextXAlignment=Enum.TextXAlignment.Center E.corner(tooltip) w.Theme:Bind(tooltip,'BackgroundColor3','Surface') w.Theme:Bind(tooltip,'TextColor3','Text')
  w.ScalePercent=math.clamp(tonumber(w.Storage.Values['@scale']) or o.Scale or 78,0,100)
  w.Minimized=false w.Visible=true
@@ -1009,6 +1162,7 @@ function Window.new(o)
  end
  w.Clamp=clamp
  local compact=false
+ local sidebarIcons=o.SidebarLayout~='expanded'
  local function layout()
   if w.Destroyed then return end
   local viewport=gui.AbsoluteSize
@@ -1020,12 +1174,16 @@ function Window.new(o)
   local width=math.min(viewport.X,math.max(math.min(viewport.X,compact and 290 or 520),viewport.X*fraction))
   local height=math.min(viewport.Y,math.max(math.min(viewport.Y,280),viewport.Y*fraction))
   root.Size=UDim2.fromOffset(width,w.Minimized and 64 or height)
-  local nav=compact and 60 or 176
-  sidebar.Size=UDim2.new(0,nav,1,-64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
+  local nav=(compact or sidebarIcons) and 64 or 176
+  local showProfile=o.ShowProfile~=false and not w.Minimized
+  profile.Visible=showProfile profile.Size=UDim2.fromOffset(nav,56) profileName.Visible=not (compact or sidebarIcons)
+  sidebar.Size=UDim2.new(0,nav,1,showProfile and -120 or -64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
   search.Visible=width>=660 subtitle.Visible=width>=420
   name.TextSize=compact and 14 or 18 name.Size=UDim2.new(1,-154,0,24)
-  for _,t in ipairs(w.Tabs) do t.Label.Visible=not compact end
-  for _,t in ipairs(w.Tabs) do if t.Relayout then t.Relayout(width-nav-24) end end
+  for _,category in ipairs(w.Categories) do category.Visible=not (compact or sidebarIcons) end
+  for _,t in ipairs(w.Tabs) do t.Label.Visible=not (compact or sidebarIcons) end
+  for _,t in ipairs(w.Tabs) do if t.Relayout then t.Relayout(width-nav-24) end
+   if t.LayoutGroups then t.LayoutGroups(width-nav-24) end end
   clamp()
  end
  function w:SetScale(percent)
@@ -1034,11 +1192,12 @@ function Window.new(o)
   if self.ScalePercent==0 then self:SetVisible(false) else self:SetVisible(true) end layout()
  end
  function w:SetVisible(visible)
-  if not visible and self.CloseDropdown then self.CloseDropdown() end
+  if not visible then tooltip.Visible=false if self.CloseDropdown then self.CloseDropdown() end end
   self.Visible=visible==true root.Visible=self.Visible restore.Visible=not self.Visible dim.Visible=self.Visible
   if self.Visible then root.GroupTransparency=1 Animate(root,{GroupTransparency=0},.18) end
  end
  function w:Minimize(value)
+  tooltip.Visible=false
   if self.CloseDropdown then self.CloseDropdown() end
   self.Minimized=if value==nil then not self.Minimized else value
   sidebar.Visible=not self.Minimized content.Visible=not self.Minimized layout()
@@ -1050,7 +1209,10 @@ function Window.new(o)
  function w:SetTransparency(value)
   self.Transparency=math.clamp(tonumber(value) or 0,0,1) root.BackgroundTransparency=self.Transparency
   if self.SettingsControls then local c=self.SettingsControls.transparency local v=math.floor(self.Transparency*100+.5) if c.Value~=v then c:SetValue(v,true) end end
-  for _,t in ipairs(self.Tabs) do for _,c in ipairs(t.Controls) do if not c.Disabled then c.Instance.BackgroundTransparency=self.Transparency end end end
+  for _,t in ipairs(self.Tabs) do
+   for _,c in ipairs(t.Controls) do if not c.Disabled then c.Instance.BackgroundTransparency=c.RowTransparent and 1 or self.Transparency end end
+   for _,group in ipairs(t.Groups or {}) do group.Instance.BackgroundTransparency=self.Transparency end
+  end
  end
  function w:SetDim(value)
   self.Dim=math.clamp(tonumber(value) or 0,0,1) dim.BackgroundTransparency=1-self.Dim
@@ -1066,10 +1228,13 @@ function Window.new(o)
  local function filter()
   local q=search.Text:lower()
   for _,t in ipairs(w.Tabs) do for _,c in ipairs(t.Controls) do
-   local label=c.Instance:FindFirstChildOfClass('TextLabel')
-   c.Instance.Visible=q=='' or (label and label.Text:lower():find(q,1,true)~=nil)
-  end end
+   if not c.Group then c.Instance.Visible=q=='' or c.Name:lower():find(q,1,true)~=nil end
+  end
+   for _,group in ipairs(t.Groups or {}) do group:Filter(q) end
+  end
  end
+ function w:ApplySearch() filter() end
+ function w:SetSidebarLayout(value) sidebarIcons=value~='expanded' layout() end
  function w:SelectTab(tab)
   if self.CloseDropdown then self.CloseDropdown() end
   for _,t in ipairs(self.Tabs) do
@@ -1080,8 +1245,9 @@ function Window.new(o)
   self.ActiveTab=tab
   tab.Page.Position=UDim2.fromOffset(0,8) Animate(tab.Page,{Position=UDim2.fromOffset(0,0)})
  end
- function w:CreateTab(opts)
-  opts=opts or {} local tab={Window=self,Cleanup=Cleanup.new(),Controls={},Internal=opts.Internal==true}
+ function w:CreateTab(opts,iconId)
+  assert(not self.Destroyed,'Janela destruída.')
+  opts=Options.normalize(opts) if iconId~=nil then opts.Icon=iconId end local tab={Window=self,Cleanup=Cleanup.new(),Controls={},Groups={},Internal=opts.Internal==true}
   tab.Id=opts.Id or opts.Name or opts.name or 'Tab'..tostring(#self.Tabs+1)
   for _,existing in ipairs(self.Tabs) do assert(existing.Id~=tab.Id,'Id de aba duplicado: '..tab.Id) end
   clean:Add(tab.Cleanup)
@@ -1090,6 +1256,8 @@ function Window.new(o)
   local icon=E.icon(b,opts.Icon or opts.icon or 'house') icon.Position=UDim2.fromOffset(9,11)
   local label=E.text(b,opts.Name or opts.name or tab.Id,13) label.Position=UDim2.fromOffset(42,0) label.Size=UDim2.new(1,-46,1,0) w.Theme:Bind(label,'TextColor3','Text') tab.Label=label
   local page=E.scroll(content) page.Visible=false tab.Page=page
+  local pageTitle=E.text(page,opts.Name or tab.Id,22) pageTitle.LayoutOrder=-1000 w.Theme:Bind(pageTitle,'TextColor3','Text')
+  if opts.Description then local description=E.text(page,opts.Description,12) description.LayoutOrder=-999 description.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(description,'TextColor3','MutedText') end
   tab.Cleanup:Add(function() self.Theme:Forget(b) self.Theme:Forget(page) b:Destroy() page:Destroy() end)
   tab.Cleanup:Add(b.Activated:Connect(function() self:SelectTab(tab) end))
   tab.Cleanup:Add(b.MouseEnter:Connect(function()
@@ -1100,6 +1268,34 @@ function Window.new(o)
   for _,kind in ipairs({'Button','Toggle','Slider','Dropdown','Textbox','Keybind','ColorPicker','Paragraph','Label','Divider','Section','Badge','ProgressBar'}) do
    tab['Create'..kind]=function(_,options) return Factory.create(tab,kind,options) end
   end
+  function tab:CreateGroup(settings)
+   assert(not self.Dead and not w.Destroyed,'Aba destruída.')
+   settings=Options.normalize(settings)
+   local parent=self.Page
+   if settings.Column~=nil then
+    assert(settings.Column==1 or settings.Column==2,'Column deve ser 1 ou 2.')
+    if not self.ColumnFrame then
+     self.ColumnFrame=E.new('Frame',{Name='GroupColumns',BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},self.Page)
+     local columnLayout=E.list(self.ColumnFrame,12)
+     self.Columns={}
+     for index=1,2 do
+      local column=E.new('Frame',{BackgroundTransparency=1,LayoutOrder=index,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},self.ColumnFrame)
+      E.list(column,12) self.Columns[index]=column
+     end
+     self.LayoutGroups=function(width)
+      local wide=width>=700
+      columnLayout.FillDirection=wide and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
+      for _,column in ipairs(self.Columns) do column.Size=wide and UDim2.new(.5,-6,0,0) or UDim2.new(1,0,0,0) end
+     end
+     self.Cleanup:Add(self.Page:GetPropertyChangedSignal('AbsoluteSize'):Connect(function() self.LayoutGroups(self.Page.AbsoluteSize.X-24) end))
+    end
+    parent=self.Columns[settings.Column]
+    self.LayoutGroups(self.Page.AbsoluteSize.X-24)
+   end
+   local group=Group.new(self,settings,parent)
+   w:ApplySearch()
+   return group
+  end
   function tab:Destroy()
    if self.Dead then return end self.Dead=true self.Cleanup:Destroy()
    local index=table.find(w.Tabs,self) if index then table.remove(w.Tabs,index) end
@@ -1109,7 +1305,8 @@ function Window.new(o)
  end
  function w:CreateCategory(nameText)
   local label=E.text(sidebar,nameText,10) self.Theme:Bind(label,'TextColor3','MutedText')
-  return {SetValue=function(_,value) label.Text=tostring(value) end,Destroy=function() self.Theme:Forget(label) label:Destroy() end}
+  table.insert(self.Categories,label) layout()
+  return {SetValue=function(_,value) label.Text=tostring(value) end,Destroy=function() local at=table.find(self.Categories,label) if at then table.remove(self.Categories,at) end self.Theme:Forget(label) label:Destroy() end}
  end
  w.Notifications=Notifications.new(w,o.Notifications)
  w.Dialogs=Dialogs.new(w)
@@ -1294,6 +1491,7 @@ __modules["Pages/Settings"] = function()
 local E=__require("Core/Elements")
 local Factory=__require("Components/Factory")
 local Profiles=__require("Pages/Profiles")
+local Group=__require("Components/Group")
 local Settings={}
 local themeNames={'Conexão Dark','Violeta','Dourado','Aurora','Oceano','Rosa','Noite','Monocromático'}
 local presets={
@@ -1325,17 +1523,22 @@ function Settings.create(w,o)
  end
  local configLeft=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) E.list(configLeft,10)
  local configRight=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) E.list(configRight,10)
+ local sections={
+  Appearance=Group.new(tab,{Id='appearance',Name='INTERFACE',Icon='settings'},groups.Interface),
+  Colors=Group.new(tab,{Id='colors',Name='TEMAS E CORES',Icon='palette'},groups.Interface),
+  Config=Group.new(tab,{Id='storage',Name='CONFIGURAÇÃO',Icon='settings'},configLeft),
+  Profiles=Group.new(tab,{Id='profiles',Name='PERFIS',Icon='user'},configRight),
+ }
  local function create(group,kind,options)
   options.FireOnInit=false
-  return Factory.create({Window=w,Id=tab.Id,Page=group=='Config' and configLeft or group=='Profiles' and configRight or groups[group],Cleanup=tab.Cleanup,Controls=tab.Controls},kind,options)
+  return Factory.create(sections[group] or sections.Appearance,kind,options)
  end
  local controls={} local defaults={}
  local refreshGallery=function() end
  local function add(kind,key,name,default,props,apply)
   props=props or {} props.Id='@ui/'..key props.Name=name props.Default=default props.Callback=apply
-  local c=create('Interface',kind,props) controls[key]=c defaults[key]=default return c
+  local c=create((key=='scale' or key=='transparency' or key=='dim' or key=='key') and 'Appearance' or 'Colors',kind,props) controls[key]=c defaults[key]=default return c
  end
- create('Interface','Section',{Name='APARÊNCIA',Content='Suas preferências são aplicadas automaticamente nas próximas execuções.'})
  local function syncColors()
   for key,themeKey in pairs({accent='Primary',background='Background'}) do
    local color=w.Theme.Values[themeKey]
@@ -1350,7 +1553,7 @@ function Settings.create(w,o)
  if w.Storage.Values['@ui/accent']==nil and type(o.Theme)=='table' then preset=nil end
  if preset then w:SetTheme(preset) end
  -- Real buttons with live selection; previews are assembled from GUI objects.
- local gallery=E.new('Frame',{Name='ThemeGallery',BackgroundTransparency=1,Size=UDim2.new(1,0,0,224)},groups.Interface)
+ local gallery=E.new('Frame',{Name='ThemeGallery',BackgroundTransparency=1,Size=UDim2.new(1,0,0,224)},sections.Colors.Page)
  local grid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(10,10),CellSize=UDim2.new(.25,-8,0,106),SortOrder=Enum.SortOrder.LayoutOrder},gallery)
  local cards={}
  for index,themeName in ipairs(themeNames) do
@@ -1409,7 +1612,7 @@ function Settings.create(w,o)
  apply()
  defaults.accent='#'..initialTheme.Primary:ToHex() defaults.background='#'..initialTheme.Background:ToHex()
  w.SettingsControls=controls
- create('Interface','Button',{Name='Restaurar aparência padrão',Variant='Secondary',Callback=function()
+ create('Appearance','Button',{Name='Restaurar aparência padrão',Variant='Secondary',Callback=function()
   w:Confirm({Content='Restaurar apenas a aparência? As escolhas das suas abas serão preservadas.',Callback=function(yes)
    if not yes or w.Destroyed then return end
    w:SetTheme(initialTheme)
@@ -1464,13 +1667,19 @@ __modules["init"] = function()
 local Window=__require("Core/Window")
 local Dashboard=__require("Pages/Dashboard")
 local Settings=__require("Pages/Settings")
-local Library={Version='1.5.0',Windows={}}
+local Options=__require("Core/Options")
+local Library={Version='1.6.0',Windows={}}
 function Library:CreateWindow(options)
- options=options or {}
+ options=Options.normalize(options)
  local id=options.Id or 'ConexaoUI'
  if self.Windows[id] then self.Windows[id]:Destroy() end
  local window=Window.new(options)
  self.Windows[id]=window
+ local library=self local destroy=window.Destroy
+ function window:Destroy()
+  destroy(self)
+  if library.Windows[id]==self then library.Windows[id]=nil end
+ end
  function window:CreateDashboard(settings) return Dashboard.create(self,settings) end
  Settings.create(window,options)
  return window
@@ -1482,43 +1691,67 @@ return Library
 
 end
 
--- Studio: coloque ConexaoUI em ReplicatedStorage e este LocalScript em StarterPlayerScripts.
+-- Exemplo separado da library. Studio: LocalScript em StarterPlayerScripts.
 local UI=__require("init")
-local window=UI:CreateWindow({
- Title='CONEXÃO UI',Subtitle='Criada para o seu próximo projeto',Version='1.5.0',
- Id='ConexaoDemo',Scale=82,ToggleKey=Enum.KeyCode.RightControl,
+local window = UI:CreateWindow({
+    Id = "ConexaoDemo", Title = "CONEXÃO UI", Version = "1.6.0",
+    Subtitle = "Sua conexão. Seu estilo.", Scale = 82,
 })
-window:CreateCategory('WORKSPACE')
-local home=window:CreateDashboard({Username=game:GetService('Players').LocalPlayer.DisplayName})
-local tab=window:CreateTab({Name='Componentes',Icon='star',Description='Exemplos interativos'})
-tab:CreateSection({Name='CONTROLES',Content='Uma API reutilizável. Os dados abaixo são demonstrativos.'})
-tab:CreateButton({Name='Mostrar notificação',Icon='info',Callback=function() window:Notify({Title='Tudo conectado',Content='Callback executado.'}) end})
-tab:CreateToggle({Id='demo/notifications',Name='Notificações',Default=true,Callback=function(value) home:SetStat('status',value and 'Ativo' or 'Pausado') end})
-tab:CreateSlider({Id='demo/volume',Name='Volume demonstrativo',Min=0,Max=100,Increment=5,Default=50,Callback=function(value) print('Volume',value) end})
-tab:CreateDropdown({Id='demo/profile',Name='Perfil',Options={'Padrão','Criativo','Compacto'},Default='Padrão',Searchable=true,Callback=function(value) home:SetStat('profile',value or 'Nenhum') end})
-tab:CreateDropdown({Id='demo/modules',Name='Módulos visíveis',Options={'Painel','Estatísticas','Novidades','Atalhos','Notificações','Aparência','Perfis','Ajuda'},Multi=true,Default={'Painel'},Callback=function(values) print(table.concat(values,', ')) end})
-tab:CreateTextbox({Id='demo/nickname',Name='Apelido',Placeholder='Como quer ser chamado?',Default='Visitante',MaxLength=32,Validate=function(value) return #value>0,'Digite um nome.' end,Callback=function(value) home:SetWelcome({Username=value}) end})
-tab:CreateKeybind({Id='demo/key',Name='Atalho de notificação',Default='F6',Callback=function() window:Notify({Content='Você pressionou o atalho.'}) end})
-tab:CreateColorPicker({Id='demo/color',Name='Cor de destaque',Default='#9070F7',Callback=function(color) window:SetTheme({Primary=color}) end})
-tab:CreateProgressBar({Name='Progresso demonstrativo',Value=68})
-tab:CreateBadge({Name='API v1.0',Content='Pronta para integrar'})
-tab:CreateParagraph({Name='Sobre os perfis',Content='Toggles, sliders, seleções, texto, teclas e cores são restaurados quando o armazenamento está disponível.'})
-tab:CreateDivider({})
-tab:CreateButton({Name='Abrir confirmação',Variant='Destructive',Callback=function() window:Confirm({Content='Executar esta ação demonstrativa?',Callback=function(confirmed) window:Notify({Content=confirmed and 'Ação confirmada.' or 'Cancelada.'}) end}) end})
-local feedback=window:CreateTab({Name='Avisos e popups',Icon='info'})
-feedback:CreateButton({Name='Notificação de sucesso',Callback=function()
- window:Notify({Title='Perfil salvo',Content='Seu próximo projeto pode usar esse mesmo sistema.',Kind='Success',Duration=6})
+
+-- O dashboard só aparece porque este exemplo o cria.
+local home = window:CreateDashboard({Username = game:GetService("Players").LocalPlayer.DisplayName})
+local tab = window:CreateTab({Name = "Componentes", Icon = "star", Description = "Controles criados pelo script de demonstração"})
+local controls = tab:CreateGroup({Id = "controls", Name = "CONTROLES", Icon = "bolt", Column = 1})
+local choices = tab:CreateGroup({Id = "choices", Name = "ESCOLHAS", Icon = "settings", Column = 2})
+
+controls:CreateButton({Name = "Mostrar notificação", Icon = "info", Callback = function()
+    window:Notify({Title = "Tudo conectado", Content = "Callback executado.", Kind = "Success"})
 end})
-feedback:CreateButton({Name='Aviso com ação',Callback=function()
- window:Notify({Title='Personalizar interface',Content='Abra as configurações ou deixe o aviso expirar.',Kind='Info',Duration=8,
-  Actions={{Name='Abrir configurações',Callback=function() window:SelectTab(window.SettingsTab) end}}})
+controls:CreateToggle({Id = "demo/notifications", Name = "Notificações", Default = true, Callback = function(value)
+    home:SetStat("status", value and "Ativo" or "Pausado")
 end})
-feedback:CreateButton({Name='Toast de aviso',Callback=function()
- window:Toast({Title='Atenção',Content='Toast usa o mesmo sistema de fila e temporizador.',Kind='Warning'})
+controls:CreateSlider({Id = "demo/volume", Name = "Volume demonstrativo", Min = 0, Max = 100, Increment = 5, Default = 50, Suffix = "%", Callback = function(value)
+    print("Volume", value)
 end})
-feedback:CreateButton({Name='Popup com três escolhas',Callback=function()
- window:Popup({Title='Escolha um perfil visual',Content='Exemplo de popup da Conexão UI.',Options={
-  {Name='Criativo',Value='criativo'}, {Name='Compacto',Value='compacto'}, {Name='Voltar',Value='cancel',Variant='Secondary'}},
-  Callback=function(value) if value then window:Notify({Content='Escolha: '..value}) end end})
+controls:CreateTextbox({Id = "demo/nickname", Name = "Apelido", Default = "Visitante", MaxLength = 32,
+    Validate = function(value) return #value > 0, "Digite um nome." end,
+    Callback = function(value) home:SetWelcome({Username = value}) end,
+})
+choices:CreateDropdown({Id = "demo/profile", Name = "Perfil", Options = {"Padrão", "Criativo", "Compacto"}, Default = "Padrão", Callback = function(value)
+    home:SetStat("profile", value or "Nenhum")
+end})
+choices:CreateDropdown({Id = "demo/modules", Name = "Módulos visíveis", Multi = true,
+    Options = {"Painel", "Estatísticas", "Novidades", "Atalhos", "Notificações", "Aparência", "Perfis", "Ajuda"}, Default = {"Painel"},
+    Callback = function(values) print(table.concat(values, ", ")) end,
+})
+choices:CreateKeybind({Id = "demo/key", Name = "Atalho de notificação", Default = "F6", Callback = function()
+    window:Notify({Content = "Você pressionou o atalho."})
+end})
+choices:CreateColorPicker({Id = "demo/color", Name = "Cor demonstrativa", Default = "#9070F7", Callback = function(color)
+    print("Cor escolhida", color:ToHex())
+end})
+choices:CreateProgressBar({Name = "Progresso demonstrativo", Value = 68})
+
+local feedback = window:CreateTab({Name = "Avisos e popups", Icon = "info"})
+local notices = feedback:CreateGroup({Name = "NOTIFICAÇÕES", Icon = "info", Column = 1})
+local dialogs = feedback:CreateGroup({Name = "POPUPS", Icon = "star", Column = 2})
+notices:CreateButton({Name = "Notificação de sucesso", Callback = function()
+    window:Notify({Title = "Perfil salvo", Content = "Seu próximo projeto pode usar esse mesmo sistema.", Kind = "Success", Duration = 6})
+end})
+notices:CreateButton({Name = "Aviso com ação", Callback = function()
+    window:Notify({Title = "Personalizar interface", Content = "Abra as configurações ou deixe o aviso expirar.", Duration = 8,
+        Actions = {{Name = "Abrir configurações", Callback = function() window:SelectTab(window.SettingsTab) end}},
+    })
+end})
+dialogs:CreateButton({Name = "Popup com escolhas", Callback = function()
+    window:Popup({Title = "Escolha uma opção", Content = "Um popup criado pelo script de exemplo.",
+        Options = {{Name = "Criativo", Value = "criativo"}, {Name = "Compacto", Value = "compacto"}, {Name = "Voltar", Value = false, Variant = "Secondary"}},
+        Callback = function(value) if value then window:Notify({Content = "Escolha: " .. value}) end end,
+    })
+end})
+dialogs:CreateButton({Name = "Abrir confirmação", Variant = "Destructive", Callback = function()
+    window:Confirm({Content = "Executar esta ação demonstrativa?", Callback = function(confirmed)
+        window:Notify({Content = confirmed and "Ação confirmada." or "Cancelada."})
+    end})
 end})
 window:SelectTab(home)

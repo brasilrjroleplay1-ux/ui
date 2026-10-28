@@ -4,27 +4,32 @@ local Input=require(script.Parent.Parent.Core.Input)
 local Animate=require(script.Parent.Parent.Core.Animation)
 local UIS=game:GetService('UserInputService')
 local DropdownPanel=require(script.Parent.DropdownPanel)
+local Options=require(script.Parent.Parent.Core.Options)
+local RowLayout=require(script.Parent.RowLayout)
 local Factory={}
 function Factory.create(tab,kind,o)
- o=o or {}
+ o=Options.normalize(o)
+ assert(not tab.Dead,'Aba ou grupo destruído.')
  local w=tab.Window
+ assert(not w.Destroyed,'Janela destruída.')
+ local id=o.Id or tab.Id..'/'..(o.Name or kind)
+ local persistent=o.Persistent~=false and (kind=='Toggle' or kind=='Slider' or kind=='Dropdown' or kind=='Textbox' or kind=='Keybind' or kind=='ColorPicker')
+ if persistent then assert(not w.Ids[id], 'Id duplicado: '..id) end
  local clean=Cleanup.new()
  tab.Cleanup:Add(clean)
  local dead=false
  local row=E.new('Frame',{Name=kind,BackgroundTransparency=w.Transparency,BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},tab.Page)
- E.corner(row,w.Theme.Values.CornerRadius) E.pad(row,12) E.list(row,8)
+ E.corner(row,w.Theme.Values.CornerRadius) local padding=E.pad(row,12) local rowList=E.list(row,8)
  w.Theme:Bind(row,'BackgroundColor3','Surface')
  local title=E.text(row,o.Name or kind,14) title.Size=UDim2.new(1,0,0,0) title.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(title,'TextColor3','Text')
- local c={Instance=row,Disabled=o.Disabled==true,Kind=kind}
- local id=o.Id or tab.Id..'/'..(o.Name or kind)
- local persistent=o.Persistent~=false and (kind=='Toggle' or kind=='Slider' or kind=='Dropdown' or kind=='Textbox' or kind=='Keybind' or kind=='ColorPicker')
+ local c={Instance=row,Disabled=o.Disabled==true,Kind=kind,Name=o.Name or kind,Group=tab.IsGroup and tab or nil}
  c.Persistent=persistent c.Id=id
  c.Default=o.Default
  if c.Default==nil then
   if kind=='Slider' then c.Default=o.Min or 0 elseif kind=='Toggle' then c.Default=false elseif kind=='Textbox' then c.Default='' elseif kind=='Keybind' then c.Default=o.Key or 'RightControl' elseif kind=='ColorPicker' then c.Default='#9070F7' end
  end
- if persistent then assert(not w.Ids[id], 'Id duplicado: '..id) w.Ids[id]=true end
- clean:Add(function() dead=true local index=table.find(tab.Controls,c) if index then table.remove(tab.Controls,index) end if persistent then w.Ids[id]=nil end w.Theme:Forget(row) row:Destroy() end)
+ if persistent then w.Ids[id]=true end
+ clean:Add(function() dead=true local index=table.find(tab.Controls,c) if index then table.remove(tab.Controls,index) end if tab.Members then local at=table.find(tab.Members,c) if at then table.remove(tab.Members,at) end end if persistent then w.Ids[id]=nil end w.Theme:Forget(row) row:Destroy() end)
  local function callback(value)
   if dead then return end
   if o.Callback then
@@ -42,18 +47,20 @@ function Factory.create(tab,kind,o)
   c.Value=value save(value) if not silent then callback(value) end
  end
  function c:GetValue() if type(self.Value)=='table' then return table.clone(self.Value) end return self.Value end
- function c:SetDisabled(value) self.Disabled=value==true if self.Disabled and self.Popup then self.Popup:Close() end row.BackgroundTransparency=self.Disabled and .55 or w.Transparency end
+ function c:SetDisabled(value) self.Disabled=value==true if self.Disabled and self.Popup then self.Popup:Close() end row.BackgroundTransparency=self.RowTransparent and 1 or (self.Disabled and .55 or w.Transparency) end
  function c:Destroy() if dead then return end dead=true clean:Destroy() end
  function c:Update(props)
-  if props.Name then title.Text=props.Name end
+  props=Options.normalize(props)
+  if props.Name then self.Name=props.Name title.Text=props.Name end
   if props.Disabled~=nil then self:SetDisabled(props.Disabled) end
   if props.Value~=nil then self:SetValue(props.Value,props.Silent) end
-  if kind=='Button' and props.Name then self:SetValue(props.Name) end
+  if kind=='Button' and props.Name and not self.RowTransparent then self:SetValue(props.Name) end
+  if w.ApplySearch then w:ApplySearch() end
  end
  local initial=if persistent then w.Storage.Values[id] else nil
  if initial==nil then initial=o.Default end
  local function button(text)
-  local b=E.button(row,text) w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
+  local b=E.button(row,text) if not c.Widget then c.Widget=b end w.Theme:Bind(b,'BackgroundColor3','SurfaceHover') w.Theme:Bind(b,'TextColor3','Text')
   clean:Add(b.MouseEnter:Connect(function() if not c.Disabled then Animate(b,{BackgroundTransparency=.18}) end end))
   clean:Add(b.MouseLeave:Connect(function() Animate(b,{BackgroundTransparency=0}) end))
   clean:Add(b.MouseButton1Down:Connect(function() if not c.Disabled then Animate(b,{BackgroundTransparency=.4},.08) end end))
@@ -75,7 +82,7 @@ function Factory.create(tab,kind,o)
    value=value==true
    w.Theme:Bind(indicator,'BackgroundColor3',value and 'Primary' or 'Border')
    Animate(knob,{Position=UDim2.fromOffset(value and 17 or 3,3)})
-   b.Text=value and 'Ativado' or 'Desativado' commit(value,silent)
+   b.Text=(o.Compact==true or (o.Compact==nil and tab.Compact)) and '' or (value and 'Ativado' or 'Desativado') commit(value,silent)
   end
   clean:Add(b.Activated:Connect(function() if not c.Disabled then c:SetValue(not c.Value) end end))
   c:SetValue(initial==true,true)
@@ -83,7 +90,7 @@ function Factory.create(tab,kind,o)
   local minimum,maximum=o.Min or 0,o.Max or 100
   local step=o.Increment or o.Step or 1
   assert(maximum>minimum and step>0,'Intervalo ou incremento inválido')
-  local line=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},row)
+  local line=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},row) c.Widget=line
   local valueLabel=E.new(kind=='Slider' and 'TextBox' or 'TextLabel',{Text='',Font=Enum.Font.GothamMedium,TextSize=13,BorderSizePixel=0,Size=UDim2.new(0,76,1,0),Position=UDim2.new(1,-76,0,0)},line)
   E.corner(valueLabel,10) w.Theme:Bind(valueLabel,'TextColor3','Text') w.Theme:Bind(valueLabel,'BackgroundColor3','SurfaceHover')
   local track=E.new('Frame',{Active=true,Size=UDim2.new(1,-94,1,0),BackgroundTransparency=1},line)
@@ -143,8 +150,9 @@ function Factory.create(tab,kind,o)
   c:SetValue(initial,true)
  elseif kind=='Textbox' then
   local box=E.new('TextBox',{Text='',PlaceholderText=o.Placeholder or 'Digite aqui…',ClearTextOnFocus=false,MultiLine=o.MultiLine==true,Size=UDim2.new(1,0,0,o.MultiLine and 140 or 44),Font=Enum.Font.Gotham,TextSize=14,BorderSizePixel=0},row)
+  c.Widget=box
   E.corner(box) w.Theme:Bind(box,'BackgroundColor3','Background') w.Theme:Bind(box,'TextColor3','Text')
-  local errorText=E.text(row,'',12) errorText.Visible=false w.Theme:Bind(errorText,'TextColor3','Error')
+  local errorText=E.text(row,'',12) c.ErrorLabel=errorText errorText.Visible=false w.Theme:Bind(errorText,'TextColor3','Error')
   function c:SetValue(value,silent)
    value=tostring(value or '')
    local n=o.MaxLength or 256
@@ -176,7 +184,7 @@ function Factory.create(tab,kind,o)
   clean:Add(function() if w.Capturing==c then w.Capturing=nil end end)
   c:SetValue(initial or o.Key or 'RightControl',true)
  elseif kind=='ColorPicker' then
-  local preview=button('') local panel=E.new('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),Visible=false},row) E.list(panel,8)
+  local preview=button('') local panel=E.new('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),Visible=false},row) c.Expansion=panel E.list(panel,8)
   local fields={}
   local function parse(v)
    if typeof(v)=='Color3' then return v end
@@ -210,9 +218,12 @@ function Factory.create(tab,kind,o)
   if kind=='Badge' then w.Theme:Bind(row,'BackgroundColor3',o.Color or 'Primary') end
   function c:SetValue(value) self.Value=value body.Text=tostring(value) end
  end
+ RowLayout.apply(c,tab,kind,o,row,title,rowList,padding,clean)
  c:SetDisabled(c.Disabled)
  if persistent and o.FireOnInit~=false and o.Callback and kind~='Keybind' then callback(kind=='ColorPicker' and c.Color or c:GetValue()) end
  table.insert(tab.Controls,c)
+ if tab.Members then table.insert(tab.Members,c) end
+ if w.ApplySearch then w:ApplySearch() end
  return c
 end
 return Factory

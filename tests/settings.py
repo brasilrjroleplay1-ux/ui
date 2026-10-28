@@ -4,7 +4,7 @@ import subprocess,sys,tempfile
 root=Path(__file__).resolve().parents[1]
 cli=sys.argv[1] if len(sys.argv)>1 else '/workspace/tools/luau/luau'
 source=(root/'ConexaoUI/Pages/Settings.luau').read_text()
-source='\n'.join(line for line in source.splitlines() if not line.startswith('local E=require') and not line.startswith('local Factory=require') and not line.startswith('local Profiles=require'))
+source='\n'.join(line for line in source.splitlines() if not line.startswith('local E=require') and not line.startswith('local Factory=require') and not line.startswith('local Profiles=require') and not line.startswith('local Group=require'))
 host=r'''
 local Color3={}
 local mt={__index={ToHex=function(self) return string.format('%02X%02X%02X',self.r,self.g,self.b) end}}
@@ -21,6 +21,7 @@ function E.button(_,text) return E.new('TextButton',{Text=text}) end
 function E.list() return {} end
 function E.corner() end
 local Profiles={create=function() return {} end}
+local Group={new=function(tab,opts,parent) return {Page={},Window=tab.Window,Cleanup=tab.Cleanup,Controls=tab.Controls,Id=opts.Id,Members={}} end}
 local Factory={}
 function Factory.create(tab,kind,o)
  local c={Kind=kind,Options=o,Id=o.Id,Default=o.Default,Persistent=o.Persistent~=false and o.Id~=nil}
@@ -42,7 +43,7 @@ local function window(values)
  local w={Tabs={},Theme={Values={Primary=Color3.fromRGB(143,110,247),Background=Color3.fromRGB(16,18,22)}},Storage={Values=values or {},Available=true,Enabled=true,Flushes=0},ProfileName='test',ScalePercent=78,Transparency=.08}
  function w.Theme:Bind() end
  function w.Storage:Flush() self.Flushes+=1 return self.Enabled end
- function w:CreateTab(opts) self.Tab={Page={AbsoluteSize={X=800}},Button={},Id=opts.Id,Controls={},Internal=opts.Internal,Cleanup={Add=function() end}} table.insert(self.Tabs,self.Tab) return self.Tab end
+ function w:CreateTab(opts) self.Tab={Window=self,Page={AbsoluteSize={X=800}},Button={},Id=opts.Id,Controls={},Internal=opts.Internal,Cleanup={Add=function() end}} table.insert(self.Tabs,self.Tab) return self.Tab end
  function w:SetDim(value) self.Dim=value end
  function w:SetScale(value) self.ScalePercent=value end
  function w:SetTransparency(value) self.Transparency=value end

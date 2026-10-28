@@ -9,13 +9,15 @@ local Notifications=require(script.Parent.Notifications)
 local Dialogs=require(script.Parent.Dialogs)
 local UIS=game:GetService('UserInputService')
 local Players=game:GetService('Players')
+local Options=require(script.Parent.Options)
+local Group=require(script.Parent.Parent.Components.Group)
 local Window={}
 function Window.new(o)
- o=o or {}
+ o=Options.normalize(o)
  local player=Players.LocalPlayer
  assert(player,'Conexão UI deve executar no cliente')
  local clean=Cleanup.new()
- local w={Cleanup=clean,Theme=Theme.new(o.Theme),Tabs={},Ids={},Transparency=math.clamp(o.Transparency or .08,0,1),Destroyed=false,Capturing=nil}
+ local w={Cleanup=clean,Theme=Theme.new(o.Theme),Tabs={},Categories={},Ids={},Transparency=math.clamp(o.Transparency or .08,0,1),Destroyed=false,Capturing=nil}
  local parent=o.Parent or player:WaitForChild('PlayerGui')
  local guiName=o.Id or 'ConexaoUI'
  local previous=parent:FindFirstChild(guiName)
@@ -23,7 +25,7 @@ function Window.new(o)
  local gui=E.new('ScreenGui',{Name=guiName,ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=o.DisplayOrder or 20,IgnoreGuiInset=false},parent)
  w.Gui=gui
  local config=table.clone(o.Config or {})
- if config.Name==nil then config.Name=(o.Id or o.Title or o.name or guiName):gsub('[^%w_-]','_')..'-'..tostring(game.PlaceId) end
+ if config.Name==nil then config.Name=(o.Id or o.Title or o.Name or guiName):gsub('[^%w_-]','_')..'-'..tostring(game.PlaceId) end
  w.ProfileName=config.Name
  w.Storage=Storage.new(config)
  w.ToggleKey=o.ToggleKey or Enum.KeyCode.RightControl
@@ -37,14 +39,18 @@ function Window.new(o)
  local scale=E.new('UIScale',{Scale=1},root)
  local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
  local logo=E.text(header,'ϟ',30) logo.Position=UDim2.fromOffset(18,18) logo.Size=UDim2.fromOffset(30,30) w.Theme:Bind(logo,'TextColor3','Primary')
- local name=E.text(header,o.Title or o.name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
- local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.5.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
+ local name=E.text(header,o.Title or o.Name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
+ local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.6.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
  local search=E.new('TextBox',{Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
  local minimize=E.button(header,'−') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
  local close=E.button(header,'×') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
  local sidebar=E.scroll(root) sidebar.Position=UDim2.fromOffset(0,64) sidebar.Size=UDim2.new(0,176,1,-64)
  local content=E.new('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(176,64),Size=UDim2.new(1,-176,1,-64),ClipsDescendants=true},root)
  local restore=E.button(gui,'ϟ  Conexão') restore.Size=UDim2.fromOffset(132,44) restore.Position=UDim2.new(0,12,1,-56) restore.Visible=false restore.ZIndex=3 w.Theme:Bind(restore,'BackgroundColor3','Primary')
+ local profile=E.new('Frame',{Name='Profile',BackgroundTransparency=1,Size=UDim2.fromOffset(64,56),Position=UDim2.new(0,0,1,-56)},root)
+ local avatar=E.icon(profile,o.Avatar or 'user') avatar.Position=UDim2.fromOffset(16,12) avatar.Size=UDim2.fromOffset(32,32) E.corner(avatar,16)
+ w.Theme:Bind(avatar,avatar:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Text')
+ local profileName=E.text(profile,player.DisplayName or player.Name or 'Perfil',12) profileName.Position=UDim2.fromOffset(56,16) profileName.Size=UDim2.new(1,-64,0,24) profileName.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileName,'TextColor3','MutedText')
  local tooltip=E.text(gui,'',12) tooltip.BackgroundTransparency=.08 tooltip.Size=UDim2.fromOffset(180,32) tooltip.Visible=false tooltip.ZIndex=100 tooltip.TextXAlignment=Enum.TextXAlignment.Center E.corner(tooltip) w.Theme:Bind(tooltip,'BackgroundColor3','Surface') w.Theme:Bind(tooltip,'TextColor3','Text')
  w.ScalePercent=math.clamp(tonumber(w.Storage.Values['@scale']) or o.Scale or 78,0,100)
  w.Minimized=false w.Visible=true
@@ -57,6 +63,7 @@ function Window.new(o)
  end
  w.Clamp=clamp
  local compact=false
+ local sidebarIcons=o.SidebarLayout~='expanded'
  local function layout()
   if w.Destroyed then return end
   local viewport=gui.AbsoluteSize
@@ -68,12 +75,16 @@ function Window.new(o)
   local width=math.min(viewport.X,math.max(math.min(viewport.X,compact and 290 or 520),viewport.X*fraction))
   local height=math.min(viewport.Y,math.max(math.min(viewport.Y,280),viewport.Y*fraction))
   root.Size=UDim2.fromOffset(width,w.Minimized and 64 or height)
-  local nav=compact and 60 or 176
-  sidebar.Size=UDim2.new(0,nav,1,-64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
+  local nav=(compact or sidebarIcons) and 64 or 176
+  local showProfile=o.ShowProfile~=false and not w.Minimized
+  profile.Visible=showProfile profile.Size=UDim2.fromOffset(nav,56) profileName.Visible=not (compact or sidebarIcons)
+  sidebar.Size=UDim2.new(0,nav,1,showProfile and -120 or -64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
   search.Visible=width>=660 subtitle.Visible=width>=420
   name.TextSize=compact and 14 or 18 name.Size=UDim2.new(1,-154,0,24)
-  for _,t in ipairs(w.Tabs) do t.Label.Visible=not compact end
-  for _,t in ipairs(w.Tabs) do if t.Relayout then t.Relayout(width-nav-24) end end
+  for _,category in ipairs(w.Categories) do category.Visible=not (compact or sidebarIcons) end
+  for _,t in ipairs(w.Tabs) do t.Label.Visible=not (compact or sidebarIcons) end
+  for _,t in ipairs(w.Tabs) do if t.Relayout then t.Relayout(width-nav-24) end
+   if t.LayoutGroups then t.LayoutGroups(width-nav-24) end end
   clamp()
  end
  function w:SetScale(percent)
@@ -82,11 +93,12 @@ function Window.new(o)
   if self.ScalePercent==0 then self:SetVisible(false) else self:SetVisible(true) end layout()
  end
  function w:SetVisible(visible)
-  if not visible and self.CloseDropdown then self.CloseDropdown() end
+  if not visible then tooltip.Visible=false if self.CloseDropdown then self.CloseDropdown() end end
   self.Visible=visible==true root.Visible=self.Visible restore.Visible=not self.Visible dim.Visible=self.Visible
   if self.Visible then root.GroupTransparency=1 Animate(root,{GroupTransparency=0},.18) end
  end
  function w:Minimize(value)
+  tooltip.Visible=false
   if self.CloseDropdown then self.CloseDropdown() end
   self.Minimized=if value==nil then not self.Minimized else value
   sidebar.Visible=not self.Minimized content.Visible=not self.Minimized layout()
@@ -98,7 +110,10 @@ function Window.new(o)
  function w:SetTransparency(value)
   self.Transparency=math.clamp(tonumber(value) or 0,0,1) root.BackgroundTransparency=self.Transparency
   if self.SettingsControls then local c=self.SettingsControls.transparency local v=math.floor(self.Transparency*100+.5) if c.Value~=v then c:SetValue(v,true) end end
-  for _,t in ipairs(self.Tabs) do for _,c in ipairs(t.Controls) do if not c.Disabled then c.Instance.BackgroundTransparency=self.Transparency end end end
+  for _,t in ipairs(self.Tabs) do
+   for _,c in ipairs(t.Controls) do if not c.Disabled then c.Instance.BackgroundTransparency=c.RowTransparent and 1 or self.Transparency end end
+   for _,group in ipairs(t.Groups or {}) do group.Instance.BackgroundTransparency=self.Transparency end
+  end
  end
  function w:SetDim(value)
   self.Dim=math.clamp(tonumber(value) or 0,0,1) dim.BackgroundTransparency=1-self.Dim
@@ -114,10 +129,13 @@ function Window.new(o)
  local function filter()
   local q=search.Text:lower()
   for _,t in ipairs(w.Tabs) do for _,c in ipairs(t.Controls) do
-   local label=c.Instance:FindFirstChildOfClass('TextLabel')
-   c.Instance.Visible=q=='' or (label and label.Text:lower():find(q,1,true)~=nil)
-  end end
+   if not c.Group then c.Instance.Visible=q=='' or c.Name:lower():find(q,1,true)~=nil end
+  end
+   for _,group in ipairs(t.Groups or {}) do group:Filter(q) end
+  end
  end
+ function w:ApplySearch() filter() end
+ function w:SetSidebarLayout(value) sidebarIcons=value~='expanded' layout() end
  function w:SelectTab(tab)
   if self.CloseDropdown then self.CloseDropdown() end
   for _,t in ipairs(self.Tabs) do
@@ -128,8 +146,9 @@ function Window.new(o)
   self.ActiveTab=tab
   tab.Page.Position=UDim2.fromOffset(0,8) Animate(tab.Page,{Position=UDim2.fromOffset(0,0)})
  end
- function w:CreateTab(opts)
-  opts=opts or {} local tab={Window=self,Cleanup=Cleanup.new(),Controls={},Internal=opts.Internal==true}
+ function w:CreateTab(opts,iconId)
+  assert(not self.Destroyed,'Janela destruída.')
+  opts=Options.normalize(opts) if iconId~=nil then opts.Icon=iconId end local tab={Window=self,Cleanup=Cleanup.new(),Controls={},Groups={},Internal=opts.Internal==true}
   tab.Id=opts.Id or opts.Name or opts.name or 'Tab'..tostring(#self.Tabs+1)
   for _,existing in ipairs(self.Tabs) do assert(existing.Id~=tab.Id,'Id de aba duplicado: '..tab.Id) end
   clean:Add(tab.Cleanup)
@@ -138,6 +157,8 @@ function Window.new(o)
   local icon=E.icon(b,opts.Icon or opts.icon or 'house') icon.Position=UDim2.fromOffset(9,11)
   local label=E.text(b,opts.Name or opts.name or tab.Id,13) label.Position=UDim2.fromOffset(42,0) label.Size=UDim2.new(1,-46,1,0) w.Theme:Bind(label,'TextColor3','Text') tab.Label=label
   local page=E.scroll(content) page.Visible=false tab.Page=page
+  local pageTitle=E.text(page,opts.Name or tab.Id,22) pageTitle.LayoutOrder=-1000 w.Theme:Bind(pageTitle,'TextColor3','Text')
+  if opts.Description then local description=E.text(page,opts.Description,12) description.LayoutOrder=-999 description.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(description,'TextColor3','MutedText') end
   tab.Cleanup:Add(function() self.Theme:Forget(b) self.Theme:Forget(page) b:Destroy() page:Destroy() end)
   tab.Cleanup:Add(b.Activated:Connect(function() self:SelectTab(tab) end))
   tab.Cleanup:Add(b.MouseEnter:Connect(function()
@@ -148,6 +169,34 @@ function Window.new(o)
   for _,kind in ipairs({'Button','Toggle','Slider','Dropdown','Textbox','Keybind','ColorPicker','Paragraph','Label','Divider','Section','Badge','ProgressBar'}) do
    tab['Create'..kind]=function(_,options) return Factory.create(tab,kind,options) end
   end
+  function tab:CreateGroup(settings)
+   assert(not self.Dead and not w.Destroyed,'Aba destruída.')
+   settings=Options.normalize(settings)
+   local parent=self.Page
+   if settings.Column~=nil then
+    assert(settings.Column==1 or settings.Column==2,'Column deve ser 1 ou 2.')
+    if not self.ColumnFrame then
+     self.ColumnFrame=E.new('Frame',{Name='GroupColumns',BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},self.Page)
+     local columnLayout=E.list(self.ColumnFrame,12)
+     self.Columns={}
+     for index=1,2 do
+      local column=E.new('Frame',{BackgroundTransparency=1,LayoutOrder=index,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},self.ColumnFrame)
+      E.list(column,12) self.Columns[index]=column
+     end
+     self.LayoutGroups=function(width)
+      local wide=width>=700
+      columnLayout.FillDirection=wide and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
+      for _,column in ipairs(self.Columns) do column.Size=wide and UDim2.new(.5,-6,0,0) or UDim2.new(1,0,0,0) end
+     end
+     self.Cleanup:Add(self.Page:GetPropertyChangedSignal('AbsoluteSize'):Connect(function() self.LayoutGroups(self.Page.AbsoluteSize.X-24) end))
+    end
+    parent=self.Columns[settings.Column]
+    self.LayoutGroups(self.Page.AbsoluteSize.X-24)
+   end
+   local group=Group.new(self,settings,parent)
+   w:ApplySearch()
+   return group
+  end
   function tab:Destroy()
    if self.Dead then return end self.Dead=true self.Cleanup:Destroy()
    local index=table.find(w.Tabs,self) if index then table.remove(w.Tabs,index) end
@@ -157,7 +206,8 @@ function Window.new(o)
  end
  function w:CreateCategory(nameText)
   local label=E.text(sidebar,nameText,10) self.Theme:Bind(label,'TextColor3','MutedText')
-  return {SetValue=function(_,value) label.Text=tostring(value) end,Destroy=function() self.Theme:Forget(label) label:Destroy() end}
+  table.insert(self.Categories,label) layout()
+  return {SetValue=function(_,value) label.Text=tostring(value) end,Destroy=function() local at=table.find(self.Categories,label) if at then table.remove(self.Categories,at) end self.Theme:Forget(label) label:Destroy() end}
  end
  w.Notifications=Notifications.new(w,o.Notifications)
  w.Dialogs=Dialogs.new(w)

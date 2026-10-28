@@ -25,7 +25,7 @@ body = '\n'.join(chunks)
 OUT.mkdir(exist_ok=True)
 (OUT/'ConexaoUI.luau').write_text(body+'\nreturn __require("init")\n')
 demo=(SRC/'Examples/Demo.client.luau').read_text()
-demo=re.sub(r"local UI=require\(game:GetService\('ReplicatedStorage'\):WaitForChild\('ConexaoUI'\)\)", 'local UI=__require("init")',demo)
+demo=re.sub(r"local UI\s*=\s*require\(game:GetService\([\"']ReplicatedStorage[\"']\):WaitForChild\([\"']ConexaoUI[\"']\)\)", 'local UI=__require("init")',demo)
 (OUT/'Demo.luau').write_text(body+'\n'+demo)
 print(f'Bundled {len(modules)} modules into dist/ConexaoUI.luau and dist/Demo.luau')
 # Native Studio model: package ModuleScript, child folders/modules, embedded source.

@@ -2,6 +2,7 @@
 local E=require(script.Parent.Parent.Core.Elements)
 local Factory=require(script.Parent.Parent.Components.Factory)
 local Profiles=require(script.Parent.Profiles)
+local Group=require(script.Parent.Parent.Components.Group)
 local Settings={}
 local themeNames={'Conexão Dark','Violeta','Dourado','Aurora','Oceano','Rosa','Noite','Monocromático'}
 local presets={
@@ -33,17 +34,22 @@ function Settings.create(w,o)
  end
  local configLeft=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) E.list(configLeft,10)
  local configRight=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) E.list(configRight,10)
+ local sections={
+  Appearance=Group.new(tab,{Id='appearance',Name='INTERFACE',Icon='settings'},groups.Interface),
+  Colors=Group.new(tab,{Id='colors',Name='TEMAS E CORES',Icon='palette'},groups.Interface),
+  Config=Group.new(tab,{Id='storage',Name='CONFIGURAÇÃO',Icon='settings'},configLeft),
+  Profiles=Group.new(tab,{Id='profiles',Name='PERFIS',Icon='user'},configRight),
+ }
  local function create(group,kind,options)
   options.FireOnInit=false
-  return Factory.create({Window=w,Id=tab.Id,Page=group=='Config' and configLeft or group=='Profiles' and configRight or groups[group],Cleanup=tab.Cleanup,Controls=tab.Controls},kind,options)
+  return Factory.create(sections[group] or sections.Appearance,kind,options)
  end
  local controls={} local defaults={}
  local refreshGallery=function() end
  local function add(kind,key,name,default,props,apply)
   props=props or {} props.Id='@ui/'..key props.Name=name props.Default=default props.Callback=apply
-  local c=create('Interface',kind,props) controls[key]=c defaults[key]=default return c
+  local c=create((key=='scale' or key=='transparency' or key=='dim' or key=='key') and 'Appearance' or 'Colors',kind,props) controls[key]=c defaults[key]=default return c
  end
- create('Interface','Section',{Name='APARÊNCIA',Content='Suas preferências são aplicadas automaticamente nas próximas execuções.'})
  local function syncColors()
   for key,themeKey in pairs({accent='Primary',background='Background'}) do
    local color=w.Theme.Values[themeKey]
@@ -58,7 +64,7 @@ function Settings.create(w,o)
  if w.Storage.Values['@ui/accent']==nil and type(o.Theme)=='table' then preset=nil end
  if preset then w:SetTheme(preset) end
  -- Real buttons with live selection; previews are assembled from GUI objects.
- local gallery=E.new('Frame',{Name='ThemeGallery',BackgroundTransparency=1,Size=UDim2.new(1,0,0,224)},groups.Interface)
+ local gallery=E.new('Frame',{Name='ThemeGallery',BackgroundTransparency=1,Size=UDim2.new(1,0,0,224)},sections.Colors.Page)
  local grid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(10,10),CellSize=UDim2.new(.25,-8,0,106),SortOrder=Enum.SortOrder.LayoutOrder},gallery)
  local cards={}
  for index,themeName in ipairs(themeNames) do
@@ -117,7 +123,7 @@ function Settings.create(w,o)
  apply()
  defaults.accent='#'..initialTheme.Primary:ToHex() defaults.background='#'..initialTheme.Background:ToHex()
  w.SettingsControls=controls
- create('Interface','Button',{Name='Restaurar aparência padrão',Variant='Secondary',Callback=function()
+ create('Appearance','Button',{Name='Restaurar aparência padrão',Variant='Secondary',Callback=function()
   w:Confirm({Content='Restaurar apenas a aparência? As escolhas das suas abas serão preservadas.',Callback=function(yes)
    if not yes or w.Destroyed then return end
    w:SetTheme(initialTheme)

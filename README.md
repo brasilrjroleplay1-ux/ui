@@ -1,8 +1,18 @@
-# Conexão UI · 1.5.0
+# Conexão UI · 1.6.0
 
 Biblioteca de interface Roblox em Luau, com módulos locais e versão em arquivo único. Visual inspirado na referência fornecida: janela escura, navegação lateral com ícones, header, boas-vindas com gradiente dourado/roxo, ações rápidas, estatísticas e novidades. As informações do dashboard são demonstrativas. Não inclui funcionalidades específicas de jogos.
 
+## Library e script: o que executar
+
+- **Library:** `dist/ConexaoUI.luau` retorna a API. Não abre janela nem cria controles de exemplo ao carregar.
+- **Seu script:** [Starter.luau](Starter.luau) carrega a library e cria sua própria janela, abas e grupos. Use como base.
+- **Demonstração:** `dist/Demo.luau` contém a library com um script separado que cria o dashboard e os controles de exemplo.
+
+`CreateWindow` inclui somente o sistema de configurações pronto. Os controles do seu hub são definidos pelas chamadas do seu script.
+
 ## Exemplos: comece aqui
+
+- **[Grupos e layout no estilo das referências](docs/GRUPOS.md)** — cards recolhíveis, linhas compactas e colunas adaptáveis.
 
 - **[Guia passo a passo de todos os componentes](docs/EXEMPLOS.md)** — janela, abas, Button, Toggle, Slider, Dropdown, Textbox, Keybind, ColorPicker e componentes informativos.
 - **[Notificações, toasts, popups e confirmação](docs/NOTIFICACOES.md)** — fila, duração, ações e exemplos.
@@ -97,7 +107,7 @@ tab:CreateToggle({
 })
 ```
 
-As propriedades são **case sensitive**: use `Name`, `Icon`, `Callback`, etc. `Title`/`Subtitle` da janela também aceitam `name`/`subtitle`; abas aceitam `name`/`icon`. Não existe dependência ou implementação da API Rayfield.
+Propriedades aceitam a forma com inicial maiúscula ou minúscula: `Name`/`name`, `Callback`/`callback`, etc. A forma com inicial maiúscula tem prioridade. Os métodos continuam sendo `CreateWindow`, `CreateTab`, etc. Abas também aceitam `CreateTab("Nome", "house")`. Não existe dependência ou implementação da API Rayfield.
 
 ### Ícones
 
@@ -107,7 +117,9 @@ Os cartões de tema são botões reais: ao selecionar, o tema é aplicado e a es
 
 ## Componentes
 
-Todos retornam um controle com `Instance`, `GetValue()`, `SetValue(value, silent?)`, `Update(properties)`, `SetDisabled(boolean)` e `Destroy()`. `Update` aceita `Name`, `Value`, `Silent` e `Disabled`. `silent=true` não chama o callback; a escolha ainda é guardada. Controles informativos têm atualização de conteúdo e não têm interação a desativar.
+Abas também oferecem `CreateGroup` para agrupar os controles em cards compactos, conforme o [guia de grupos](docs/GRUPOS.md). As chamadas diretas na aba continuam válidas.
+
+Todos os componentes retornam um controle com `Instance`, `GetValue()`, `SetValue(value, silent?)`, `Update(properties)`, `SetDisabled(boolean)` e `Destroy()`. `Update` aceita `Name`, `Value`, `Silent` e `Disabled`. `silent=true` não chama o callback; a escolha ainda é guardada. Controles informativos têm atualização de conteúdo e não têm interação a desativar.
 
 Para componentes persistentes, informe um `Id` estável e único por janela. Sem `Id`, usa `IdDaAba/NomeDoComponente`; renomear esse nome muda a chave. IDs duplicados são rejeitados.
 
@@ -253,7 +265,7 @@ window:Destroy()         -- Limpa eventos, interface e grava escolhas.
 UI:Destroy()            -- Destrói todas as janelas desta instância da library.
 ```
 
-Para valores entre 1 e 100, há dimensões mínimas de usabilidade, limitadas pela tela: os controles não são reduzidos a pontos ilegíveis. Em telas abaixo de 760 px, a sidebar usa somente ícones. Cards se reorganizam em uma coluna e o conteúdo rola. O tamanho respeita a área útil do Roblox, incluindo seus insets, e não cobre necessariamente a barra superior do aplicativo. Arraste pelo header com mouse/toque. A janela fica limitada à tela. Um botão flutuante permite restaurar sem teclado no celular.
+Para valores entre 1 e 100, há dimensões mínimas de usabilidade, limitadas pela tela: os controles não são reduzidos a pontos ilegíveis. A sidebar usa ícones por padrão, como nas referências. `SidebarLayout="expanded"` na criação ou `SetSidebarLayout("expanded")` mostra nomes em telas largas; abaixo de 760 px, volta a ícones. Cards se reorganizam em uma coluna e o conteúdo rola. O tamanho respeita a área útil do Roblox, incluindo seus insets, e não cobre necessariamente a barra superior do aplicativo. Arraste pelo header com mouse/toque. A janela fica limitada à tela. Um botão flutuante permite restaurar sem teclado no celular.
 
 O atalho padrão de mostrar/esconder é RightControl. É ignorado enquanto um TextBox tem foco, durante captura de tecla ou enquanto há confirmação aberta. A tecla de cada Keybind também respeita esses estados. Keybinds são uma função de teclado; os demais controles usam toque.
 
@@ -325,8 +337,8 @@ Notificações incluem fila, ícones, tipos Info/Success/Warning/Error, ações,
 ```
 ConexaoUI/
   init.luau
-  Core/        Window, Theme, Animation, Elements, Input, Cleanup, Storage, Notifications, Dialogs
-  Components/  Factory, DropdownPanel e entradas por componente
+  Core/        Window, Options, Theme, Animation, Elements, Input, Cleanup, Storage, Notifications, Dialogs
+  Components/  Factory, Group, RowLayout, DropdownPanel e entradas por componente
   Pages/       Dashboard, Settings
   Examples/    Demo.client.luau, Minimal.client.luau
 dist/          Biblioteca, demo e modelo Studio gerados
@@ -346,6 +358,7 @@ python3 tests/settings.py /workspace/tools/luau/luau
 python3 tests/sliders.py /workspace/tools/luau/luau
 python3 tests/dropdowns.py /workspace/tools/luau/luau
 python3 tests/feedback.py /workspace/tools/luau/luau
+python3 tests/lifecycle.py /workspace/tools/luau/luau
 /workspace/tools/luau/luau-compile dist/ConexaoUI.luau >/dev/null
 /workspace/tools/luau/luau-compile dist/Demo.luau >/dev/null
 ```
@@ -354,7 +367,7 @@ O compilador/CLI Luau foi obtido da distribuição oficial `luau-lang/luau` por 
 
 ## Validação e limites
 
-Executado neste ambiente: compilação Luau dos arquivos de distribuição e 144 verificações com serviços/elementos simulados: 46 de persistência/cleanup e gerenciamento de perfis, 17 do factory real de sliders/barras de progresso/cores, 21 do dropdown/painel real, 23 da integração das configurações nativas e 37 dos módulos reais de notificações/popups (restauração, cartões selecionáveis, presets, escala, gradiente, escurecimento do jogo, atalho, opt-out de salvamento e reset preservando as escolhas do aplicativo). Inclui round-trip de escolhas, debounce, gravação final, falhas de leitura/escrita, conteúdo inválido, backend sem arquivos, diretório existente e limpeza idempotente. Esses testes não validam o motor Roblox, seu codec JSON real nem a aparência.
+Executado neste ambiente: compilação Luau dos arquivos de distribuição e 172 verificações com serviços/elementos simulados: 28 da importação/ciclo de vida da library e dos grupos, 46 de persistência/cleanup e gerenciamento de perfis, 17 do factory real de sliders/barras de progresso/cores, 21 do dropdown/painel real, 23 da integração das configurações nativas e 37 dos módulos reais de notificações/popups (restauração, cartões selecionáveis, presets, escala, gradiente, escurecimento do jogo, atalho, opt-out de salvamento e reset preservando as escolhas do aplicativo). Inclui round-trip de escolhas, debounce, gravação final, falhas de leitura/escrita, conteúdo inválido, backend sem arquivos, diretório existente e limpeza idempotente. A distribuição de demonstração também é iniciada e destruída no host simulado. Esses testes não validam o motor Roblox, seu codec JSON real nem a aparência.
 
 **Não executado em Roblox Studio ou executor real.** Antes de publicar, execute a demo e confira:
 
