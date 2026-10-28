@@ -1,65 +1,55 @@
--- Exemplo separado da library. Studio: LocalScript em StarterPlayerScripts.
+-- Demonstração da Conexão UI 3.0 usando os componentes reais do Rayfield Gen2.
 local UI = require(game:GetService("ReplicatedStorage"):WaitForChild("ConexaoUI"))
+local previousDemo = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("ConexaoDemo")
+if previousDemo and previousDemo:IsA("ScreenGui") then previousDemo:Destroy() end
 local window = UI:CreateWindow({
-    Id = "ConexaoDemo", Title = "CONEXÃO UI", Version = "2.1.0",
-    Subtitle = "Sua conexão. Seu estilo.",
-    Config = {Name = "conexao_demo_visual_v21"},
+    Id = "ConexaoDemo3",
+    name = "CONEXÃO UI", subtitle = "Gen2 · 3.0.0", sidebarLayout = true,
+    theme = "amethyst",
+    configuration = { fileName = "conexao_demo_gen2_v3" },
 })
 
--- Início, avatar, nome e executor já são fornecidos pela library.
-local home = window.HomeTab
-local tab = window:CreateTab({Name = "Componentes", Icon = "star", Description = "Controles criados pelo script de demonstração"})
-local controls = tab:CreateGroup({Id = "controls", Name = "CONTROLES", Icon = "bolt", Column = 1})
-local choices = tab:CreateGroup({Id = "choices", Name = "ESCOLHAS", Icon = "settings", Column = 2})
+window:CreateSection({ name = "PRINCIPAL" })
+local home = window:CreateTab({ name = "Início", icon = 93364949241311 })
+home:CreateText({ name = "Conexão UI · Gen2", text = "Esta versão usa a base real do Rayfield Gen2. O perfil e as configurações já vêm com a janela." })
+home:CreateSection({ name = "Controles" })
+home:CreateToggle({ name = "Ativar recurso", flag = "demo/ativo", value = true, callback = function(value) print("Ativo", value) end })
+home:CreateSlider({ name = "Intensidade", flag = "demo/intensidade", range = { 0, 100 }, increment = 1, value = 50, suffix = "%" })
+home:CreateDropdown({ name = "Modo", flag = "demo/modo", options = { "Padrão", "Criativo", "Compacto" }, value = "Padrão" })
+home:CreateDropdown({ name = "Painéis", flag = "demo/paineis", multiSelect = true, options = { "Perfil", "Atalhos", "Estatísticas", "Novidades" }, value = { "Perfil", "Atalhos" } })
+home:CreateButton({ name = "Mostrar notificação", icon = 125823673784681, callback = function()
+    window:Notify({ title = "Conectado", content = "Notificação nativa do Gen2.", icon = 125823673784681 })
+end })
 
-controls:CreateButton({Name = "Mostrar notificação", Text = "Mostrar", Icon = "info", Callback = function()
-    window:Notify({Title = "Tudo conectado", Content = "Callback executado.", Kind = "Success"})
-end})
-controls:CreateToggle({Id = "demo/notifications", Name = "Notificações", Default = true, Callback = function(value)
-    print("Notificações", value)
-end})
-controls:CreateSlider({Id = "demo/volume", Name = "Volume demonstrativo", Min = 0, Max = 100, Increment = 5, Default = 50, Suffix = "%", Callback = function(value)
-    print("Volume", value)
-end})
-controls:CreateTextbox({Id = "demo/nickname", Name = "Apelido", Default = "Visitante", MaxLength = 32,
-    Validate = function(value) return #value > 0, "Digite um nome." end,
-    Callback = function(value) print("Apelido", value) end,
-})
-choices:CreateDropdown({Id = "demo/profile", Name = "Perfil", Options = {"Padrão", "Criativo", "Compacto"}, Default = "Padrão", Callback = function(value)
-    print("Modo", value)
-end})
-choices:CreateDropdown({Id = "demo/modules", Name = "Módulos visíveis", Multi = true,
-    Options = {"Painel", "Estatísticas", "Novidades", "Atalhos", "Notificações", "Aparência", "Perfis", "Ajuda"}, Default = {"Painel"},
-    Callback = function(values) print(table.concat(values, ", ")) end,
-})
-choices:CreateKeybind({Id = "demo/key", Name = "Atalho de notificação", Default = "F6", Callback = function()
-    window:Notify({Content = "Você pressionou o atalho."})
-end})
-choices:CreateColorPicker({Id = "demo/color", Name = "Cor demonstrativa", Default = "#9070F7", Callback = function(color)
-    print("Cor escolhida", color:ToHex())
-end})
-choices:CreateProgressBar({Name = "Progresso demonstrativo", Value = 68})
+local fields = window:CreateTab({ name = "Campos", icon = 100604009889706 })
+fields:CreateInput({ name = "Apelido", flag = "demo/apelido", placeholder = "Digite aqui", value = "Visitante" })
+fields:CreateKeybind({ name = "Atalho", flag = "demo/atalho", value = Enum.KeyCode.F6, callback = function()
+    window:Toast({ title = "Atalho acionado", icon = 93364949241311 })
+end })
+fields:CreateColorPicker({ name = "Cor", flag = "demo/cor", color = Color3.fromRGB(166, 112, 255), callback = function(color, alpha) print(color, alpha) end })
+fields:CreateSection({ name = "Temas nativos" })
+fields:CreateDropdown({ name = "Tema", flag = "demo/tema", options = { "default", "amethyst", "cobalt", "ember", "frost", "rose" }, value = "amethyst", callback = function(name)
+    window:ChangeTheme(name)
+end })
 
-local feedback = window:CreateTab({Name = "Avisos e popups", Icon = "info"})
-local notices = feedback:CreateGroup({Name = "NOTIFICAÇÕES", Icon = "info", Column = 1})
-local dialogs = feedback:CreateGroup({Name = "POPUPS", Icon = "star", Column = 2})
-notices:CreateButton({Name = "Notificação de sucesso", Text = "Mostrar", Callback = function()
-    window:Notify({Title = "Perfil salvo", Content = "Seu próximo projeto pode usar esse mesmo sistema.", Kind = "Success", Duration = 6})
-end})
-notices:CreateButton({Name = "Aviso com ação", Text = "Mostrar", Callback = function()
-    window:Notify({Title = "Personalizar interface", Content = "Abra as configurações ou deixe o aviso expirar.", Duration = 8,
-        Actions = {{Name = "Abrir configurações", Callback = function() window:SelectTab(window.SettingsTab) end}},
-    })
-end})
-dialogs:CreateButton({Name = "Popup com escolhas", Text = "Abrir", Callback = function()
-    window:Popup({Title = "Escolha uma opção", Content = "Um popup criado pelo script de exemplo.",
-        Options = {{Name = "Criativo", Value = "criativo"}, {Name = "Compacto", Value = "compacto"}, {Name = "Voltar", Value = false, Variant = "Secondary"}},
-        Callback = function(value) if value then window:Notify({Content = "Escolha: " .. value}) end end,
-    })
-end})
-dialogs:CreateButton({Name = "Abrir confirmação", Text = "Abrir", Variant = "Destructive", Callback = function()
-    window:Confirm({Content = "Executar esta ação demonstrativa?", Callback = function(confirmed)
-        window:Notify({Content = confirmed and "Ação confirmada." or "Cancelada."})
-    end})
-end})
-window:SelectTab(home)
+local feedback = window:CreateTab({ name = "Avisos", icon = 125823673784681 })
+feedback:CreateButton({ name = "Toast", callback = function() window:Toast({ title = "Tudo pronto", subtitle = "Conexão UI", duration = 4 }) end })
+feedback:CreateButton({ name = "Popup", callback = function()
+    window:Popup({ title = "Escolha uma ação", content = "Popup nativo do Gen2.", options = {
+        { text = "Cancelar" },
+        { text = "Continuar", style = "primary", callback = function() window:Toast({ title = "Confirmado" }) end },
+    } })
+end })
+feedback:CreateProgress({ name = "Progresso", range = { 0, 100 }, value = 65 })
+local console = feedback:CreateConsole({ name = "Console", height = 110, text = "Conexão UI pronta.", maxLines = 30 })
+feedback:CreateButton({ name = "Escrever no console", callback = function() console:Append("Callback executado.") end })
+
+window:CreateSection({ name = "LAYOUT" })
+local layout = window:CreateTab({ name = "Grupos", icon = 84750991656135 })
+local row = layout:CreateGroup()
+local left = row:CreateGroup({ direction = "column" })
+local right = row:CreateGroup({ direction = "column" })
+left:CreateToggle({ name = "Painel esquerdo", flag = "demo/esquerdo", value = true })
+right:CreateToggle({ name = "Painel direito", flag = "demo/direito", value = true })
+layout:CreateStat({ name = "Controles de exemplo", value = 18 })
+home:Select()

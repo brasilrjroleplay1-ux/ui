@@ -1,0 +1,7 @@
+vendor/rayfield-gen2/build/
+vendor/rayfield-gen2/coverage/
+vendor/rayfield-gen2/sourcemap.json
+vendor/rayfield-gen2/roblox.yml
+vendor/rayfield-gen2/globalTypes.d.luau*
+**/__pycache__/
+*.pyc

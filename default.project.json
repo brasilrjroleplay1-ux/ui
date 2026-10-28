@@ -1,0 +1,15 @@
+{
+  "name": "ConexaoUI",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "ConexaoUI": {
+        "$path": "ConexaoUI/init.luau",
+        "Gen2": { "$path": "vendor/rayfield-gen2/src" }
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": { "ConexaoDemo": { "$path": "ConexaoUI/Examples/Demo.client.luau" } }
+    }
+  }
+}
