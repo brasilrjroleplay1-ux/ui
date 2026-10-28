@@ -27,6 +27,7 @@ A aba **Configurações** já é criada com a janela. Você não precisa escreve
 - [Abrir configurações e salvar](#configuracoes)
 - [Criar Dashboard](#dashboard)
 - [Destruir a interface](#destruir)
+- [Notificações completas e popups](NOTIFICACOES.md)
 
 Os trechos de componentes usam `Window`, `Principal`, `Campos` e `Informacoes`, criados nos três primeiros passos. Para executar todos juntos, copie o arquivo `Example.luau`. O exemplo só demonstra a interface, com callbacks de console e notificações.
 
@@ -428,6 +429,10 @@ Informacoes:CreateButton({
     end,
 })
 ```
+
+## Notificações, toasts e popups completos
+
+A aba **Avisos e popups** do [script completo](../Example.luau) demonstra os recursos da library: notificações com duração e ações, mensagens persistentes atualizáveis e popup de várias escolhas. Consulte o [guia de notificações](NOTIFICACOES.md) para todos os campos e exemplos.
 
 ## Métodos comuns dos controles
 

@@ -5,6 +5,8 @@ local Input=require(script.Parent.Input)
 local Storage=require(script.Parent.Storage)
 local Animate=require(script.Parent.Animation)
 local Factory=require(script.Parent.Parent.Components.Factory)
+local Notifications=require(script.Parent.Notifications)
+local Dialogs=require(script.Parent.Dialogs)
 local UIS=game:GetService('UserInputService')
 local Players=game:GetService('Players')
 local Window={}
@@ -36,7 +38,7 @@ function Window.new(o)
  local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
  local logo=E.text(header,'ϟ',30) logo.Position=UDim2.fromOffset(18,18) logo.Size=UDim2.fromOffset(30,30) w.Theme:Bind(logo,'TextColor3','Primary')
  local name=E.text(header,o.Title or o.name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
- local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.4.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
+ local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.5.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
  local search=E.new('TextBox',{Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
  local minimize=E.button(header,'−') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
  local close=E.button(header,'×') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
@@ -157,34 +159,21 @@ function Window.new(o)
   local label=E.text(sidebar,nameText,10) self.Theme:Bind(label,'TextColor3','MutedText')
   return {SetValue=function(_,value) label.Text=tostring(value) end,Destroy=function() self.Theme:Forget(label) label:Destroy() end}
  end
- local notifications=E.new('Frame',{ZIndex=4,BackgroundTransparency=1,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-12,1,-12),Size=UDim2.new(.9,0,1,-24)},gui)
- E.new('UISizeConstraint',{MaxSize=Vector2.new(320,10000)},notifications)
- local notificationLayout=E.list(notifications,8) notificationLayout.VerticalAlignment=Enum.VerticalAlignment.Bottom
- function w:Notify(opts)
-  opts=opts or {} local c=Cleanup.new() clean:Add(c)
-  local card=E.new('Frame',{BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},notifications) E.corner(card) E.pad(card,14) E.list(card,6) self.Theme:Bind(card,'BackgroundColor3','Surface')
-  local title=E.text(card,opts.Title or 'Conexão UI',14) self.Theme:Bind(title,'TextColor3','Primary')
-  local body=E.text(card,opts.Content or '',13) body.Size=UDim2.new(1,0,0,0) body.AutomaticSize=Enum.AutomaticSize.Y self.Theme:Bind(body,'TextColor3','Text')
-  local b=E.button(card,'Fechar') self.Theme:Bind(b,'BackgroundColor3','SurfaceHover')
-  c:Add(function() self.Theme:Forget(card) card:Destroy() end) c:Add(b.Activated:Connect(function() c:Destroy() end))
-  if opts.Duration~=0 then task.delay(opts.Duration or 5,function() c:Destroy() end) end
-  return {Destroy=function() c:Destroy() end,SetValue=function(_,value) body.Text=tostring(value) end,Update=function(_,values) title.Text=values.Title or title.Text body.Text=values.Content or body.Text end}
- end
+ w.Notifications=Notifications.new(w,o.Notifications)
+ w.Dialogs=Dialogs.new(w)
+ clean:Add(w.Notifications) clean:Add(w.Dialogs)
+ function w:Notify(opts) return self.Notifications:Notify(opts) end
+ function w:Toast(opts) return self.Notifications:Notify(opts) end
+ function w:Popup(opts) return self.Dialogs:Popup(opts) end
  function w:Confirm(opts)
-  opts=opts or {} local c=Cleanup.new() clean:Add(c)
-  self.DialogCount=(self.DialogCount or 0)+1
-  c:Add(function() self.DialogCount=math.max(0,self.DialogCount-1) end)
-  local overlay=E.new('TextButton',{Text='',AutoButtonColor=false,BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.35,Size=UDim2.fromScale(1,1),ZIndex=200,Modal=true},gui)
-  local panel=E.new('Frame',{AnchorPoint=Vector2.new(.5,.5),Position=UDim2.fromScale(.5,.5),Size=UDim2.new(.9,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,ZIndex=201},overlay)
-  E.new('UISizeConstraint',{MaxSize=Vector2.new(420,1000)},panel) E.corner(panel) E.pad(panel,20) E.list(panel,12) self.Theme:Bind(panel,'BackgroundColor3','Surface')
-  local text=E.text(panel,opts.Content or 'Confirmar ação?',15) text.Size=UDim2.new(1,0,0,0) text.AutomaticSize=Enum.AutomaticSize.Y text.ZIndex=202 self.Theme:Bind(text,'TextColor3','Text')
-  c:Add(function() self.Theme:Forget(overlay) overlay:Destroy() end)
-  local resolved=false
-  local function finish(value) if resolved then return end resolved=true c:Destroy() if opts.Callback then task.spawn(function() local ok,err=pcall(opts.Callback,value) if not ok then warn(err) end end) end end
-  for _,entry in ipairs({{'Confirmar',true,'Primary'},{'Cancelar',false,'SurfaceHover'}}) do
-   local b=E.button(panel,entry[1]) b.ZIndex=202 self.Theme:Bind(b,'BackgroundColor3',entry[3]) c:Add(b.Activated:Connect(function() finish(entry[2]) end))
-  end
-  return {Destroy=function() finish(false) end,SetValue=function(_,value) text.Text=tostring(value) end,Update=function(_,values) text.Text=values.Content or text.Text end}
+  opts=opts or {}
+  local callback=opts.Callback
+  return self:Popup({
+   Title=opts.Title or 'Confirmar ação',Content=opts.Content or 'Deseja continuar?',
+   Cancellable=opts.Cancellable,DismissOnOutside=opts.DismissOnOutside,
+   Options={{Name=opts.ConfirmText or 'Confirmar',Value=true,Variant=opts.Destructive and 'Destructive' or nil},{Name=opts.CancelText or 'Cancelar',Value=false,Variant='Secondary'}},
+   Callback=callback and function(value) callback(value==true) end or nil,
+  })
  end
  Input.drag(header,root,clean,clamp)
  clean:Add(minimize.Activated:Connect(function() w:Minimize() end))

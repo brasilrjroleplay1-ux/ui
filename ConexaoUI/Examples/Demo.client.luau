@@ -1,7 +1,7 @@
 -- Studio: coloque ConexaoUI em ReplicatedStorage e este LocalScript em StarterPlayerScripts.
 local UI=require(game:GetService('ReplicatedStorage'):WaitForChild('ConexaoUI'))
 local window=UI:CreateWindow({
- Title='CONEXÃO UI',Subtitle='Criada para o seu próximo projeto',Version='1.4.0',
+ Title='CONEXÃO UI',Subtitle='Criada para o seu próximo projeto',Version='1.5.0',
  Id='ConexaoDemo',Scale=82,ToggleKey=Enum.KeyCode.RightControl,
 })
 window:CreateCategory('WORKSPACE')
@@ -21,4 +21,20 @@ tab:CreateBadge({Name='API v1.0',Content='Pronta para integrar'})
 tab:CreateParagraph({Name='Sobre os perfis',Content='Toggles, sliders, seleções, texto, teclas e cores são restaurados quando o armazenamento está disponível.'})
 tab:CreateDivider({})
 tab:CreateButton({Name='Abrir confirmação',Variant='Destructive',Callback=function() window:Confirm({Content='Executar esta ação demonstrativa?',Callback=function(confirmed) window:Notify({Content=confirmed and 'Ação confirmada.' or 'Cancelada.'}) end}) end})
+local feedback=window:CreateTab({Name='Avisos e popups',Icon='info'})
+feedback:CreateButton({Name='Notificação de sucesso',Callback=function()
+ window:Notify({Title='Perfil salvo',Content='Seu próximo projeto pode usar esse mesmo sistema.',Kind='Success',Duration=6})
+end})
+feedback:CreateButton({Name='Aviso com ação',Callback=function()
+ window:Notify({Title='Personalizar interface',Content='Abra as configurações ou deixe o aviso expirar.',Kind='Info',Duration=8,
+  Actions={{Name='Abrir configurações',Callback=function() window:SelectTab(window.SettingsTab) end}}})
+end})
+feedback:CreateButton({Name='Toast de aviso',Callback=function()
+ window:Toast({Title='Atenção',Content='Toast usa o mesmo sistema de fila e temporizador.',Kind='Warning'})
+end})
+feedback:CreateButton({Name='Popup com três escolhas',Callback=function()
+ window:Popup({Title='Escolha um perfil visual',Content='Exemplo de popup da Conexão UI.',Options={
+  {Name='Criativo',Value='criativo'}, {Name='Compacto',Value='compacto'}, {Name='Voltar',Value='cancel',Variant='Secondary'}},
+  Callback=function(value) if value then window:Notify({Content='Escolha: '..value}) end end})
+end})
 window:SelectTab(home)

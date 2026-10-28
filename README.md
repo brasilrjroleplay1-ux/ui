@@ -1,10 +1,11 @@
-# Conexão UI · 1.4.0
+# Conexão UI · 1.5.0
 
 Biblioteca de interface Roblox em Luau, com módulos locais e versão em arquivo único. Visual inspirado na referência fornecida: janela escura, navegação lateral com ícones, header, boas-vindas com gradiente dourado/roxo, ações rápidas, estatísticas e novidades. As informações do dashboard são demonstrativas. Não inclui funcionalidades específicas de jogos.
 
 ## Exemplos: comece aqui
 
 - **[Guia passo a passo de todos os componentes](docs/EXEMPLOS.md)** — janela, abas, Button, Toggle, Slider, Dropdown, Textbox, Keybind, ColorPicker e componentes informativos.
+- **[Notificações, toasts, popups e confirmação](docs/NOTIFICACOES.md)** — fila, duração, ações e exemplos.
 - **[Script completo organizado em Luau](Example.luau)** — carregue nossa library e veja cada criação em uma seção separada, pronta para copiar.
 - **[Código bruto do exemplo](https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/Example.luau)** — somente o código, sem a página do GitHub.
 
@@ -315,14 +316,16 @@ dialog:SetValue('Confirma esta ação?')
 -- dialog:Destroy() equivale a cancelar.
 ```
 
-Notificações têm botão para fechar; `Duration=0` desativa o temporizador. Confirmações bloqueiam cliques na interface ao fundo e ignoram atalhos da library. Destruir a janela elimina os diálogos sem executar ações pendentes.
+Notificações incluem fila, ícones, tipos Info/Success/Warning/Error, ações, animações e progresso de duração. `Duration=0` mantém o aviso até fechar; o mouse pausa a contagem por padrão. `Update`, `Pause`, `Resume`, `Close` e `Destroy` controlam o aviso. `Window:Toast()` usa o mesmo sistema.
+
+`Window:Popup()` oferece de 1 a 10 opções com valores e callbacks, além de conteúdo atualizável, fila e cancelamento. `Confirm()` usa esse sistema com resultado booleano. Popups bloqueiam cliques e atalhos da library ao fundo; destruir a janela limpa filas e temporizadores sem executar ações pendentes. Veja a [documentação completa com exemplos](docs/NOTIFICACOES.md).
 
 ## Arquitetura e desenvolvimento
 
 ```
 ConexaoUI/
   init.luau
-  Core/        Window, Theme, Animation, Elements, Input, Cleanup, Storage
+  Core/        Window, Theme, Animation, Elements, Input, Cleanup, Storage, Notifications, Dialogs
   Components/  Factory, DropdownPanel e entradas por componente
   Pages/       Dashboard, Settings
   Examples/    Demo.client.luau, Minimal.client.luau
@@ -342,6 +345,7 @@ python3 tests/run.py /workspace/tools/luau/luau
 python3 tests/settings.py /workspace/tools/luau/luau
 python3 tests/sliders.py /workspace/tools/luau/luau
 python3 tests/dropdowns.py /workspace/tools/luau/luau
+python3 tests/feedback.py /workspace/tools/luau/luau
 /workspace/tools/luau/luau-compile dist/ConexaoUI.luau >/dev/null
 /workspace/tools/luau/luau-compile dist/Demo.luau >/dev/null
 ```
@@ -350,7 +354,7 @@ O compilador/CLI Luau foi obtido da distribuição oficial `luau-lang/luau` por 
 
 ## Validação e limites
 
-Executado neste ambiente: compilação Luau dos arquivos de distribuição e 103 verificações com serviços/elementos simulados: 46 de persistência/cleanup e gerenciamento de perfis, 13 do factory real de sliders/barras de progresso, 21 do dropdown/painel real e 23 da integração das configurações nativas (restauração, cartões selecionáveis, presets, escala, gradiente, escurecimento do jogo, atalho, opt-out de salvamento e reset preservando as escolhas do aplicativo). Inclui round-trip de escolhas, debounce, gravação final, falhas de leitura/escrita, conteúdo inválido, backend sem arquivos, diretório existente e limpeza idempotente. Esses testes não validam o motor Roblox, seu codec JSON real nem a aparência.
+Executado neste ambiente: compilação Luau dos arquivos de distribuição e 144 verificações com serviços/elementos simulados: 46 de persistência/cleanup e gerenciamento de perfis, 17 do factory real de sliders/barras de progresso/cores, 21 do dropdown/painel real, 23 da integração das configurações nativas e 37 dos módulos reais de notificações/popups (restauração, cartões selecionáveis, presets, escala, gradiente, escurecimento do jogo, atalho, opt-out de salvamento e reset preservando as escolhas do aplicativo). Inclui round-trip de escolhas, debounce, gravação final, falhas de leitura/escrita, conteúdo inválido, backend sem arquivos, diretório existente e limpeza idempotente. Esses testes não validam o motor Roblox, seu codec JSON real nem a aparência.
 
 **Não executado em Roblox Studio ou executor real.** Antes de publicar, execute a demo e confira:
 
@@ -362,6 +366,8 @@ Executado neste ambiente: compilação Luau dos arquivos de distribuição e 103
 - Troca de tema, transparência e escala, incluindo 0 e 100.
 - Criar/ativar/salvar/excluir/restaurar perfis, exportar/copiar e importar JSON; ligar/desligar auto load e autosave.
 - Restauração do JSON e callbacks iniciais; falhas de escrita devem gerar aviso.
+- Fila de notificações, pausa por hover, botões de ação e atualização de avisos.
+- Fila de popups com várias opções, confirmação, cancelamento e textos extensos.
 - Destruição sem conexões remanescentes e modal bloqueando o fundo.
 
 A pesquisa do header filtra componentes na subpágina ativa de Configurações e nos controles criados pela API; não pesquisa textos internos do dashboard. A posição arrastada, aba ativa e estado minimizado não são persistidos. Teclados virtuais, glifos de ícones e permissões de assets variam por dispositivo e requerem validação no cliente real. Em janelas extremamente pequenas, a rolagem mantém os controles disponíveis; textos extensos de botões podem ser truncados. O layout do dashboard foi preparado para os cards curtos mostrados na referência, não para artigos extensos.

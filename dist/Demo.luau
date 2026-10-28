@@ -312,7 +312,7 @@ function Factory.create(tab,kind,o)
   local function parse(v)
    if typeof(v)=='Color3' then return v end
    if type(v)=='string' and v:match('^#?%x%x%x%x%x%x$') then return Color3.fromHex(v:gsub('#','')) end
-   if type(v)=='table' and tonumber(v[1]) and tonumber(v[2]) and tonumber(v[3]) then return Color3.fromRGB(math.clamp(v[1],0,255),math.clamp(v[2],0,255),math.clamp(v[3],0,255)) end
+   if type(v)=='table' and tonumber(v[1]) and tonumber(v[2]) and tonumber(v[3]) then return Color3.fromRGB(math.clamp(tonumber(v[1]),0,255),math.clamp(tonumber(v[2]),0,255),math.clamp(tonumber(v[3]),0,255)) end
    return nil
   end
   function c:SetValue(value,silent)
@@ -334,7 +334,7 @@ function Factory.create(tab,kind,o)
    clean:Add(field.FocusLost:Connect(function() if not c.Disabled then setChannel(math.clamp(tonumber(field.Text) or 0,0,255)) end end))
   end
   clean:Add(preview.Activated:Connect(function() if not c.Disabled then panel.Visible=not panel.Visible end end))
-  c:SetValue(initial or '#9070F7',true) hex.Text=c.Value
+  if not c:SetValue(initial,true) then if not c:SetValue(o.Default,true) then c:SetValue('#9070F7',true) end end hex.Text=c.Value
  else
   local body=E.text(row,o.Content or o.Text or '',13) body.AutomaticSize=Enum.AutomaticSize.Y body.Size=UDim2.new(1,0,0,0) w.Theme:Bind(body,'TextColor3','MutedText')
   if kind=='Divider' then title.Visible=false body.Visible=false row.Size=UDim2.new(1,0,0,2) row.AutomaticSize=Enum.AutomaticSize.None end
@@ -415,6 +415,123 @@ return Cleanup
 
 end
 
+__modules["Core/Dialogs"] = function()
+local E = __require("Core/Elements")
+local Cleanup = __require("Core/Cleanup")
+local TweenService = game:GetService('TweenService')
+local UIS = game:GetService('UserInputService')
+local Dialogs = {}
+local function validate(options)
+ assert(type(options)=='table' and #options>0 and #options<=10,'Options precisa conter de 1 a 10 ações.')
+ for _,entry in ipairs(options) do
+  assert(type(entry)=='table' and type(entry.Name)=='string','Cada opção precisa de Name.')
+  assert(entry.Callback==nil or type(entry.Callback)=='function','Callback de opção inválido.')
+ end
+end
+function Dialogs.new(w)
+ local manager={Queue={},Records={},Active=nil,Dead=false}
+ local pump,finish,render
+ local function safe(callback,...)
+  if not callback then return end
+  local args=table.pack(...)
+  task.spawn(function()
+   if manager.Dead or w.Destroyed then return end
+   local ok,err=pcall(callback,table.unpack(args,1,args.n))
+   if not ok then warn('[Conexão UI / popup] '..tostring(err)) end
+  end)
+ end
+ function manager:Popup(options)
+  assert(not self.Dead,'Janela destruída.')
+  local o=table.clone(options or {})
+  o.Options=o.Options or {{Name='Fechar',Value=true}}
+  validate(o.Options)
+  assert(#self.Queue<20,'Fila de popups cheia.')
+  local d={State='Queued',Options=o,Cleanup=Cleanup.new()}
+  self.Records[d]=true
+  function d:SetValue(value) return self:Update({Content=tostring(value)}) end
+  function d:SetOptions(values) return self:Update({Options=values}) end
+  function d:Update(values)
+   if self.State=='Closed' then return false end
+   if values.Options~=nil then validate(values.Options) end
+   for key,value in pairs(values) do self.Options[key]=value end
+   if self.State=='Visible' then render(self) end
+   return true
+  end
+  function d:Cancel() finish(self,nil,nil) end
+  function d:Destroy() self:Cancel() end
+  table.insert(self.Queue,d) pump()
+  return d
+ end
+ finish=function(d,value,entry)
+  if d.State=='Closed' then return end
+  local wasVisible=d.State=='Visible'
+  d.State='Closed' d.Cleanup:Destroy() manager.Records[d]=nil
+  local index=table.find(manager.Queue,d) if index then table.remove(manager.Queue,index) end
+  if wasVisible then manager.Active=nil w.DialogCount=math.max(0,(w.DialogCount or 0)-1) end
+  if entry then safe(entry.Callback,value) end
+  safe(d.Options.Callback,value)
+  if not manager.Dead then pump() end
+ end
+ render=function(d)
+  local o=d.Options
+  if not d.Layer then
+   local layer=E.new('Frame',{Name='PopupOverlay',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=200},w.Gui) d.Layer=layer
+   local scrim=E.new('TextButton',{Text='',AutoButtonColor=false,Modal=true,BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.4,Size=UDim2.fromScale(1,1),BorderSizePixel=0,ZIndex=200},layer)
+   local panel=E.new('CanvasGroup',{Active=true,GroupTransparency=1,AnchorPoint=Vector2.new(.5,.5),Position=UDim2.fromScale(.5,.5),BorderSizePixel=0,ZIndex=201},layer) d.Panel=panel
+   E.corner(panel,20) w.Theme:Bind(panel,'BackgroundColor3','Surface')
+   local stroke=E.new('UIStroke',{Thickness=1,Transparency=.2},panel) w.Theme:Bind(stroke,'Color','Border')
+   d.Title=E.text(panel,'',18) d.Title.Position=UDim2.fromOffset(18,16) d.Title.Size=UDim2.new(1,-84,0,38) d.Title.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(d.Title,'TextColor3','Text')
+   local close=E.button(panel,'×') close.Size=UDim2.fromOffset(38,38) close.Position=UDim2.new(1,-54,0,16) w.Theme:Bind(close,'BackgroundColor3','SurfaceHover') d.CloseButton=close
+   local content=E.scroll(panel) content.Position=UDim2.fromOffset(0,66) content.Size=UDim2.new(1,0,1,-78) d.Content=content
+   d.Body=E.text(content,'',14) d.Body.Size=UDim2.new(1,0,0,0) d.Body.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(d.Body,'TextColor3','MutedText')
+   d.Actions=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},content) E.list(d.Actions,10)
+   d.ActionCleanup=Cleanup.new()
+   local function layout()
+    local viewport=w.Gui.AbsoluteSize
+    panel.Size=UDim2.fromOffset(math.max(1,math.min(520,viewport.X-24)),math.max(1,math.min(460,viewport.Y-24)))
+   end
+   d.Cleanup:Add(function() d.ActionCleanup:Destroy() w.Theme:Forget(layer) layer:Destroy() end)
+   d.Cleanup:Add(close.Activated:Connect(function() d:Cancel() end))
+   d.Cleanup:Add(scrim.Activated:Connect(function() if d.Options.DismissOnOutside and d.Options.Cancellable~=false then d:Cancel() end end))
+   d.Cleanup:Add(UIS.InputBegan:Connect(function(input)
+    if d.State=='Visible' and input.KeyCode==Enum.KeyCode.Escape and d.Options.Cancellable~=false then d:Cancel() end
+   end))
+   d.Cleanup:Add(w.Gui:GetPropertyChangedSignal('AbsoluteSize'):Connect(layout))
+   layout() TweenService:Create(panel,TweenInfo.new(.18),{GroupTransparency=0}):Play()
+  end
+  d.Title.Text=tostring(o.Title or 'Conexão UI') d.Body.Text=tostring(o.Content or '')
+  d.CloseButton.Visible=o.Cancellable~=false
+  d.ActionCleanup:Destroy() d.ActionCleanup=Cleanup.new()
+  for index,entry in ipairs(o.Options) do
+   local b=E.button(d.Actions,entry.Name) b.Size=UDim2.new(1,0,0,48)
+   w.Theme:Bind(b,'BackgroundColor3',entry.Variant=='Destructive' and 'Error' or entry.Variant=='Secondary' and 'SurfaceHover' or 'Primary') w.Theme:Bind(b,'TextColor3','Text')
+   d.ActionCleanup:Add(function() w.Theme:Forget(b) b:Destroy() end)
+   d.ActionCleanup:Add(b.Activated:Connect(function()
+    if d.State~='Visible' then return end
+    local value=entry.Value if value==nil then value=index end
+    finish(d,value,entry)
+   end))
+  end
+ end
+ pump=function()
+  if manager.Dead or manager.Active then return end
+  local d=table.remove(manager.Queue,1) if not d then return end
+  if w.CloseDropdown then w.CloseDropdown() end
+  manager.Active=d d.State='Visible' w.DialogCount=(w.DialogCount or 0)+1
+  render(d)
+ end
+ function manager:Destroy()
+  if self.Dead then return end self.Dead=true
+  if self.Active then w.DialogCount=math.max(0,(w.DialogCount or 0)-1) end
+  for d in pairs(self.Records) do d.State='Closed' d.Cleanup:Destroy() end
+  self.Active=nil table.clear(self.Records) table.clear(self.Queue)
+ end
+ return manager
+end
+return Dialogs
+
+end
+
 __modules["Core/Elements"] = function()
 local E = {}
 function E.new(class, props, parent)
@@ -481,6 +598,196 @@ function Input.slider(track,cleanup,onFraction)
  cleanup:Add(UIS.InputEnded:Connect(function(i) if i==active or i.UserInputType==Enum.UserInputType.MouseButton1 then active=nil end end))
 end
 return Input
+
+end
+
+__modules["Core/Notifications"] = function()
+-- Notification queue, timers and UI are owned by the window, not application code.
+local E = __require("Core/Elements")
+local Cleanup = __require("Core/Cleanup")
+local TweenService = game:GetService('TweenService')
+local Notifications = {}
+local kinds = {Info='Primary', Success='Success', Warning='Warning', Error='Error'}
+local symbols = {Info='info', Success='✓', Warning='!', Error='×'}
+local function duration(value)
+ local n=tonumber(value)
+ if not n or n~=n then return 5 end
+ return math.clamp(n,0,86400)
+end
+local function validateActions(actions)
+ assert(type(actions)=='table' and #actions<=5,'Actions aceita até 5 botões.')
+ for _,entry in ipairs(actions) do
+  assert(type(entry)=='table' and type(entry.Name)=='string','Cada ação precisa de Name.')
+  assert(entry.Callback==nil or type(entry.Callback)=='function','Callback de ação inválido.')
+ end
+end
+function Notifications.new(w,config)
+ config=config or {}
+ local manager={Records={},Queue={},Active={},Dead=false,Sequence=0,Cleanup=Cleanup.new()}
+ local maxVisible=math.clamp(math.floor(tonumber(config.MaxVisible) or 3),1,5)
+ local maxQueue=math.clamp(math.floor(tonumber(config.MaxQueue) or 50),1,200)
+ local layer=E.new('ScrollingFrame',{Name='Notifications',ZIndex=50,BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollingDirection=Enum.ScrollingDirection.Y,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-12,1,-12)},w.Gui)
+ local list=E.list(layer,10) list.VerticalAlignment=Enum.VerticalAlignment.Bottom
+ E.pad(layer,4)
+ manager.Layer=layer
+ manager.Cleanup:Add(function() w.Theme:Forget(layer) layer:Destroy() end)
+ local capacity=maxVisible
+ local pump,render,finish
+ local function safe(callback,...)
+  if not callback then return end
+  local args=table.pack(...)
+  task.spawn(function()
+   if manager.Dead or w.Destroyed then return end
+   local ok,err=pcall(callback,table.unpack(args,1,args.n))
+   if not ok then warn('[Conexão UI / notification] '..tostring(err)) end
+  end)
+ end
+ function manager:Notify(options)
+  assert(not self.Dead,'Janela destruída.')
+  local o=table.clone(options or {})
+  o.Actions=o.Actions or {} validateActions(o.Actions)
+  assert(#self.Queue<maxQueue,'Fila de notificações cheia.')
+  self.Sequence+=1
+  local n={State='Queued',Options=o,Duration=duration(o.Duration),Remaining=duration(o.Duration),Paused=false,Cleanup=Cleanup.new(),TimerRevision=0,Sequence=self.Sequence}
+  self.Records[n]=true
+  local function stopTimer()
+   n.TimerRevision+=1
+   if n.Timer then pcall(task.cancel,n.Timer) n.Timer=nil end
+   if n.ProgressTween then n.ProgressTween:Cancel() n.ProgressTween=nil end
+  end
+  function n:Pause()
+   if self.State~='Visible' or self.Paused then return end
+   if self.Started then self.Remaining=math.max(0,self.Remaining-(os.clock()-self.Started)) self.Started=nil end
+   self.Paused=true stopTimer()
+  end
+  function n:Resume()
+   if self.State~='Visible' then return end
+   self.Paused=false stopTimer()
+   if self.Duration==0 then return end
+   self.Started=os.clock()
+   local revision=self.TimerRevision
+   if self.Fill then
+    self.Fill.Size=UDim2.fromScale(math.clamp(self.Remaining/math.max(self.Duration,.001),0,1),1)
+    self.ProgressTween=TweenService:Create(self.Fill,TweenInfo.new(self.Remaining,Enum.EasingStyle.Linear),{Size=UDim2.fromScale(0,1)}) self.ProgressTween:Play()
+   end
+   self.Timer=task.delay(self.Remaining,function()
+    self.Timer=nil
+    if self.State=='Visible' and self.TimerRevision==revision then self:Close('timeout') end
+   end)
+  end
+  function n:Close(reason)
+   if self.State=='Closed' or self.State=='Closing' then return end
+   reason=reason or 'dismiss' self.CloseReason=reason
+   stopTimer()
+   if self.State=='Queued' then finish(self,reason) return end
+   self.State='Closing'
+   if self.Card then TweenService:Create(self.Card,TweenInfo.new(.14),{GroupTransparency=1}):Play() end
+   self.Exit=task.delay(.14,function() self.Exit=nil finish(self,reason) end)
+  end
+  function n:Destroy() self:Close('destroy') end
+  function n:SetValue(value) return self:Update({Content=tostring(value)}) end
+  function n:Update(values)
+   if self.State=='Closed' or self.State=='Closing' then return false end
+   if values.Actions~=nil then validateActions(values.Actions) end
+   for key,value in pairs(values) do self.Options[key]=value end
+   if values.Duration~=nil then
+    stopTimer() self.Duration=duration(values.Duration) self.Remaining=self.Duration self.Started=nil
+   end
+   if self.State=='Visible' then
+    render(self)
+    if values.Duration~=nil and not self.Paused then self:Resume()
+    elseif values.PauseOnHover==false and self.Paused then self:Resume() end
+   end
+   return true
+  end
+  function n:Dispose()
+   stopTimer()
+   if self.Exit then pcall(task.cancel,self.Exit) self.Exit=nil end
+   self.Cleanup:Destroy()
+  end
+  table.insert(self.Queue,n) pump()
+  return n
+ end
+ finish=function(n,reason)
+  if n.State=='Closed' then return end
+  n.State='Closed' n:Dispose()
+  manager.Records[n]=nil
+  local i=table.find(manager.Active,n) if i then table.remove(manager.Active,i) end
+  i=table.find(manager.Queue,n) if i then table.remove(manager.Queue,i) end
+  safe(n.Options.OnClose,reason)
+  if not manager.Dead then pump() end
+ end
+ render=function(n)
+  local o=n.Options local semantic=kinds[o.Kind] or 'Primary'
+  if not n.Card then
+   local card=E.new('CanvasGroup',{Name='Notification',LayoutOrder=n.Sequence,GroupTransparency=1,BorderSizePixel=0,Size=UDim2.new(1,-8,0,0),AutomaticSize=Enum.AutomaticSize.Y},layer)
+   n.Card=card E.corner(card,16) E.pad(card,14) E.list(card,10)
+   w.Theme:Bind(card,'BackgroundColor3','Surface')
+   local border=E.new('UIStroke',{Thickness=1,Transparency=.2},card) w.Theme:Bind(border,'Color','Border')
+   local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,36)},card) n.Header=header
+   n.Title=E.text(header,'',14) n.Title.Position=UDim2.fromOffset(34,0) n.Title.Size=UDim2.new(1,-74,1,0) w.Theme:Bind(n.Title,'TextColor3','Text')
+   local close=E.button(header,'×') close.Size=UDim2.fromOffset(32,32) close.Position=UDim2.new(1,-32,0,0) w.Theme:Bind(close,'BackgroundColor3','SurfaceHover')
+   n.Body=E.text(card,'',13) n.Body.Size=UDim2.new(1,0,0,0) n.Body.AutomaticSize=Enum.AutomaticSize.Y w.Theme:Bind(n.Body,'TextColor3','MutedText')
+   n.Actions=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},card) E.list(n.Actions,8)
+   n.ActionCleanup=Cleanup.new()
+   local rail=E.new('Frame',{BorderSizePixel=0,Size=UDim2.new(1,0,0,3)},card) E.corner(rail,2) w.Theme:Bind(rail,'BackgroundColor3','Border') n.Rail=rail
+   n.Fill=E.new('Frame',{BorderSizePixel=0,Size=UDim2.fromScale(1,1)},rail) E.corner(n.Fill,2)
+   n.Cleanup:Add(function() n.ActionCleanup:Destroy() w.Theme:Forget(card) card:Destroy() end)
+   n.Cleanup:Add(close.Activated:Connect(function() n:Close('dismiss') end))
+   n.Cleanup:Add(card.MouseEnter:Connect(function() if n.Options.PauseOnHover~=false then n:Pause() end end))
+   n.Cleanup:Add(card.MouseLeave:Connect(function() if n.Options.PauseOnHover~=false then n:Resume() end end))
+   TweenService:Create(card,TweenInfo.new(.18),{GroupTransparency=0}):Play()
+  end
+  n.Title.Text=tostring(o.Title or 'Conexão UI') n.Body.Text=tostring(o.Content or '')
+  n.Body.Visible=n.Body.Text~='' n.Rail.Visible=n.Duration>0
+  w.Theme:Bind(n.Fill,'BackgroundColor3',semantic)
+  if n.Icon then w.Theme:Forget(n.Icon) n.Icon:Destroy() end
+  n.Icon=E.icon(n.Header,o.Icon or symbols[o.Kind] or 'info') n.Icon.Position=UDim2.fromOffset(0,6)
+  w.Theme:Bind(n.Icon,n.Icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3',semantic)
+  n.ActionCleanup:Destroy() n.ActionCleanup=Cleanup.new()
+  n.Actions.Visible=#o.Actions>0
+  for _,entry in ipairs(o.Actions) do
+   local b=E.button(n.Actions,entry.Name) w.Theme:Bind(b,'BackgroundColor3',semantic) w.Theme:Bind(b,'TextColor3','Text')
+   n.ActionCleanup:Add(function() w.Theme:Forget(b) b:Destroy() end)
+   n.ActionCleanup:Add(b.Activated:Connect(function()
+    if n.State~='Visible' then return end
+    safe(entry.Callback,n)
+    if entry.Close~=false then n:Close('action') end
+   end))
+  end
+ end
+ pump=function()
+  if manager.Dead then return end
+  while #manager.Active<capacity and #manager.Queue>0 do
+   local n=table.remove(manager.Queue,1)
+   if n.State=='Queued' then n.State='Visible' table.insert(manager.Active,n) render(n) n:Resume() end
+  end
+ end
+ local function layout()
+  local viewport=w.Gui.AbsoluteSize
+  layer.Size=UDim2.fromOffset(math.max(1,math.min(tonumber(config.Width) or 360,viewport.X-24)),math.max(1,viewport.Y-24))
+  capacity=(viewport.Y<600 or viewport.X<600) and 1 or maxVisible
+  for index=#manager.Active,capacity+1,-1 do
+   local n=manager.Active[index]
+   if n.State=='Visible' then
+    table.remove(manager.Active,index)
+    n:Pause() n.Cleanup:Destroy() n.Cleanup=Cleanup.new() n.Card=nil n.Icon=nil n.State='Queued'
+    table.insert(manager.Queue,1,n)
+   end
+  end
+  pump()
+ end
+ manager.Cleanup:Add(w.Gui:GetPropertyChangedSignal('AbsoluteSize'):Connect(layout))
+ function manager:Destroy()
+  if self.Dead then return end self.Dead=true
+  for n in pairs(self.Records) do n.State='Closed' n:Dispose() end
+  table.clear(self.Records) table.clear(self.Queue) table.clear(self.Active)
+  self.Cleanup:Destroy()
+ end
+ layout()
+ return manager
+end
+return Notifications
 
 end
 
@@ -650,6 +957,8 @@ local Input=__require("Core/Input")
 local Storage=__require("Core/Storage")
 local Animate=__require("Core/Animation")
 local Factory=__require("Components/Factory")
+local Notifications=__require("Core/Notifications")
+local Dialogs=__require("Core/Dialogs")
 local UIS=game:GetService('UserInputService')
 local Players=game:GetService('Players')
 local Window={}
@@ -681,7 +990,7 @@ function Window.new(o)
  local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
  local logo=E.text(header,'ϟ',30) logo.Position=UDim2.fromOffset(18,18) logo.Size=UDim2.fromOffset(30,30) w.Theme:Bind(logo,'TextColor3','Primary')
  local name=E.text(header,o.Title or o.name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
- local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.4.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
+ local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.5.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
  local search=E.new('TextBox',{Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
  local minimize=E.button(header,'−') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
  local close=E.button(header,'×') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
@@ -802,34 +1111,21 @@ function Window.new(o)
   local label=E.text(sidebar,nameText,10) self.Theme:Bind(label,'TextColor3','MutedText')
   return {SetValue=function(_,value) label.Text=tostring(value) end,Destroy=function() self.Theme:Forget(label) label:Destroy() end}
  end
- local notifications=E.new('Frame',{ZIndex=4,BackgroundTransparency=1,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-12,1,-12),Size=UDim2.new(.9,0,1,-24)},gui)
- E.new('UISizeConstraint',{MaxSize=Vector2.new(320,10000)},notifications)
- local notificationLayout=E.list(notifications,8) notificationLayout.VerticalAlignment=Enum.VerticalAlignment.Bottom
- function w:Notify(opts)
-  opts=opts or {} local c=Cleanup.new() clean:Add(c)
-  local card=E.new('Frame',{BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},notifications) E.corner(card) E.pad(card,14) E.list(card,6) self.Theme:Bind(card,'BackgroundColor3','Surface')
-  local title=E.text(card,opts.Title or 'Conexão UI',14) self.Theme:Bind(title,'TextColor3','Primary')
-  local body=E.text(card,opts.Content or '',13) body.Size=UDim2.new(1,0,0,0) body.AutomaticSize=Enum.AutomaticSize.Y self.Theme:Bind(body,'TextColor3','Text')
-  local b=E.button(card,'Fechar') self.Theme:Bind(b,'BackgroundColor3','SurfaceHover')
-  c:Add(function() self.Theme:Forget(card) card:Destroy() end) c:Add(b.Activated:Connect(function() c:Destroy() end))
-  if opts.Duration~=0 then task.delay(opts.Duration or 5,function() c:Destroy() end) end
-  return {Destroy=function() c:Destroy() end,SetValue=function(_,value) body.Text=tostring(value) end,Update=function(_,values) title.Text=values.Title or title.Text body.Text=values.Content or body.Text end}
- end
+ w.Notifications=Notifications.new(w,o.Notifications)
+ w.Dialogs=Dialogs.new(w)
+ clean:Add(w.Notifications) clean:Add(w.Dialogs)
+ function w:Notify(opts) return self.Notifications:Notify(opts) end
+ function w:Toast(opts) return self.Notifications:Notify(opts) end
+ function w:Popup(opts) return self.Dialogs:Popup(opts) end
  function w:Confirm(opts)
-  opts=opts or {} local c=Cleanup.new() clean:Add(c)
-  self.DialogCount=(self.DialogCount or 0)+1
-  c:Add(function() self.DialogCount=math.max(0,self.DialogCount-1) end)
-  local overlay=E.new('TextButton',{Text='',AutoButtonColor=false,BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.35,Size=UDim2.fromScale(1,1),ZIndex=200,Modal=true},gui)
-  local panel=E.new('Frame',{AnchorPoint=Vector2.new(.5,.5),Position=UDim2.fromScale(.5,.5),Size=UDim2.new(.9,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,ZIndex=201},overlay)
-  E.new('UISizeConstraint',{MaxSize=Vector2.new(420,1000)},panel) E.corner(panel) E.pad(panel,20) E.list(panel,12) self.Theme:Bind(panel,'BackgroundColor3','Surface')
-  local text=E.text(panel,opts.Content or 'Confirmar ação?',15) text.Size=UDim2.new(1,0,0,0) text.AutomaticSize=Enum.AutomaticSize.Y text.ZIndex=202 self.Theme:Bind(text,'TextColor3','Text')
-  c:Add(function() self.Theme:Forget(overlay) overlay:Destroy() end)
-  local resolved=false
-  local function finish(value) if resolved then return end resolved=true c:Destroy() if opts.Callback then task.spawn(function() local ok,err=pcall(opts.Callback,value) if not ok then warn(err) end end) end end
-  for _,entry in ipairs({{'Confirmar',true,'Primary'},{'Cancelar',false,'SurfaceHover'}}) do
-   local b=E.button(panel,entry[1]) b.ZIndex=202 self.Theme:Bind(b,'BackgroundColor3',entry[3]) c:Add(b.Activated:Connect(function() finish(entry[2]) end))
-  end
-  return {Destroy=function() finish(false) end,SetValue=function(_,value) text.Text=tostring(value) end,Update=function(_,values) text.Text=values.Content or text.Text end}
+  opts=opts or {}
+  local callback=opts.Callback
+  return self:Popup({
+   Title=opts.Title or 'Confirmar ação',Content=opts.Content or 'Deseja continuar?',
+   Cancellable=opts.Cancellable,DismissOnOutside=opts.DismissOnOutside,
+   Options={{Name=opts.ConfirmText or 'Confirmar',Value=true,Variant=opts.Destructive and 'Destructive' or nil},{Name=opts.CancelText or 'Cancelar',Value=false,Variant='Secondary'}},
+   Callback=callback and function(value) callback(value==true) end or nil,
+  })
  end
  Input.drag(header,root,clean,clamp)
  clean:Add(minimize.Activated:Connect(function() w:Minimize() end))
@@ -1168,7 +1464,7 @@ __modules["init"] = function()
 local Window=__require("Core/Window")
 local Dashboard=__require("Pages/Dashboard")
 local Settings=__require("Pages/Settings")
-local Library={Version='1.4.0',Windows={}}
+local Library={Version='1.5.0',Windows={}}
 function Library:CreateWindow(options)
  options=options or {}
  local id=options.Id or 'ConexaoUI'
@@ -1189,7 +1485,7 @@ end
 -- Studio: coloque ConexaoUI em ReplicatedStorage e este LocalScript em StarterPlayerScripts.
 local UI=__require("init")
 local window=UI:CreateWindow({
- Title='CONEXÃO UI',Subtitle='Criada para o seu próximo projeto',Version='1.4.0',
+ Title='CONEXÃO UI',Subtitle='Criada para o seu próximo projeto',Version='1.5.0',
  Id='ConexaoDemo',Scale=82,ToggleKey=Enum.KeyCode.RightControl,
 })
 window:CreateCategory('WORKSPACE')
@@ -1209,4 +1505,20 @@ tab:CreateBadge({Name='API v1.0',Content='Pronta para integrar'})
 tab:CreateParagraph({Name='Sobre os perfis',Content='Toggles, sliders, seleções, texto, teclas e cores são restaurados quando o armazenamento está disponível.'})
 tab:CreateDivider({})
 tab:CreateButton({Name='Abrir confirmação',Variant='Destructive',Callback=function() window:Confirm({Content='Executar esta ação demonstrativa?',Callback=function(confirmed) window:Notify({Content=confirmed and 'Ação confirmada.' or 'Cancelada.'}) end}) end})
+local feedback=window:CreateTab({Name='Avisos e popups',Icon='info'})
+feedback:CreateButton({Name='Notificação de sucesso',Callback=function()
+ window:Notify({Title='Perfil salvo',Content='Seu próximo projeto pode usar esse mesmo sistema.',Kind='Success',Duration=6})
+end})
+feedback:CreateButton({Name='Aviso com ação',Callback=function()
+ window:Notify({Title='Personalizar interface',Content='Abra as configurações ou deixe o aviso expirar.',Kind='Info',Duration=8,
+  Actions={{Name='Abrir configurações',Callback=function() window:SelectTab(window.SettingsTab) end}}})
+end})
+feedback:CreateButton({Name='Toast de aviso',Callback=function()
+ window:Toast({Title='Atenção',Content='Toast usa o mesmo sistema de fila e temporizador.',Kind='Warning'})
+end})
+feedback:CreateButton({Name='Popup com três escolhas',Callback=function()
+ window:Popup({Title='Escolha um perfil visual',Content='Exemplo de popup da Conexão UI.',Options={
+  {Name='Criativo',Value='criativo'}, {Name='Compacto',Value='compacto'}, {Name='Voltar',Value='cancel',Variant='Secondary'}},
+  Callback=function(value) if value then window:Notify({Content='Escolha: '..value}) end end})
+end})
 window:SelectTab(home)

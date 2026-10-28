@@ -12,6 +12,15 @@ local UDim2={new=function(xs,xo,ys,yo) return {X={Scale=xs,Offset=xo},Y={Scale=y
 function UDim2.fromScale(x,y) return UDim2.new(x,0,y,0) end
 function UDim2.fromOffset(x,y) return UDim2.new(0,x,0,y) end
 local Vector2={new=function(x,y) return {X=x,Y=y} end}
+local nativeTypeof=typeof
+local function typeof(value) if type(value)=='table' and value._color then return 'Color3' end return nativeTypeof(value) end
+local Color3={}
+function Color3.fromRGB(r,g,b)
+ local color={_color=true,R=r/255,G=g/255,B=b/255}
+ function color:ToHex() return string.format('%02X%02X%02X',math.floor(self.R*255+.5),math.floor(self.G*255+.5),math.floor(self.B*255+.5)) end
+ return color
+end
+function Color3.fromHex(hex) return Color3.fromRGB(tonumber(hex:sub(1,2),16),tonumber(hex:sub(3,4),16),tonumber(hex:sub(5,6),16)) end
 local task={spawn=function(fn) fn() end}
 local warned=false
 local function warn() warned=true end
@@ -32,10 +41,11 @@ function E.new(class,props,parent)
  if parent then table.insert(parent.Children,node) end
  function node:Destroy() self.Dead=true self.Parent=nil end
  function node:ReleaseFocus() self.Released=true end
- node.Focused=signal() node.FocusLost=signal()
+ for _,key in ipairs({'Focused','FocusLost','Activated','MouseEnter','MouseLeave','MouseButton1Down','MouseButton1Up'}) do node[key]=signal() end
  return node
 end
 function E.text(parent,text) return E.new('TextLabel',{Text=text},parent) end
+function E.button(parent,text) return E.new('TextButton',{Text=text},parent) end
 function E.corner() end
 function E.pad() end
 function E.list() end
@@ -67,8 +77,18 @@ local before=calls c:SetValue(60,true) check(calls==before and w.Storage.Values[
 local progress=Factory.create(tab,'ProgressBar',{Name='progress',Min=0,Max=100,Value=68})
 check(progress:GetValue()==68 and progress.Instance.Children[2].Children[1].ClassName=='TextLabel','progress uses a display-only label')
 c:Destroy() check(#tab.Controls==1 and w.Ids['test/amount']==nil,'slider destruction unregisters control')
+w.Storage.Values['test/cor']='invalid color from imported profile'
+local color=Factory.create(tab,'ColorPicker',{Name='cor',Default='#123456',FireOnInit=false})
+check(color:GetValue()=='#123456','invalid stored color falls back to configured default')
+color:SetValue({'255','128','0'},true) check(color:GetValue()=='#FF8000','RGB string channels are normalized to numbers')
+check(not color:SetValue('not a color',true) and color:GetValue()=='#FF8000','invalid color update preserves last valid value')
+color:Destroy()
+w.Storage.Values['test/badDefault']='invalid'
+local fallback=Factory.create(tab,'ColorPicker',{Name='badDefault',Default='invalid',FireOnInit=false})
+check(fallback:GetValue()=='#9070F7','invalid default uses safe library fallback')
+fallback:Destroy()
 tab.Cleanup:Destroy() check(#tab.Controls==0,'tab teardown cleans remaining controls')
-print('PASS: '..checks..' slider/progress assertions (GUI/input primitives mocked)')
+print('PASS: '..checks..' slider/progress/color assertions (GUI/input primitives mocked)')
 '''
 with tempfile.TemporaryDirectory() as temp:
  p=Path(temp)/'sliders.luau'

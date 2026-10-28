@@ -24,7 +24,7 @@ local Window = ConexaoUI:CreateWindow({
     Id = "ConexaoExemploCompleto",
     Title = "CONEXÃO UI",
     Subtitle = "Exemplos de todos os componentes",
-    Version = "1.4.0",
+    Version = "1.5.0",
     Scale = 82,
     ToggleKey = Enum.KeyCode.RightControl,
 })
@@ -291,6 +291,68 @@ Informacoes:CreateButton({
             Content = "Fechar e destruir esta interface?",
             Callback = function(confirmed)
                 if confirmed then Window:Destroy() end
+            end,
+        })
+    end,
+})
+
+--// 18. Notificações completas e popup de escolhas
+
+local Avisos = Window:CreateTab({Name = "Avisos e popups", Icon = "info"})
+
+Avisos:CreateButton({
+    Name = "Sucesso com ação",
+    Callback = function()
+        Window:Notify({
+            Title = "Tudo salvo",
+            Content = "Aviso com duração, progresso e botão de ação.",
+            Kind = "Success",
+            Duration = 8,
+            PauseOnHover = true,
+            Actions = {{
+                Name = "Abrir configurações",
+                Callback = function() Window:SelectTab(Window.SettingsTab) end,
+            }},
+            OnClose = function(reason) print("Notificação encerrada:", reason) end,
+        })
+    end,
+})
+
+Avisos:CreateButton({
+    Name = "Aviso persistente e atualizável",
+    Callback = function()
+        local notice = Window:Notify({
+            Title = "Aviso persistente",
+            Content = "Este aviso fica aberto até ser fechado.",
+            Kind = "Info",
+            Duration = 0,
+        })
+        notice:Update({
+            Actions = {{
+                Name = "Atualizar mensagem",
+                Close = false,
+                Callback = function(handle)
+                    handle:Update({Content = "Atualizado sem recriar a janela.", Kind = "Success"})
+                end,
+            }},
+        })
+    end,
+})
+
+Avisos:CreateButton({
+    Name = "Popup de escolhas",
+    Callback = function()
+        Window:Popup({
+            Title = "O que deseja abrir?",
+            Content = "As escolhas são definidas pelo autor do script.",
+            Options = {
+                {Name = "Configurações", Value = "settings"},
+                {Name = "Principal", Value = "home"},
+                {Name = "Cancelar", Value = false, Variant = "Secondary"},
+            },
+            Callback = function(value)
+                if value == "settings" then Window:SelectTab(Window.SettingsTab)
+                elseif value == "home" then Window:SelectTab(Principal) end
             end,
         })
     end,

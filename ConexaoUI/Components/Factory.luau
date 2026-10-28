@@ -181,7 +181,7 @@ function Factory.create(tab,kind,o)
   local function parse(v)
    if typeof(v)=='Color3' then return v end
    if type(v)=='string' and v:match('^#?%x%x%x%x%x%x$') then return Color3.fromHex(v:gsub('#','')) end
-   if type(v)=='table' and tonumber(v[1]) and tonumber(v[2]) and tonumber(v[3]) then return Color3.fromRGB(math.clamp(v[1],0,255),math.clamp(v[2],0,255),math.clamp(v[3],0,255)) end
+   if type(v)=='table' and tonumber(v[1]) and tonumber(v[2]) and tonumber(v[3]) then return Color3.fromRGB(math.clamp(tonumber(v[1]),0,255),math.clamp(tonumber(v[2]),0,255),math.clamp(tonumber(v[3]),0,255)) end
    return nil
   end
   function c:SetValue(value,silent)
@@ -203,7 +203,7 @@ function Factory.create(tab,kind,o)
    clean:Add(field.FocusLost:Connect(function() if not c.Disabled then setChannel(math.clamp(tonumber(field.Text) or 0,0,255)) end end))
   end
   clean:Add(preview.Activated:Connect(function() if not c.Disabled then panel.Visible=not panel.Visible end end))
-  c:SetValue(initial or '#9070F7',true) hex.Text=c.Value
+  if not c:SetValue(initial,true) then if not c:SetValue(o.Default,true) then c:SetValue('#9070F7',true) end end hex.Text=c.Value
  else
   local body=E.text(row,o.Content or o.Text or '',13) body.AutomaticSize=Enum.AutomaticSize.Y body.Size=UDim2.new(1,0,0,0) w.Theme:Bind(body,'TextColor3','MutedText')
   if kind=='Divider' then title.Visible=false body.Visible=false row.Size=UDim2.new(1,0,0,2) row.AutomaticSize=Enum.AutomaticSize.None end
