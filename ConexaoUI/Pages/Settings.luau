@@ -7,12 +7,12 @@ local Settings={}
 local themeNames={'Conexão Dark','Violeta','Dourado','Aurora','Oceano','Rosa','Noite','Monocromático'}
 local presets={
  ['Conexão Dark']={Background=Color3.fromRGB(16,18,22),Surface=Color3.fromRGB(28,31,36),SurfaceHover=Color3.fromRGB(40,44,52),Primary=Color3.fromRGB(143,110,247)},
- ['Violeta']={Background=Color3.fromRGB(22,18,32),Surface=Color3.fromRGB(36,29,49),SurfaceHover=Color3.fromRGB(49,39,67),Primary=Color3.fromRGB(173,135,255)},
+ ['Violeta']={Background=Color3.fromRGB(22,18,32),Surface=Color3.fromRGB(36,29,49),SurfaceHover=Color3.fromRGB(49,39,67),Primary=Color3.fromRGB(158,126,221)},
  ['Dourado']={Background=Color3.fromRGB(23,21,17),Surface=Color3.fromRGB(36,33,27),SurfaceHover=Color3.fromRGB(51,46,36),Primary=Color3.fromRGB(224,184,100)},
- ['Aurora']={Background=Color3.fromRGB(13,24,27),Surface=Color3.fromRGB(20,39,43),SurfaceHover=Color3.fromRGB(28,55,58),Primary=Color3.fromRGB(51,221,190)},
- ['Oceano']={Background=Color3.fromRGB(12,21,35),Surface=Color3.fromRGB(21,35,55),SurfaceHover=Color3.fromRGB(29,49,75),Primary=Color3.fromRGB(56,170,250)},
- ['Rosa']={Background=Color3.fromRGB(29,18,30),Surface=Color3.fromRGB(45,29,46),SurfaceHover=Color3.fromRGB(64,39,64),Primary=Color3.fromRGB(235,134,204)},
- ['Noite']={Background=Color3.fromRGB(14,14,30),Surface=Color3.fromRGB(25,24,48),SurfaceHover=Color3.fromRGB(38,35,68),Primary=Color3.fromRGB(115,102,255)},
+ ['Aurora']={Background=Color3.fromRGB(13,24,27),Surface=Color3.fromRGB(20,39,43),SurfaceHover=Color3.fromRGB(28,55,58),Primary=Color3.fromRGB(75,185,164)},
+ ['Oceano']={Background=Color3.fromRGB(12,21,35),Surface=Color3.fromRGB(21,35,55),SurfaceHover=Color3.fromRGB(29,49,75),Primary=Color3.fromRGB(83,149,211)},
+ ['Rosa']={Background=Color3.fromRGB(29,18,30),Surface=Color3.fromRGB(45,29,46),SurfaceHover=Color3.fromRGB(64,39,64),Primary=Color3.fromRGB(207,126,181)},
+ ['Noite']={Background=Color3.fromRGB(14,14,30),Surface=Color3.fromRGB(25,24,48),SurfaceHover=Color3.fromRGB(38,35,68),Primary=Color3.fromRGB(132,119,210)},
  ['Monocromático']={Background=Color3.fromRGB(19,21,24),Surface=Color3.fromRGB(30,33,38),SurfaceHover=Color3.fromRGB(45,49,55),Primary=Color3.fromRGB(184,204,227)},
 }
 function Settings.create(w,o)
@@ -21,7 +21,6 @@ function Settings.create(w,o)
  local tab=w:CreateTab({Id='@conexao/settings',Name='Configurações',Icon='settings',Description='Preferências da interface',Internal=true})
  tab.Button.LayoutOrder=100000
  w.SettingsTab=tab
- local heading=E.text(tab.Page,'Configurações',24) w.Theme:Bind(heading,'TextColor3','Text')
  local nav=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},tab.Page)
  local groups={} local buttons={} local groupLayouts={}
  local function select(name)
@@ -29,14 +28,18 @@ function Settings.create(w,o)
  end
  for index,name in ipairs({'Interface','Config'}) do
   local b=E.button(nav,name) b.Size=UDim2.new(.5,-4,1,0) b.Position=UDim2.new((index-1)*.5,(index-1)*8,0,0) buttons[name]=b
-  local frame=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},tab.Page) groupLayouts[name]=E.list(frame,10) groups[name]=frame
+  local frame=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},tab.Page) groupLayouts[name]=E.list(frame,14) E.fit(frame,groupLayouts[name],tab.Cleanup,0) groups[name]=frame
   tab.Cleanup:Add(b.Activated:Connect(function() select(name) end))
  end
- local configLeft=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) E.list(configLeft,10)
- local configRight=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) E.list(configRight,10)
+ local configLeft=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) local configLeftLayout=E.list(configLeft,14) E.fit(configLeft,configLeftLayout,tab.Cleanup,0)
+ local configRight=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) local configRightLayout=E.list(configRight,14) E.fit(configRight,configRightLayout,tab.Cleanup,0)
+ local interfaceLeft=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0)},groups.Interface)
+ local interfaceRight=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0)},groups.Interface)
+ local leftLayout=E.list(interfaceLeft,14) E.fit(interfaceLeft,leftLayout,tab.Cleanup,0)
+ local rightLayout=E.list(interfaceRight,14) E.fit(interfaceRight,rightLayout,tab.Cleanup,0)
  local sections={
-  Appearance=Group.new(tab,{Id='appearance',Name='INTERFACE',Icon='settings'},groups.Interface),
-  Colors=Group.new(tab,{Id='colors',Name='TEMAS E CORES',Icon='palette'},groups.Interface),
+  Appearance=Group.new(tab,{Id='appearance',Name='INTERFACE',Icon='settings'},interfaceLeft),
+  Colors=Group.new(tab,{Id='colors',Name='TEMAS E CORES',Icon='palette'},interfaceRight),
   Config=Group.new(tab,{Id='storage',Name='CONFIGURAÇÃO',Icon='settings'},configLeft),
   Profiles=Group.new(tab,{Id='profiles',Name='PERFIS',Icon='user'},configRight),
  }
@@ -64,18 +67,18 @@ function Settings.create(w,o)
  if w.Storage.Values['@ui/accent']==nil and type(o.Theme)=='table' then preset=nil end
  if preset then w:SetTheme(preset) end
  -- Real buttons with live selection; previews are assembled from GUI objects.
- local gallery=E.new('Frame',{Name='ThemeGallery',BackgroundTransparency=1,Size=UDim2.new(1,0,0,224)},sections.Colors.Page)
+ local gallery=E.new('Frame',{Name='ThemeGallery',BackgroundTransparency=1,Size=UDim2.new(1,0,0,202)},sections.Colors.Page)
  local grid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(10,10),CellSize=UDim2.new(.25,-8,0,106),SortOrder=Enum.SortOrder.LayoutOrder},gallery)
  local cards={}
  for index,themeName in ipairs(themeNames) do
   local palette=presets[themeName]
-  local card=E.button(gallery,'') card.LayoutOrder=index E.corner(card,16)
-  w.Theme:Bind(card,'BackgroundColor3','Surface')
+  local card=E.button(gallery,'') card.LayoutOrder=index E.corner(card,12)
+  w.Theme:Bind(card,'BackgroundColor3','SurfaceHover')
   local border=E.new('UIStroke',{Thickness=1,Transparency=.5},card) w.Theme:Bind(border,'Color','Border')
-  local preview=E.new('Frame',{BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,Position=UDim2.fromOffset(10,10),Size=UDim2.new(1,-20,0,52)},card) E.corner(preview,10)
+  local preview=E.new('Frame',{BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,Position=UDim2.fromOffset(10,10),Size=UDim2.new(1,-20,0,38)},card) E.corner(preview,10)
   E.new('UIGradient',{Color=ColorSequence.new(palette.Surface,palette.Primary),Rotation=25},preview)
   local bar=E.new('Frame',{BackgroundColor3=palette.Primary,BorderSizePixel=0,Position=UDim2.new(0,10,1,-18),Size=UDim2.new(.45,0,0,6)},preview) E.corner(bar,3)
-  local label=E.text(card,themeName,12) label.Position=UDim2.fromOffset(10,69) label.Size=UDim2.new(1,-20,0,26) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','Text')
+  local label=E.text(card,themeName,12) label.Position=UDim2.fromOffset(10,56) label.Size=UDim2.new(1,-20,0,22) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','Text')
   cards[themeName]={Button=card,Border=border}
   tab.Cleanup:Add(card.Activated:Connect(function() controls.theme:SetValue(themeName) end))
  end
@@ -87,14 +90,25 @@ function Settings.create(w,o)
   end
  end
  tab.ThemeCards=cards
+ local function galleryLayout()
+  local width=sections.Colors.Page.AbsoluteSize.X
+  local columns=width>=640 and 4 or width>=340 and 2 or 1
+  grid.CellSize=UDim2.new(1/columns,-10*(columns-1)/columns,0,90)
+  gallery.Size=UDim2.new(1,0,0,math.ceil(#themeNames/columns)*100-10)
+ end
+ tab.Cleanup:Add(sections.Colors.Page:GetPropertyChangedSignal('AbsoluteSize'):Connect(galleryLayout))
  tab.Relayout=function(width)
-  local wide=width>=650
-  groupLayouts.Config.FillDirection=wide and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
-  configLeft.Size=UDim2.new(wide and .45 or 1,wide and -5 or 0,0,0)
-  configRight.Size=UDim2.new(wide and .55 or 1,wide and -5 or 0,0,0)
-  local columns=width>=600 and 4 or width>=290 and 2 or 1
-  grid.CellSize=UDim2.new(1/columns,-10*(columns-1)/columns,0,106)
-  gallery.Size=UDim2.new(1,0,0,math.ceil(#themeNames/columns)*116-10)
+  local wide=width>=800
+  for _,name in ipairs({'Config','Interface'}) do groupLayouts[name].FillDirection=wide and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical end
+  for _,frame in ipairs({configLeft,configRight,interfaceLeft,interfaceRight}) do
+   local size=frame.Size
+   frame.Size=UDim2.new(wide and .5 or 1,wide and -7 or 0,0,size.Y.Offset)
+  end
+  for index,name in ipairs({'Interface','Config'}) do
+   local buttonWidth=math.min(150,math.max(1,(width-12)/2))
+   buttons[name].Size=UDim2.fromOffset(buttonWidth,38) buttons[name].Position=UDim2.fromOffset((index-1)*(buttonWidth+10),0)
+  end
+  galleryLayout()
  end
  tab.Relayout(tab.Page.AbsoluteSize.X-24) refreshGallery()
  add('Slider','scale','Tamanho da janela (%)',w.ScalePercent,{Min=0,Max=100,Suffix='%'},function(value) w:SetScale(value) end)
@@ -165,6 +179,7 @@ function Settings.create(w,o)
    end
   end
   refresh() if self.RefreshProfiles then self.RefreshProfiles() end
+  if self.HomeTab then self.HomeTab:Refresh() end
  end
  w.ProfileControls=Profiles.create(w,function(kind,props) props.Persistent=false return create('Profiles',kind,props) end)
  refresh() select('Interface')

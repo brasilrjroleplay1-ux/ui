@@ -1,12 +1,12 @@
 -- Exemplo separado da library. Studio: LocalScript em StarterPlayerScripts.
 local UI = require(game:GetService("ReplicatedStorage"):WaitForChild("ConexaoUI"))
 local window = UI:CreateWindow({
-    Id = "ConexaoDemo", Title = "CONEXÃO UI", Version = "1.6.0",
+    Id = "ConexaoDemo", Title = "CONEXÃO UI", Version = "1.7.0",
     Subtitle = "Sua conexão. Seu estilo.", Scale = 82,
 })
 
--- O dashboard só aparece porque este exemplo o cria.
-local home = window:CreateDashboard({Username = game:GetService("Players").LocalPlayer.DisplayName})
+-- Início, avatar, nome e executor já são fornecidos pela library.
+local home = window.HomeTab
 local tab = window:CreateTab({Name = "Componentes", Icon = "star", Description = "Controles criados pelo script de demonstração"})
 local controls = tab:CreateGroup({Id = "controls", Name = "CONTROLES", Icon = "bolt", Column = 1})
 local choices = tab:CreateGroup({Id = "choices", Name = "ESCOLHAS", Icon = "settings", Column = 2})

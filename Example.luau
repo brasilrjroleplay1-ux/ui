@@ -1,7 +1,7 @@
 --============================================================--
 -- CONEXÃO UI | EXEMPLO COMPLETO DA NOSSA API
 -- Janela, abas, todos os componentes e atualização de valores.
--- Configurações, temas e perfis já vêm dentro da library.
+-- Dashboard do jogador, configurações, temas e perfis já vêm na library.
 --============================================================--
 
 --// 1. Carregar a library
@@ -24,12 +24,12 @@ local Window = ConexaoUI:CreateWindow({
     Id = "ConexaoExemploCompleto",
     Title = "CONEXÃO UI",
     Subtitle = "Exemplos de todos os componentes",
-    Version = "1.6.0",
+    Version = "1.7.0",
     Scale = 82,
     ToggleKey = Enum.KeyCode.RightControl,
 })
 
--- Não precisa criar a aba Configurações nem programar o salvamento.
+-- Avatar/nome/executor, Configurações e salvamento já vêm prontos.
 -- Use Ids estáveis e únicos para restaurar as escolhas entre execuções.
 
 --// 3. Categorias e abas com ícones

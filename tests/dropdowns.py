@@ -34,7 +34,7 @@ function E.new(class,props,parent)
 end
 function E.text(parent,text) return E.new('TextLabel',{Text=text},parent) end
 function E.button(parent,text) return E.new('TextButton',{Text=text},parent) end
-function E.corner() end function E.list() end function E.pad() end
+function E.fit() end function E.corner() end function E.list() end function E.pad() end
 local Input={} local function Animate() end
 '''
 tests=r'''

@@ -6,7 +6,7 @@ Este guia mostra **a API da nossa library**, com cada componente separado e um s
 - **[Abrir o código bruto do exemplo](https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/Example.luau)**
 - [Instalação no Roblox Studio e documentação de referência](../README.md)
 
-A aba **Configurações** já é criada com a janela. Você não precisa escrever a interface de temas, perfis nem o sistema de salvamento.
+O Dashboard de identidade e a aba **Configurações** já são criados com a janela. Você não precisa escrever a interface de temas, perfis nem o sistema de salvamento.
 
 ## Índice
 

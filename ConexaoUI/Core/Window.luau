@@ -11,6 +11,7 @@ local UIS=game:GetService('UserInputService')
 local Players=game:GetService('Players')
 local Options=require(script.Parent.Options)
 local Group=require(script.Parent.Parent.Components.Group)
+local Identity=require(script.Parent.Identity)
 local Window={}
 function Window.new(o)
  o=Options.normalize(o)
@@ -24,6 +25,7 @@ function Window.new(o)
  if previous then previous:Destroy() end
  local gui=E.new('ScreenGui',{Name=guiName,ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=o.DisplayOrder or 20,IgnoreGuiInset=false},parent)
  w.Gui=gui
+ w.Identity=Identity.new(w,o) clean:Add(w.Identity)
  local config=table.clone(o.Config or {})
  if config.Name==nil then config.Name=(o.Id or o.Title or o.Name or guiName):gsub('[^%w_-]','_')..'-'..tostring(game.PlaceId) end
  w.ProfileName=config.Name
@@ -40,17 +42,19 @@ function Window.new(o)
  local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
  local logo=E.text(header,'ϟ',30) logo.Position=UDim2.fromOffset(18,18) logo.Size=UDim2.fromOffset(30,30) w.Theme:Bind(logo,'TextColor3','Primary')
  local name=E.text(header,o.Title or o.Name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
- local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.6.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
+ local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.7.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
  local search=E.new('TextBox',{Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
  local minimize=E.button(header,'−') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
  local close=E.button(header,'×') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
  local sidebar=E.scroll(root) sidebar.Position=UDim2.fromOffset(0,64) sidebar.Size=UDim2.new(0,176,1,-64)
  local content=E.new('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(176,64),Size=UDim2.new(1,-176,1,-64),ClipsDescendants=true},root)
  local restore=E.button(gui,'ϟ  Conexão') restore.Size=UDim2.fromOffset(132,44) restore.Position=UDim2.new(0,12,1,-56) restore.Visible=false restore.ZIndex=3 w.Theme:Bind(restore,'BackgroundColor3','Primary')
- local profile=E.new('Frame',{Name='Profile',BackgroundTransparency=1,Size=UDim2.fromOffset(64,56),Position=UDim2.new(0,0,1,-56)},root)
- local avatar=E.icon(profile,o.Avatar or 'user') avatar.Position=UDim2.fromOffset(16,12) avatar.Size=UDim2.fromOffset(32,32) E.corner(avatar,16)
- w.Theme:Bind(avatar,avatar:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Text')
- local profileName=E.text(profile,player.DisplayName or player.Name or 'Perfil',12) profileName.Position=UDim2.fromOffset(56,16) profileName.Size=UDim2.new(1,-64,0,24) profileName.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileName,'TextColor3','MutedText')
+ local profile=E.new('TextButton',{Name='Profile',Text='',AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.fromOffset(64,64),Position=UDim2.new(0,0,1,-64)},root)
+ local avatar=E.new('ImageLabel',{Name='Avatar',BackgroundTransparency=1,Size=UDim2.fromOffset(38,38),Position=UDim2.fromOffset(13,13)},profile) E.corner(avatar,19).Name='AvatarMask' w.Identity:BindImage(avatar)
+ local profileName=E.text(profile,w.Identity.DisplayName,12) profileName.Position=UDim2.fromOffset(58,11) profileName.Size=UDim2.new(1,-66,0,22) profileName.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileName,'TextColor3','Text')
+ local profileExecutor=E.text(profile,w.Identity.Executor,10) profileExecutor.Position=UDim2.fromOffset(58,34) profileExecutor.Size=UDim2.new(1,-66,0,18) profileExecutor.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileExecutor,'TextColor3','MutedText')
+ clean:Add(profile.Activated:Connect(function() if w.HomeTab then w:SelectTab(w.HomeTab) end end))
+ w.Profile={Avatar=avatar,Name=profileName,Executor=profileExecutor}
  local tooltip=E.text(gui,'',12) tooltip.BackgroundTransparency=.08 tooltip.Size=UDim2.fromOffset(180,32) tooltip.Visible=false tooltip.ZIndex=100 tooltip.TextXAlignment=Enum.TextXAlignment.Center E.corner(tooltip) w.Theme:Bind(tooltip,'BackgroundColor3','Surface') w.Theme:Bind(tooltip,'TextColor3','Text')
  w.ScalePercent=math.clamp(tonumber(w.Storage.Values['@scale']) or o.Scale or 78,0,100)
  w.Minimized=false w.Visible=true
@@ -75,12 +79,12 @@ function Window.new(o)
   local width=math.min(viewport.X,math.max(math.min(viewport.X,compact and 290 or 520),viewport.X*fraction))
   local height=math.min(viewport.Y,math.max(math.min(viewport.Y,280),viewport.Y*fraction))
   root.Size=UDim2.fromOffset(width,w.Minimized and 64 or height)
-  local nav=(compact or sidebarIcons) and 64 or 176
+  local nav=(compact or sidebarIcons) and 64 or 210
   local showProfile=o.ShowProfile~=false and not w.Minimized
-  profile.Visible=showProfile profile.Size=UDim2.fromOffset(nav,56) profileName.Visible=not (compact or sidebarIcons)
-  sidebar.Size=UDim2.new(0,nav,1,showProfile and -120 or -64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
+  profile.Visible=showProfile profile.Size=UDim2.fromOffset(nav,64) profileName.Visible=not (compact or sidebarIcons) profileExecutor.Visible=profileName.Visible
+  sidebar.Size=UDim2.new(0,nav,1,showProfile and -128 or -64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
   search.Visible=width>=660 subtitle.Visible=width>=420
-  name.TextSize=compact and 14 or 18 name.Size=UDim2.new(1,-154,0,24)
+  name.TextSize=compact and 14 or 18 name.Size=UDim2.new(1,search.Visible and -330 or -154,0,24) name.TextTruncate=Enum.TextTruncate.AtEnd
   for _,category in ipairs(w.Categories) do category.Visible=not (compact or sidebarIcons) end
   for _,t in ipairs(w.Tabs) do t.Label.Visible=not (compact or sidebarIcons) end
   for _,t in ipairs(w.Tabs) do if t.Relayout then t.Relayout(width-nav-24) end
@@ -105,7 +109,7 @@ function Window.new(o)
  end
  function w:SetTheme(values)
   self.Theme:Apply(values)
-  if values.CornerRadius then for _,instance in ipairs(root:GetDescendants()) do if instance:IsA('UICorner') then instance.CornerRadius=UDim.new(0,values.CornerRadius) end end end
+  if values.CornerRadius then for _,instance in ipairs(root:GetDescendants()) do if instance:IsA('UICorner') and instance.Name~='AvatarMask' then instance.CornerRadius=UDim.new(0,values.CornerRadius) end end end
  end
  function w:SetTransparency(value)
   self.Transparency=math.clamp(tonumber(value) or 0,0,1) root.BackgroundTransparency=self.Transparency
@@ -177,16 +181,16 @@ function Window.new(o)
     assert(settings.Column==1 or settings.Column==2,'Column deve ser 1 ou 2.')
     if not self.ColumnFrame then
      self.ColumnFrame=E.new('Frame',{Name='GroupColumns',BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},self.Page)
-     local columnLayout=E.list(self.ColumnFrame,12)
+     local columnLayout=E.list(self.ColumnFrame,12) E.fit(self.ColumnFrame,columnLayout,self.Cleanup,0)
      self.Columns={}
      for index=1,2 do
       local column=E.new('Frame',{BackgroundTransparency=1,LayoutOrder=index,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},self.ColumnFrame)
-      E.list(column,12) self.Columns[index]=column
+      local fitList=E.list(column,12) E.fit(column,fitList,self.Cleanup,0) self.Columns[index]=column
      end
      self.LayoutGroups=function(width)
       local wide=width>=700
       columnLayout.FillDirection=wide and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
-      for _,column in ipairs(self.Columns) do column.Size=wide and UDim2.new(.5,-6,0,0) or UDim2.new(1,0,0,0) end
+      for _,column in ipairs(self.Columns) do local height=column.Size.Y.Offset column.Size=wide and UDim2.new(.5,-6,0,height) or UDim2.new(1,0,0,height) end
      end
      self.Cleanup:Add(self.Page:GetPropertyChangedSignal('AbsoluteSize'):Connect(function() self.LayoutGroups(self.Page.AbsoluteSize.X-24) end))
     end
@@ -202,7 +206,7 @@ function Window.new(o)
    local index=table.find(w.Tabs,self) if index then table.remove(w.Tabs,index) end
    if w.ActiveTab==self and w.Tabs[1] then w:SelectTab(w.Tabs[1]) end
   end
-  table.insert(self.Tabs,tab) if #self.Tabs==1 or (self.ActiveTab and self.ActiveTab.Internal and not tab.Internal) then self:SelectTab(tab) end layout() return tab
+  table.insert(self.Tabs,tab) if #self.Tabs==1 or (self.ActiveTab and self.ActiveTab.Internal and not self.HomeTab and not tab.Internal) then self:SelectTab(tab) end layout() return tab
  end
  function w:CreateCategory(nameText)
   local label=E.text(sidebar,nameText,10) self.Theme:Bind(label,'TextColor3','MutedText')

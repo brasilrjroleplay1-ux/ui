@@ -7,6 +7,7 @@ factory=(root/'ConexaoUI/Components/Factory.luau').read_text()
 factory='\n'.join(x for x in factory.splitlines() if not x.startswith('local ') or '=require(' not in x)
 cleanup=(root/'ConexaoUI/Core/Cleanup.luau').read_text()
 options=(root/'ConexaoUI/Core/Options.luau').read_text()
+colorpanel='\n'.join(x for x in (root/'ConexaoUI/Components/ColorPanel.luau').read_text().splitlines() if '=require(' not in x)
 rowlayout='\n'.join(x for x in (root/'ConexaoUI/Components/RowLayout.luau').read_text().splitlines() if '= require(' not in x)
 host=r'''
 local Enum={AutomaticSize={Y='Y'},Font={GothamMedium='GothamMedium'}}
@@ -22,6 +23,7 @@ function Color3.fromRGB(r,g,b)
  function color:ToHex() return string.format('%02X%02X%02X',math.floor(self.R*255+.5),math.floor(self.G*255+.5),math.floor(self.B*255+.5)) end
  return color
 end
+function Color3.new(r,g,b) return Color3.fromRGB(r*255,g*255,b*255) end
 function Color3.fromHex(hex) return Color3.fromRGB(tonumber(hex:sub(1,2),16),tonumber(hex:sub(3,4),16),tonumber(hex:sub(5,6),16)) end
 local task={spawn=function(fn) fn() end}
 local warned=false
@@ -48,6 +50,7 @@ function E.new(class,props,parent)
 end
 function E.text(parent,text) return E.new('TextLabel',{Text=text},parent) end
 function E.button(parent,text) return E.new('TextButton',{Text=text},parent) end
+function E.fit() end
 function E.corner() end
 function E.pad() end
 function E.list() end
@@ -94,5 +97,5 @@ print('PASS: '..checks..' slider/progress/color assertions (GUI/input primitives
 '''
 with tempfile.TemporaryDirectory() as temp:
  p=Path(temp)/'sliders.luau'
- p.write_text(host+'\nlocal Cleanup=(function()\n'+cleanup+'\nend)()\nlocal Options=(function()\n'+options+'\nend)()\nlocal RowLayout=(function()\n'+rowlayout+'\nend)()\nlocal Factory=(function()\n'+factory+'\nend)()\n'+tests)
+ p.write_text(host+'\nlocal Cleanup=(function()\n'+cleanup+'\nend)()\nlocal Options=(function()\n'+options+'\nend)()\nlocal RowLayout=(function()\n'+rowlayout+'\nend)()\nlocal ColorPanel=(function()\n'+colorpanel+'\nend)()\nlocal Factory=(function()\n'+factory+'\nend)()\n'+tests)
  subprocess.run([cli,str(p)],check=True)

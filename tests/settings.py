@@ -13,15 +13,16 @@ function Color3.new(r,g,b) return Color3.fromRGB(r*255,g*255,b*255) end
 function Color3.fromHex(hex) return Color3.fromRGB(tonumber(hex:sub(1,2),16),tonumber(hex:sub(3,4),16),tonumber(hex:sub(5,6),16)) end
 local ColorSequence={new=function(...) return {...} end}
 local Enum={FillDirection={Horizontal='Horizontal',Vertical='Vertical'},SortOrder={LayoutOrder='LayoutOrder'},TextTruncate={AtEnd='AtEnd'},AutomaticSize={Y='Y'},KeyCode={RightControl={Name='RightControl'},F8={Name='F8'}}}
-local UDim2={new=function(...) return {...} end,fromOffset=function(...) return {...} end}
+local UDim2={new=function(xs,xo,ys,yo) return {X={Scale=xs,Offset=xo},Y={Scale=ys,Offset=yo}} end,fromOffset=function(x,y) return {X={Scale=0,Offset=x},Y={Scale=0,Offset=y}} end}
 local E={}
 function E.new(_,props) local node=props or {} node.Activated={Connect=function(_,fn) node.Click=fn return {} end} return node end
 function E.text(_,text) return E.new('TextLabel',{Text=text}) end
 function E.button(_,text) return E.new('TextButton',{Text=text}) end
 function E.list() return {} end
+function E.fit() end
 function E.corner() end
 local Profiles={create=function() return {} end}
-local Group={new=function(tab,opts,parent) return {Page={},Window=tab.Window,Cleanup=tab.Cleanup,Controls=tab.Controls,Id=opts.Id,Members={}} end}
+local Group={new=function(tab,opts,parent) return {Page={AbsoluteSize={X=600},GetPropertyChangedSignal=function() return {Connect=function() return {} end} end},Window=tab.Window,Cleanup=tab.Cleanup,Controls=tab.Controls,Id=opts.Id,Members={}} end}
 local Factory={}
 function Factory.create(tab,kind,o)
  local c={Kind=kind,Options=o,Id=o.Id,Default=o.Default,Persistent=o.Persistent~=false and o.Id~=nil}

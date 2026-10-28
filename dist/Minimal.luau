@@ -14,6 +14,79 @@ return function(tab, options) return Factory.create(tab, 'Button', options) end
 
 end
 
+__modules["Components/ColorPanel"] = function()
+local E=__require("Core/Elements")
+local Cleanup=__require("Core/Cleanup")
+local Input=__require("Core/Input")
+local UIS=game:GetService('UserInputService')
+local ColorPanel={}
+function ColorPanel.new(w,o)
+ local self={Cleanup=nil,Fields={}}
+ local close
+ function self:Close()
+  if not self.Cleanup then return end
+  local cleanup=self.Cleanup self.Cleanup=nil self.Fields={}
+  if w.CloseDropdown==close then w.CloseDropdown=nil end
+  w.DialogCount=math.max(0,(w.DialogCount or 0)-1) cleanup:Destroy()
+ end
+ close=function() self:Close() end
+ function self:Refresh()
+  if not self.Cleanup then return end
+  local color=o.GetColor() if not color then return end
+  self.Preview.BackgroundColor3=color self.Hex.Text='#'..color:ToHex()
+  local channels={color.R,color.G,color.B}
+  for index,entry in ipairs(self.Fields) do entry.Input.Text=tostring(math.floor(channels[index]*255+.5)) entry.Fill.Size=UDim2.fromScale(channels[index],1) end
+ end
+ function self:Open()
+  if self.Cleanup then self:Close() return end
+  if w.CloseDropdown then w.CloseDropdown() end
+  self.Cleanup=Cleanup.new() local cleanup=self.Cleanup
+  w.CloseDropdown=close w.DialogCount=(w.DialogCount or 0)+1
+  local layer=E.new('Frame',{Name='ColorPickerOverlay',BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=150},w.Gui)
+  local scrim=E.new('TextButton',{Text='',AutoButtonColor=false,Modal=true,BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=.45,Size=UDim2.fromScale(1,1),BorderSizePixel=0,ZIndex=150},layer)
+  local panel=E.new('Frame',{Active=true,AnchorPoint=Vector2.new(.5,.5),Position=UDim2.fromScale(.5,.5),BorderSizePixel=0,ZIndex=151},layer)
+  E.corner(panel,18) w.Theme:Bind(panel,'BackgroundColor3','Background')
+  local border=E.new('UIStroke',{Thickness=1,Transparency=.2},panel) w.Theme:Bind(border,'Color','Border')
+  local title=E.text(panel,o.Name or 'Selecionar cor',17) title.Position=UDim2.fromOffset(18,14) title.Size=UDim2.new(1,-76,0,36) w.Theme:Bind(title,'TextColor3','Text')
+  local exit=E.button(panel,'×') exit.Size=UDim2.fromOffset(36,36) exit.Position=UDim2.new(1,-52,0,14) w.Theme:Bind(exit,'BackgroundColor3','Surface')
+  local body=E.scroll(panel) body.Position=UDim2.fromOffset(0,62) body.Size=UDim2.new(1,0,1,-126)
+  self.Preview=E.new('Frame',{Name='ColorPreview',BorderSizePixel=0,Size=UDim2.new(1,0,0,64)},body) E.corner(self.Preview,12)
+  self.Hex=E.new('TextBox',{Text='',PlaceholderText='#RRGGBB',ClearTextOnFocus=false,Size=UDim2.new(1,0,0,42),Font=Enum.Font.Gotham,TextSize=14,BorderSizePixel=0},body) E.corner(self.Hex,10)
+  w.Theme:Bind(self.Hex,'BackgroundColor3','Surface') w.Theme:Bind(self.Hex,'TextColor3','Text')
+  cleanup:Add(self.Hex.FocusLost:Connect(function() o.SetValue(self.Hex.Text) self:Refresh() end))
+  for index,name in ipairs({'R','G','B'}) do
+   local row=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,46)},body)
+   local label=E.text(row,name,13) label.Size=UDim2.fromOffset(20,46) w.Theme:Bind(label,'TextColor3','MutedText')
+   local track=E.new('Frame',{BackgroundTransparency=1,Active=true,Position=UDim2.fromOffset(30,0),Size=UDim2.new(1,-104,1,0)},row)
+   local rail=E.new('Frame',{BorderSizePixel=0,Size=UDim2.new(1,0,0,6),Position=UDim2.new(0,0,.5,-3)},track) E.corner(rail,3) w.Theme:Bind(rail,'BackgroundColor3','Border')
+   local fill=E.new('Frame',{BorderSizePixel=0,Size=UDim2.fromScale(0,1)},rail) E.corner(fill,3) w.Theme:Bind(fill,'BackgroundColor3','Primary')
+   local field=E.new('TextBox',{Text='',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.new(0,58,1,0),Position=UDim2.new(1,-58,0,0),BorderSizePixel=0},row) E.corner(field,10) w.Theme:Bind(field,'BackgroundColor3','Surface') w.Theme:Bind(field,'TextColor3','Text')
+   local function setChannel(value)
+    local color=o.GetColor() local values={color.R*255,color.G*255,color.B*255}
+    values[index]=math.clamp(tonumber(value) or values[index],0,255) o.SetValue(values) self:Refresh()
+   end
+   Input.slider(track,cleanup,function(fraction) setChannel(math.floor(fraction*255+.5)) end)
+   cleanup:Add(field.FocusLost:Connect(function() setChannel(field.Text) end))
+   table.insert(self.Fields,{Input=field,Fill=fill})
+  end
+  local footer=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,-32,0,40),Position=UDim2.new(0,16,1,-54)},panel)
+  local reset=E.button(footer,'Padrão') reset.Size=UDim2.new(.5,-5,1,0) w.Theme:Bind(reset,'BackgroundColor3','Surface')
+  local done=E.button(footer,'Concluir') done.Size=UDim2.new(.5,-5,1,0) done.Position=UDim2.new(.5,5,0,0) w.Theme:Bind(done,'BackgroundColor3','Primary')
+  cleanup:Add(reset.Activated:Connect(function() o.SetValue(o.Default) self:Refresh() end))
+  cleanup:Add(done.Activated:Connect(close)) cleanup:Add(exit.Activated:Connect(close)) cleanup:Add(scrim.Activated:Connect(close))
+  cleanup:Add(UIS.InputBegan:Connect(function(input) if input.KeyCode==Enum.KeyCode.Escape then close() end end))
+  local function layout() local size=w.Gui.AbsoluteSize panel.Size=UDim2.fromOffset(math.max(1,math.min(420,size.X-24)),math.max(1,math.min(450,size.Y-24))) end
+  cleanup:Add(w.Gui:GetPropertyChangedSignal('AbsoluteSize'):Connect(layout))
+  cleanup:Add(function() w.Theme:Forget(layer) layer:Destroy() end)
+  layout() self:Refresh()
+ end
+ function self:Destroy() self:Close() end
+ return self
+end
+return ColorPanel
+
+end
+
 __modules["Components/ColorPicker"] = function()
 local Factory=__require("Components/Factory")
 return function(tab, options) return Factory.create(tab, 'ColorPicker', options) end
@@ -137,6 +210,7 @@ local UIS=game:GetService('UserInputService')
 local DropdownPanel=__require("Components/DropdownPanel")
 local Options=__require("Core/Options")
 local RowLayout=__require("Components/RowLayout")
+local ColorPanel=__require("Components/ColorPanel")
 local Factory={}
 function Factory.create(tab,kind,o)
  o=Options.normalize(o)
@@ -201,18 +275,18 @@ function Factory.create(tab,kind,o)
  if kind=='Button' then
   title.Visible=false
   local b=button(o.Name or 'Button')
-  w.Theme:Bind(b,'BackgroundColor3',o.Variant=='Destructive' and 'Error' or o.Variant=='Secondary' and 'SurfaceHover' or 'Primary')
+  w.Theme:Bind(b,'BackgroundColor3',o.Variant=='Destructive' and 'Error' or o.Variant=='Primary' and 'Primary' or 'SurfaceHover')
   if o.Icon then local icon=E.icon(b,o.Icon) icon.Position=UDim2.new(0,12,.5,-12) end
   clean:Add(b.Activated:Connect(function() if not c.Disabled then callback() end end))
   function c:SetValue(value) b.Text=tostring(value) end
  elseif kind=='Toggle' then
   local b=button('')
-  local indicator=E.new('Frame',{Size=UDim2.fromOffset(38,24),Position=UDim2.new(1,-50,.5,-12),BorderSizePixel=0},b) E.corner(indicator,12)
-  local knob=E.new('Frame',{Size=UDim2.fromOffset(18,18),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0},indicator) E.corner(knob,9)
+  local indicator=E.new('Frame',{Size=UDim2.fromOffset(46,26),Position=UDim2.new(1,-46,.5,-13),BorderSizePixel=0},b) E.corner(indicator,12)
+  local knob=E.new('Frame',{Size=UDim2.fromOffset(20,20),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0},indicator) E.corner(knob,9)
   function c:SetValue(value,silent)
    value=value==true
    w.Theme:Bind(indicator,'BackgroundColor3',value and 'Primary' or 'Border')
-   Animate(knob,{Position=UDim2.fromOffset(value and 17 or 3,3)})
+   Animate(knob,{Position=UDim2.fromOffset(value and 23 or 3,3)})
    b.Text=(o.Compact==true or (o.Compact==nil and tab.Compact)) and '' or (value and 'Ativado' or 'Desativado') commit(value,silent)
   end
   clean:Add(b.Activated:Connect(function() if not c.Disabled then c:SetValue(not c.Value) end end))
@@ -315,34 +389,35 @@ function Factory.create(tab,kind,o)
   clean:Add(function() if w.Capturing==c then w.Capturing=nil end end)
   c:SetValue(initial or o.Key or 'RightControl',true)
  elseif kind=='ColorPicker' then
-  local preview=button('') local panel=E.new('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),Visible=false},row) c.Expansion=panel E.list(panel,8)
-  local fields={}
-  local function parse(v)
-   if typeof(v)=='Color3' then return v end
-   if type(v)=='string' and v:match('^#?%x%x%x%x%x%x$') then return Color3.fromHex(v:gsub('#','')) end
-   if type(v)=='table' and tonumber(v[1]) and tonumber(v[2]) and tonumber(v[3]) then return Color3.fromRGB(math.clamp(tonumber(v[1]),0,255),math.clamp(tonumber(v[2]),0,255),math.clamp(tonumber(v[3]),0,255)) end
-   return nil
+  local preview=button('')
+  -- This swatch represents a user value; theme refresh must not recolor it.
+  if w.Theme.Bindings and w.Theme.Bindings[preview] then
+   w.Theme.Bindings[preview].BackgroundColor3=nil w.Theme.Bindings[preview].TextColor3=nil
+  end
+  local function parse(value)
+   if typeof(value)=='Color3' then return value end
+   if type(value)=='string' and value:match('^#?%x%x%x%x%x%x$') then return Color3.fromHex(value:gsub('#','')) end
+   if type(value)=='table' then
+    local r,g,b=tonumber(value[1]),tonumber(value[2]),tonumber(value[3])
+    if r and g and b and r==r and g==g and b==b then return Color3.fromRGB(math.clamp(r,0,255),math.clamp(g,0,255),math.clamp(b,0,255)) end
+   end
   end
   function c:SetValue(value,silent)
    value=parse(value) if not value then return false end
-   self.Color=value self.Value='#'..value:ToHex() preview.BackgroundColor3=value preview.Text=self.Value
-   for index,field in ipairs(fields) do local channel=({value.R,value.G,value.B})[index] field.Text=tostring(math.floor(channel*255+.5)) end
-   save(self.Value) if not silent then callback(value) end return true
+   self.Color=value self.Value='#'..value:ToHex()
+   preview.BackgroundColor3=value preview.Text=self.Value preview.TextSize=12
+   preview.TextColor3=(value.R*.299+value.G*.587+value.B*.114)>.65 and Color3.fromRGB(20,22,28) or Color3.new(1,1,1)
+   save(self.Value) if not silent then callback(value) end
+   if self.Popup then self.Popup:Refresh() end
+   return true
   end
-  local hex=E.new('TextBox',{Text='',PlaceholderText='#RRGGBB',Size=UDim2.new(1,0,0,38),Font=Enum.Font.Gotham,TextSize=14,ClearTextOnFocus=false},panel) w.Theme:Bind(hex,'BackgroundColor3','SurfaceHover') w.Theme:Bind(hex,'TextColor3','Text') E.corner(hex)
-  clean:Add(hex.FocusLost:Connect(function() if not c.Disabled then c:SetValue(hex.Text) hex.Text=c.Value end end))
-  for index,channel in ipairs({'R','G','B'}) do
-   local group=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,76)},panel)
-   local field=E.new('TextBox',{Text='',PlaceholderText=channel,Size=UDim2.new(1,0,0,36),Font=Enum.Font.Gotham,TextSize=14,ClearTextOnFocus=false},group) fields[index]=field E.corner(field) w.Theme:Bind(field,'BackgroundColor3','SurfaceHover') w.Theme:Bind(field,'TextColor3','Text')
-   local rail=E.new('Frame',{Active=true,Size=UDim2.new(1,0,0,32),Position=UDim2.fromOffset(0,40),BorderSizePixel=0},group) E.corner(rail) w.Theme:Bind(rail,'BackgroundColor3','Border')
-   local function setChannel(n)
-    local color=c.Color local values={color.R*255,color.G*255,color.B*255} values[index]=n c:SetValue(values) hex.Text=c.Value
-   end
-   Input.slider(rail,clean,function(f) if not c.Disabled then setChannel(math.floor(f*255+.5)) end end)
-   clean:Add(field.FocusLost:Connect(function() if not c.Disabled then setChannel(math.clamp(tonumber(field.Text) or 0,0,255)) end end))
-  end
-  clean:Add(preview.Activated:Connect(function() if not c.Disabled then panel.Visible=not panel.Visible end end))
-  if not c:SetValue(initial,true) then if not c:SetValue(o.Default,true) then c:SetValue('#9070F7',true) end end hex.Text=c.Value
+  c.Popup=ColorPanel.new(w,{Name=o.Name,Default=o.Default or '#9070F7',GetColor=function() return c.Color end,SetValue=function(value) if not dead and not c.Disabled then c:SetValue(value) end end})
+  clean:Add(c.Popup)
+  function c:Open() if not dead and not self.Disabled then self.Popup:Open() end end
+  function c:Close() self.Popup:Close() end
+  clean:Add(preview.Activated:Connect(function() c:Open() end))
+  if not c:SetValue(initial,true) then if not c:SetValue(o.Default,true) then c:SetValue('#9070F7',true) end end
+
  else
   local body=E.text(row,o.Content or o.Text or '',13) body.AutomaticSize=Enum.AutomaticSize.Y body.Size=UDim2.new(1,0,0,0) w.Theme:Bind(body,'TextColor3','MutedText')
   if kind=='Divider' then title.Visible=false body.Visible=false row.Size=UDim2.new(1,0,0,2) row.AutomaticSize=Enum.AutomaticSize.None end
@@ -350,6 +425,7 @@ function Factory.create(tab,kind,o)
   function c:SetValue(value) self.Value=value body.Text=tostring(value) end
  end
  RowLayout.apply(c,tab,kind,o,row,title,rowList,padding,clean)
+ if not c.RowTransparent and kind~='Divider' then E.fit(row,rowList,clean,24) end
  c:SetDisabled(c.Disabled)
  if persistent and o.FireOnInit~=false and o.Callback and kind~='Keybind' then callback(kind=='ColorPicker' and c.Color or c:GetValue()) end
  table.insert(tab.Controls,c)
@@ -375,7 +451,7 @@ function Group.new(tab,options,parent)
  local group={Window=w,Id=tab.Id..'/'..id,Name=o.Name or 'Grupo',Cleanup=Cleanup.new(),Members={},Controls=tab.Controls,Compact=o.Compact~=false,IsGroup=true,Collapsed=o.Collapsed==true,Dead=false}
  tab.Cleanup:Add(group.Cleanup)
  local root=E.new('Frame',{Name=group.Name,BackgroundTransparency=w.Transparency,BorderSizePixel=0,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},parent or tab.Page)
- E.corner(root,18) E.pad(root,14) E.list(root,4) w.Theme:Bind(root,'BackgroundColor3','Surface')
+ E.corner(root,16) E.pad(root,16) local rootLayout=E.list(root,6) E.fit(root,rootLayout,group.Cleanup,32) w.Theme:Bind(root,'BackgroundColor3','Surface')
  local border=E.new('UIStroke',{Thickness=1,Transparency=.3},root) w.Theme:Bind(border,'Color','Border')
  group.Instance=root
  local header=E.button(root,'') header.Size=UDim2.new(1,0,0,38) header.BackgroundTransparency=1
@@ -383,7 +459,7 @@ function Group.new(tab,options,parent)
  w.Theme:Bind(icon,icon:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Secondary')
  local label=E.text(header,group.Name,12) label.Position=UDim2.fromOffset(32,0) label.Size=UDim2.new(1,-60,1,0) w.Theme:Bind(label,'TextColor3','Text')
  local arrow=E.text(header,'⌄',18) arrow.Position=UDim2.new(1,-22,0,0) arrow.Size=UDim2.new(0,22,1,0) w.Theme:Bind(arrow,'TextColor3','MutedText')
- local body=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},root) E.list(body,0)
+ local body=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},root) local bodyLayout=E.list(body,0) E.fit(body,bodyLayout,group.Cleanup,0)
  group.Page=body
  if o.Description then
   local description=E.text(body,o.Description,12) description.AutomaticSize=Enum.AutomaticSize.Y description.Size=UDim2.new(1,0,0,0) w.Theme:Bind(description,'TextColor3','MutedText')
@@ -439,7 +515,6 @@ return function(tab, kind, options) return Factory.create(tab, kind, options) en
 end
 
 __modules["Components/RowLayout"] = function()
--- Compact rows inside grouped cards. Small screens stack labels above touch controls.
 local E = __require("Core/Elements")
 local RowLayout = {}
 function RowLayout.apply(c,tab,kind,o,row,title,list,padding,cleanup)
@@ -450,38 +525,35 @@ function RowLayout.apply(c,tab,kind,o,row,title,list,padding,cleanup)
  list:Destroy()
  for _,property in ipairs({'PaddingTop','PaddingBottom','PaddingLeft','PaddingRight'}) do padding[property]=UDim.new() end
  c.RowTransparent=true row.BackgroundTransparency=1 row.AutomaticSize=Enum.AutomaticSize.None
- title.AutomaticSize=Enum.AutomaticSize.None title.TextYAlignment=Enum.TextYAlignment.Center
- local separator=E.new('Frame',{Name='Separator',Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BorderSizePixel=0,BackgroundTransparency=.6},row)
+ title.AutomaticSize=Enum.AutomaticSize.None title.TextYAlignment=Enum.TextYAlignment.Center title.TextSize=13
+ local separator=E.new('Frame',{Name='Separator',Size=UDim2.new(1,0,0,1),Position=UDim2.new(0,0,1,-1),BorderSizePixel=0,BackgroundTransparency=.72},row)
  w.Theme:Bind(separator,'BackgroundColor3','Border')
  if kind=='Button' then title.Visible=true c.Widget.Text=o.Text or 'Executar' end
  local function layout()
   if not row.Parent then return end
   local width=row.AbsoluteSize.X
-  local stacked=width<360
-  local base=stacked and 86 or 54
-  title.Size=stacked and UDim2.new(1,0,0,28) or UDim2.new(.42,-12,0,54)
+  local stacked=(kind=='Slider' or kind=='ProgressBar') and width<410
+   or (kind=='Dropdown' or kind=='Textbox') and width<340
+  local height=stacked and 84 or 52
+  local widgetWidth
+  if kind=='Toggle' then widgetWidth=54
+  elseif kind=='ColorPicker' then widgetWidth=112
+  elseif kind=='Button' then widgetWidth=104
+  elseif kind=='Keybind' then widgetWidth=126
+  elseif kind=='Slider' or kind=='ProgressBar' then widgetWidth=math.min(300,math.max(200,width*.56))
+  else widgetWidth=math.min(230,math.max(140,width*.52)) end
+  widgetWidth=math.min(widgetWidth,math.max(44,width-116))
   title.Position=UDim2.fromOffset(0,0)
-  c.Widget.Position=stacked and UDim2.fromOffset(0,32) or UDim2.new(.42,0,0,5)
-  c.Widget.Size=stacked and UDim2.new(1,0,0,44) or UDim2.new(.58,0,0,44)
-  if kind=='Toggle' and not stacked then
-   c.Widget.Position=UDim2.new(1,-64,0,5) c.Widget.Size=UDim2.fromOffset(64,44)
-   title.Size=UDim2.new(1,-80,0,54)
-  end
-  if c.Expansion then
-   c.Expansion.Position=UDim2.fromOffset(0,base+4)
-   if c.Expansion.Visible then base+=c.Expansion.AbsoluteSize.Y+12 end
-  end
+  title.Size=stacked and UDim2.new(1,0,0,28) or UDim2.new(1,-widgetWidth-16,0,52)
+  c.Widget.Position=stacked and UDim2.fromOffset(0,32) or UDim2.new(1,-widgetWidth,0,8)
+  c.Widget.Size=stacked and UDim2.new(1,0,0,44) or UDim2.fromOffset(widgetWidth,36)
   if c.ErrorLabel then
-   c.ErrorLabel.Position=UDim2.fromOffset(0,base)
-   if c.ErrorLabel.Visible then base+=28 end
+   c.ErrorLabel.Position=UDim2.fromOffset(0,height)
+   if c.ErrorLabel.Visible then height+=28 end
   end
-  row.Size=UDim2.new(1,0,0,base)
+  row.Size=UDim2.new(1,0,0,height)
  end
  cleanup:Add(row:GetPropertyChangedSignal('AbsoluteSize'):Connect(layout))
- if c.Expansion then
-  cleanup:Add(c.Expansion:GetPropertyChangedSignal('Visible'):Connect(layout))
-  cleanup:Add(c.Expansion:GetPropertyChangedSignal('AbsoluteSize'):Connect(layout))
- end
  if c.ErrorLabel then cleanup:Add(c.ErrorLabel:GetPropertyChangedSignal('Visible'):Connect(layout)) end
  c.Relayout=layout layout()
 end
@@ -661,13 +733,36 @@ end
 
 __modules["Core/Elements"] = function()
 local E = {}
+local order=setmetatable({}, {__mode="k"})
 function E.new(class, props, parent)
- local o = Instance.new(class)
+ local o = (class=='UIStroke' and parent and parent:FindFirstChildOfClass('UIStroke')) or Instance.new(class)
+ if class=='UIStroke' and (not props or props.ApplyStrokeMode==nil) then o.ApplyStrokeMode=Enum.ApplyStrokeMode.Border end
+ if parent and o:IsA('GuiObject') then
+  order[parent]=(order[parent] or 0)+1
+  if not props or props.LayoutOrder==nil then o.LayoutOrder=order[parent] end
+ end
  for k,v in pairs(props or {}) do o[k] = v end
  o.Parent = parent
  return o
 end
-function E.corner(o, radius) return E.new('UICorner', {CornerRadius = UDim.new(0,radius or 12)}, o) end
+function E.corner(o, radius)
+ local corner=o:FindFirstChildOfClass('UICorner') or E.new('UICorner',{},o)
+ corner.CornerRadius=UDim.new(0,radius or 12) return corner
+end
+-- Explicit stack heights: only leaf text uses AutomaticSize. No circular auto-height stacks.
+function E.fit(parent,layout,cleanup,padding)
+ parent.AutomaticSize=Enum.AutomaticSize.None
+ local function update()
+  if not parent.Parent then return end
+  local content=layout.AbsoluteContentSize
+  local height=math.ceil(content and content.Y or 0)+(padding or 0)
+  local size=parent.Size
+  if size.Y.Scale~=0 or size.Y.Offset~=height then parent.Size=UDim2.new(size.X.Scale,size.X.Offset,0,height) end
+ end
+ local connection=layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(update)
+ if cleanup then cleanup:Add(connection) end
+ update() return update
+end
 function E.pad(o, n) return E.new('UIPadding',{PaddingTop=UDim.new(0,n),PaddingBottom=UDim.new(0,n),PaddingLeft=UDim.new(0,n),PaddingRight=UDim.new(0,n)},o) end
 function E.list(o, gap)
  return E.new('UIListLayout',{Padding=UDim.new(0,gap or 10),SortOrder=Enum.SortOrder.LayoutOrder},o)
@@ -677,12 +772,18 @@ function E.text(parent, text, size)
 end
 function E.button(parent, text)
  local b = E.new('TextButton',{Text=text or '',Font=Enum.Font.GothamMedium,TextSize=14,TextColor3=Color3.new(1,1,1),AutoButtonColor=false,TextTruncate=Enum.TextTruncate.AtEnd,BorderSizePixel=0,Size=UDim2.new(1,0,0,44)},parent)
- E.corner(b)
+ E.corner(b,10)
+ E.new('UIStroke',{Thickness=1,Transparency=.55,Color=Color3.fromRGB(78,81,91)},b)
  return b
 end
 function E.scroll(parent)
- local f=E.new('ScrollingFrame',{BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,Size=UDim2.fromScale(1,1),ScrollingDirection=Enum.ScrollingDirection.Y},parent)
- E.pad(f,12) E.list(f,10)
+ local f=E.new('ScrollingFrame',{BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=3,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.None,Size=UDim2.fromScale(1,1),ScrollingDirection=Enum.ScrollingDirection.Y},parent)
+ E.pad(f,12) local layout=E.list(f,10)
+ local function canvas()
+  local content=layout.AbsoluteContentSize
+  f.CanvasSize=UDim2.fromOffset(0,(content and content.Y or 0)+24)
+ end
+ layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(canvas) canvas()
  return f
 end
 local icons = {house='⌂',home='⌂',settings='⚙',user='○',star='✦',search='⌕',palette='◈',info='i',bolt='ϟ'}
@@ -693,6 +794,42 @@ function E.icon(parent, value)
  local t=E.text(parent,icons[value] or value or '◈',22) t.Size=UDim2.fromOffset(24,24) t.TextXAlignment=Enum.TextXAlignment.Center return t
 end
 return E
+
+end
+
+__modules["Core/Identity"] = function()
+-- Public client metadata only. Never guesses an executor name or reads credentials.
+local Players=game:GetService('Players')
+local Identity={}
+function Identity.new(w,options)
+ local player=Players.LocalPlayer
+ local executor='Não identificado'
+ local env=getfenv()
+ local detect=env.identifyexecutor or env.getexecutorname
+ if type(detect)=='function' then
+  local ok,name=pcall(detect)
+  if ok and type(name)=='string' and name~='' then executor=name end
+ else
+  local ok,studio=pcall(function() return game:GetService('RunService'):IsStudio() end)
+  if ok and studio then executor='Roblox Studio' end
+ end
+ local self={DisplayName=player.DisplayName or player.Name or 'Jogador',Username=player.Name or 'Jogador',UserId=player.UserId or 0,Executor=executor,Images={}}
+ local avatar=options.Avatar
+ if type(avatar)=='number' then avatar='rbxassetid://'..avatar end
+ self.Avatar=avatar or ('rbxthumb://type=AvatarHeadShot&id='..self.UserId..'&w=150&h=150')
+ function self:BindImage(image) image.Image=self.Avatar table.insert(self.Images,image) end
+ if not avatar and self.UserId>0 then
+  task.spawn(function()
+   local ok,url,ready=pcall(function() return Players:GetUserThumbnailAsync(self.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size150x150) end)
+   if not ok or not ready or w.Destroyed then return end
+   self.Avatar=url
+   for _,image in ipairs(self.Images) do if image.Parent then image.Image=url end end
+  end)
+ end
+ function self:Destroy() table.clear(self.Images) end
+ return self
+end
+return Identity
 
 end
 
@@ -1110,6 +1247,7 @@ local UIS=game:GetService('UserInputService')
 local Players=game:GetService('Players')
 local Options=__require("Core/Options")
 local Group=__require("Components/Group")
+local Identity=__require("Core/Identity")
 local Window={}
 function Window.new(o)
  o=Options.normalize(o)
@@ -1123,6 +1261,7 @@ function Window.new(o)
  if previous then previous:Destroy() end
  local gui=E.new('ScreenGui',{Name=guiName,ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,DisplayOrder=o.DisplayOrder or 20,IgnoreGuiInset=false},parent)
  w.Gui=gui
+ w.Identity=Identity.new(w,o) clean:Add(w.Identity)
  local config=table.clone(o.Config or {})
  if config.Name==nil then config.Name=(o.Id or o.Title or o.Name or guiName):gsub('[^%w_-]','_')..'-'..tostring(game.PlaceId) end
  w.ProfileName=config.Name
@@ -1139,17 +1278,19 @@ function Window.new(o)
  local header=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),Active=true},root)
  local logo=E.text(header,'ϟ',30) logo.Position=UDim2.fromOffset(18,18) logo.Size=UDim2.fromOffset(30,30) w.Theme:Bind(logo,'TextColor3','Primary')
  local name=E.text(header,o.Title or o.Name or 'CONEXÃO UI',18) name.Position=UDim2.fromOffset(58,13) name.Size=UDim2.new(.5,-58,0,24) w.Theme:Bind(name,'TextColor3','Text')
- local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.6.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
+ local subtitle=E.text(header,(o.Subtitle or o.subtitle or 'Sua conexão. Seu estilo.')..'  /  '..(o.Version or '1.7.0'),11) subtitle.Position=UDim2.fromOffset(58,38) subtitle.Size=UDim2.new(.6,-58,0,18) w.Theme:Bind(subtitle,'TextColor3','MutedText')
  local search=E.new('TextBox',{Text='',PlaceholderText='Pesquisar…',ClearTextOnFocus=false,Font=Enum.Font.Gotham,TextSize=13,Size=UDim2.fromOffset(160,36),Position=UDim2.new(1,-252,0,14),BorderSizePixel=0},header) E.corner(search) w.Theme:Bind(search,'BackgroundColor3','Surface') w.Theme:Bind(search,'TextColor3','Text')
  local minimize=E.button(header,'−') minimize.Size=UDim2.fromOffset(34,34) minimize.Position=UDim2.new(1,-82,0,15) w.Theme:Bind(minimize,'BackgroundColor3','Surface')
  local close=E.button(header,'×') close.Size=UDim2.fromOffset(34,34) close.Position=UDim2.new(1,-42,0,15) w.Theme:Bind(close,'BackgroundColor3','Surface')
  local sidebar=E.scroll(root) sidebar.Position=UDim2.fromOffset(0,64) sidebar.Size=UDim2.new(0,176,1,-64)
  local content=E.new('Frame',{BackgroundTransparency=1,Position=UDim2.fromOffset(176,64),Size=UDim2.new(1,-176,1,-64),ClipsDescendants=true},root)
  local restore=E.button(gui,'ϟ  Conexão') restore.Size=UDim2.fromOffset(132,44) restore.Position=UDim2.new(0,12,1,-56) restore.Visible=false restore.ZIndex=3 w.Theme:Bind(restore,'BackgroundColor3','Primary')
- local profile=E.new('Frame',{Name='Profile',BackgroundTransparency=1,Size=UDim2.fromOffset(64,56),Position=UDim2.new(0,0,1,-56)},root)
- local avatar=E.icon(profile,o.Avatar or 'user') avatar.Position=UDim2.fromOffset(16,12) avatar.Size=UDim2.fromOffset(32,32) E.corner(avatar,16)
- w.Theme:Bind(avatar,avatar:IsA('ImageLabel') and 'ImageColor3' or 'TextColor3','Text')
- local profileName=E.text(profile,player.DisplayName or player.Name or 'Perfil',12) profileName.Position=UDim2.fromOffset(56,16) profileName.Size=UDim2.new(1,-64,0,24) profileName.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileName,'TextColor3','MutedText')
+ local profile=E.new('TextButton',{Name='Profile',Text='',AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.fromOffset(64,64),Position=UDim2.new(0,0,1,-64)},root)
+ local avatar=E.new('ImageLabel',{Name='Avatar',BackgroundTransparency=1,Size=UDim2.fromOffset(38,38),Position=UDim2.fromOffset(13,13)},profile) E.corner(avatar,19).Name='AvatarMask' w.Identity:BindImage(avatar)
+ local profileName=E.text(profile,w.Identity.DisplayName,12) profileName.Position=UDim2.fromOffset(58,11) profileName.Size=UDim2.new(1,-66,0,22) profileName.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileName,'TextColor3','Text')
+ local profileExecutor=E.text(profile,w.Identity.Executor,10) profileExecutor.Position=UDim2.fromOffset(58,34) profileExecutor.Size=UDim2.new(1,-66,0,18) profileExecutor.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(profileExecutor,'TextColor3','MutedText')
+ clean:Add(profile.Activated:Connect(function() if w.HomeTab then w:SelectTab(w.HomeTab) end end))
+ w.Profile={Avatar=avatar,Name=profileName,Executor=profileExecutor}
  local tooltip=E.text(gui,'',12) tooltip.BackgroundTransparency=.08 tooltip.Size=UDim2.fromOffset(180,32) tooltip.Visible=false tooltip.ZIndex=100 tooltip.TextXAlignment=Enum.TextXAlignment.Center E.corner(tooltip) w.Theme:Bind(tooltip,'BackgroundColor3','Surface') w.Theme:Bind(tooltip,'TextColor3','Text')
  w.ScalePercent=math.clamp(tonumber(w.Storage.Values['@scale']) or o.Scale or 78,0,100)
  w.Minimized=false w.Visible=true
@@ -1174,12 +1315,12 @@ function Window.new(o)
   local width=math.min(viewport.X,math.max(math.min(viewport.X,compact and 290 or 520),viewport.X*fraction))
   local height=math.min(viewport.Y,math.max(math.min(viewport.Y,280),viewport.Y*fraction))
   root.Size=UDim2.fromOffset(width,w.Minimized and 64 or height)
-  local nav=(compact or sidebarIcons) and 64 or 176
+  local nav=(compact or sidebarIcons) and 64 or 210
   local showProfile=o.ShowProfile~=false and not w.Minimized
-  profile.Visible=showProfile profile.Size=UDim2.fromOffset(nav,56) profileName.Visible=not (compact or sidebarIcons)
-  sidebar.Size=UDim2.new(0,nav,1,showProfile and -120 or -64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
+  profile.Visible=showProfile profile.Size=UDim2.fromOffset(nav,64) profileName.Visible=not (compact or sidebarIcons) profileExecutor.Visible=profileName.Visible
+  sidebar.Size=UDim2.new(0,nav,1,showProfile and -128 or -64) content.Position=UDim2.fromOffset(nav,64) content.Size=UDim2.new(1,-nav,1,-64)
   search.Visible=width>=660 subtitle.Visible=width>=420
-  name.TextSize=compact and 14 or 18 name.Size=UDim2.new(1,-154,0,24)
+  name.TextSize=compact and 14 or 18 name.Size=UDim2.new(1,search.Visible and -330 or -154,0,24) name.TextTruncate=Enum.TextTruncate.AtEnd
   for _,category in ipairs(w.Categories) do category.Visible=not (compact or sidebarIcons) end
   for _,t in ipairs(w.Tabs) do t.Label.Visible=not (compact or sidebarIcons) end
   for _,t in ipairs(w.Tabs) do if t.Relayout then t.Relayout(width-nav-24) end
@@ -1204,7 +1345,7 @@ function Window.new(o)
  end
  function w:SetTheme(values)
   self.Theme:Apply(values)
-  if values.CornerRadius then for _,instance in ipairs(root:GetDescendants()) do if instance:IsA('UICorner') then instance.CornerRadius=UDim.new(0,values.CornerRadius) end end end
+  if values.CornerRadius then for _,instance in ipairs(root:GetDescendants()) do if instance:IsA('UICorner') and instance.Name~='AvatarMask' then instance.CornerRadius=UDim.new(0,values.CornerRadius) end end end
  end
  function w:SetTransparency(value)
   self.Transparency=math.clamp(tonumber(value) or 0,0,1) root.BackgroundTransparency=self.Transparency
@@ -1276,16 +1417,16 @@ function Window.new(o)
     assert(settings.Column==1 or settings.Column==2,'Column deve ser 1 ou 2.')
     if not self.ColumnFrame then
      self.ColumnFrame=E.new('Frame',{Name='GroupColumns',BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},self.Page)
-     local columnLayout=E.list(self.ColumnFrame,12)
+     local columnLayout=E.list(self.ColumnFrame,12) E.fit(self.ColumnFrame,columnLayout,self.Cleanup,0)
      self.Columns={}
      for index=1,2 do
       local column=E.new('Frame',{BackgroundTransparency=1,LayoutOrder=index,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},self.ColumnFrame)
-      E.list(column,12) self.Columns[index]=column
+      local fitList=E.list(column,12) E.fit(column,fitList,self.Cleanup,0) self.Columns[index]=column
      end
      self.LayoutGroups=function(width)
       local wide=width>=700
       columnLayout.FillDirection=wide and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
-      for _,column in ipairs(self.Columns) do column.Size=wide and UDim2.new(.5,-6,0,0) or UDim2.new(1,0,0,0) end
+      for _,column in ipairs(self.Columns) do local height=column.Size.Y.Offset column.Size=wide and UDim2.new(.5,-6,0,height) or UDim2.new(1,0,0,height) end
      end
      self.Cleanup:Add(self.Page:GetPropertyChangedSignal('AbsoluteSize'):Connect(function() self.LayoutGroups(self.Page.AbsoluteSize.X-24) end))
     end
@@ -1301,7 +1442,7 @@ function Window.new(o)
    local index=table.find(w.Tabs,self) if index then table.remove(w.Tabs,index) end
    if w.ActiveTab==self and w.Tabs[1] then w:SelectTab(w.Tabs[1]) end
   end
-  table.insert(self.Tabs,tab) if #self.Tabs==1 or (self.ActiveTab and self.ActiveTab.Internal and not tab.Internal) then self:SelectTab(tab) end layout() return tab
+  table.insert(self.Tabs,tab) if #self.Tabs==1 or (self.ActiveTab and self.ActiveTab.Internal and not self.HomeTab and not tab.Internal) then self:SelectTab(tab) end layout() return tab
  end
  function w:CreateCategory(nameText)
   local label=E.text(sidebar,nameText,10) self.Theme:Bind(label,'TextColor3','MutedText')
@@ -1424,6 +1565,69 @@ return Dashboard
 
 end
 
+__modules["Pages/Overview"] = function()
+-- Built-in client identity page. No game features or fictional game statistics.
+local E=__require("Core/Elements")
+local Overview={}
+function Overview.create(w,o)
+ local info=w.Identity
+ local tab=w:CreateTab({Id='@conexao/home',Name=o.HomeTitle or 'Dashboard',Icon='house',Internal=true})
+ w.HomeTab=tab tab.Button.LayoutOrder=-500
+ local hero=E.new('Frame',{Name='Welcome',Size=UDim2.new(1,0,0,176),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0},tab.Page) E.corner(hero,18)
+ local gradient=E.new('UIGradient',{Color=ColorSequence.new(Color3.fromRGB(205,169,99),Color3.fromRGB(114,87,200)),Rotation=24},hero)
+ local avatar=E.new('ImageLabel',{Name='PlayerAvatar',Size=UDim2.fromOffset(72,72),Position=UDim2.fromOffset(22,24),BackgroundColor3=Color3.fromRGB(46,41,57),BorderSizePixel=0},hero)
+ E.corner(avatar,36).Name='AvatarMask' info:BindImage(avatar)
+ local greeting=E.text(hero,'BEM-VINDO DE VOLTA',10) greeting.Position=UDim2.fromOffset(112,26) greeting.Size=UDim2.new(1,-132,0,20)
+ local name=E.text(hero,info.DisplayName,26) name.Font=Enum.Font.GothamBold name.Position=UDim2.fromOffset(112,50) name.Size=UDim2.new(1,-132,0,36) name.TextTruncate=Enum.TextTruncate.AtEnd
+ local username=E.text(hero,'@'..info.Username,12) username.Position=UDim2.fromOffset(112,90) username.Size=UDim2.new(1,-132,0,22)
+ local badge=E.new('TextLabel',{Text=info.Executor,Font=Enum.Font.GothamMedium,TextSize=11,TextColor3=Color3.new(1,1,1),BackgroundColor3=Color3.fromRGB(42,38,53),BackgroundTransparency=.22,BorderSizePixel=0,Position=UDim2.fromOffset(22,134),Size=UDim2.new(1,-44,0,26),TextTruncate=Enum.TextTruncate.AtEnd},hero) E.corner(badge,8)
+ local account=tab:CreateGroup({Id='account',Name='JOGADOR',Icon='user',Column=1})
+ local system=tab:CreateGroup({Id='system',Name='CONEXÃO UI',Icon='settings',Column=2})
+ local values={}
+ local function field(group,key,label,value)
+  local row=E.new('Frame',{Name=key,BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},group.Page)
+  local heading=E.text(row,label,12) heading.Size=UDim2.new(.44,-8,1,0) w.Theme:Bind(heading,'TextColor3','MutedText')
+  local text=E.text(row,tostring(value),13) text.Position=UDim2.new(.44,0,0,0) text.Size=UDim2.new(.56,0,1,0) text.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(text,'TextColor3','Text')
+  values[key]=text
+ end
+ field(account,'username','Usuário','@'..info.Username)
+ field(account,'executor','Executor',info.Executor)
+ field(account,'userid','ID',info.UserId)
+ field(system,'version','Library',w.Version or '1.7.0')
+ field(system,'profile','Perfil ativo',w.Storage.Active)
+ field(system,'config','Armazenamento',w.Storage.Available and 'Disponível' or 'Só nesta sessão')
+ field(system,'status','Estado','Conectado')
+ account:CreateButton({Name='Preferências da interface',Text='Abrir',Callback=function() w:SelectTab(w.SettingsTab) end})
+ system:CreateButton({Name='Salvar escolhas',Text='Salvar',Callback=function()
+  w:Notify({Title='Perfil',Content=w:SaveConfig() and 'Suas escolhas foram salvas.' or 'Este ambiente não oferece armazenamento em arquivo.',Kind=w.Storage.Available and 'Success' or 'Warning'})
+ end})
+ function tab:Refresh()
+  values.profile.Text=w.Storage.Active values.config.Text=w.Storage.Available and 'Disponível' or 'Só nesta sessão'
+ end
+ function tab:SetStat(key,value) assert(values[key],'Campo desconhecido: '..tostring(key)) values[key].Text=tostring(value) end
+ function tab:SetWelcome(options)
+  if options.Username then name.Text=options.Username end
+  if options.Status then badge.Text=options.Status end
+  if options.Avatar then avatar.Image=options.Avatar end
+  if options.Gradient then gradient.Color=ColorSequence.new(options.Gradient[1],options.Gradient[2]) end
+ end
+ local function layout(width)
+  local small=width<440
+  avatar.Size=UDim2.fromOffset(small and 48 or 72,small and 48 or 72)
+  avatar.Position=UDim2.fromOffset(18,26)
+  local left=small and 80 or 112
+  greeting.Position=UDim2.fromOffset(left,26) greeting.Size=UDim2.new(1,-left-18,0,20)
+  name.Position=UDim2.fromOffset(left,50) name.Size=UDim2.new(1,-left-18,0,36) name.TextSize=small and 18 or 26
+  username.Position=UDim2.fromOffset(22,100) username.Size=UDim2.new(1,-44,0,22)
+ end
+ tab.Relayout=layout layout(tab.Page.AbsoluteSize.X-24)
+ tab.Profile={Avatar=avatar,Name=name,Executor=badge,Fields=values}
+ return tab
+end
+return Overview
+
+end
+
 __modules["Pages/Profiles"] = function()
 -- Profile management is part of the built-in configuration page.
 local Profiles={}
@@ -1496,12 +1700,12 @@ local Settings={}
 local themeNames={'Conexão Dark','Violeta','Dourado','Aurora','Oceano','Rosa','Noite','Monocromático'}
 local presets={
  ['Conexão Dark']={Background=Color3.fromRGB(16,18,22),Surface=Color3.fromRGB(28,31,36),SurfaceHover=Color3.fromRGB(40,44,52),Primary=Color3.fromRGB(143,110,247)},
- ['Violeta']={Background=Color3.fromRGB(22,18,32),Surface=Color3.fromRGB(36,29,49),SurfaceHover=Color3.fromRGB(49,39,67),Primary=Color3.fromRGB(173,135,255)},
+ ['Violeta']={Background=Color3.fromRGB(22,18,32),Surface=Color3.fromRGB(36,29,49),SurfaceHover=Color3.fromRGB(49,39,67),Primary=Color3.fromRGB(158,126,221)},
  ['Dourado']={Background=Color3.fromRGB(23,21,17),Surface=Color3.fromRGB(36,33,27),SurfaceHover=Color3.fromRGB(51,46,36),Primary=Color3.fromRGB(224,184,100)},
- ['Aurora']={Background=Color3.fromRGB(13,24,27),Surface=Color3.fromRGB(20,39,43),SurfaceHover=Color3.fromRGB(28,55,58),Primary=Color3.fromRGB(51,221,190)},
- ['Oceano']={Background=Color3.fromRGB(12,21,35),Surface=Color3.fromRGB(21,35,55),SurfaceHover=Color3.fromRGB(29,49,75),Primary=Color3.fromRGB(56,170,250)},
- ['Rosa']={Background=Color3.fromRGB(29,18,30),Surface=Color3.fromRGB(45,29,46),SurfaceHover=Color3.fromRGB(64,39,64),Primary=Color3.fromRGB(235,134,204)},
- ['Noite']={Background=Color3.fromRGB(14,14,30),Surface=Color3.fromRGB(25,24,48),SurfaceHover=Color3.fromRGB(38,35,68),Primary=Color3.fromRGB(115,102,255)},
+ ['Aurora']={Background=Color3.fromRGB(13,24,27),Surface=Color3.fromRGB(20,39,43),SurfaceHover=Color3.fromRGB(28,55,58),Primary=Color3.fromRGB(75,185,164)},
+ ['Oceano']={Background=Color3.fromRGB(12,21,35),Surface=Color3.fromRGB(21,35,55),SurfaceHover=Color3.fromRGB(29,49,75),Primary=Color3.fromRGB(83,149,211)},
+ ['Rosa']={Background=Color3.fromRGB(29,18,30),Surface=Color3.fromRGB(45,29,46),SurfaceHover=Color3.fromRGB(64,39,64),Primary=Color3.fromRGB(207,126,181)},
+ ['Noite']={Background=Color3.fromRGB(14,14,30),Surface=Color3.fromRGB(25,24,48),SurfaceHover=Color3.fromRGB(38,35,68),Primary=Color3.fromRGB(132,119,210)},
  ['Monocromático']={Background=Color3.fromRGB(19,21,24),Surface=Color3.fromRGB(30,33,38),SurfaceHover=Color3.fromRGB(45,49,55),Primary=Color3.fromRGB(184,204,227)},
 }
 function Settings.create(w,o)
@@ -1510,7 +1714,6 @@ function Settings.create(w,o)
  local tab=w:CreateTab({Id='@conexao/settings',Name='Configurações',Icon='settings',Description='Preferências da interface',Internal=true})
  tab.Button.LayoutOrder=100000
  w.SettingsTab=tab
- local heading=E.text(tab.Page,'Configurações',24) w.Theme:Bind(heading,'TextColor3','Text')
  local nav=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,44)},tab.Page)
  local groups={} local buttons={} local groupLayouts={}
  local function select(name)
@@ -1518,14 +1721,18 @@ function Settings.create(w,o)
  end
  for index,name in ipairs({'Interface','Config'}) do
   local b=E.button(nav,name) b.Size=UDim2.new(.5,-4,1,0) b.Position=UDim2.new((index-1)*.5,(index-1)*8,0,0) buttons[name]=b
-  local frame=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},tab.Page) groupLayouts[name]=E.list(frame,10) groups[name]=frame
+  local frame=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},tab.Page) groupLayouts[name]=E.list(frame,14) E.fit(frame,groupLayouts[name],tab.Cleanup,0) groups[name]=frame
   tab.Cleanup:Add(b.Activated:Connect(function() select(name) end))
  end
- local configLeft=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) E.list(configLeft,10)
- local configRight=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) E.list(configRight,10)
+ local configLeft=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) local configLeftLayout=E.list(configLeft,14) E.fit(configLeft,configLeftLayout,tab.Cleanup,0)
+ local configRight=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y},groups.Config) local configRightLayout=E.list(configRight,14) E.fit(configRight,configRightLayout,tab.Cleanup,0)
+ local interfaceLeft=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0)},groups.Interface)
+ local interfaceRight=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,0)},groups.Interface)
+ local leftLayout=E.list(interfaceLeft,14) E.fit(interfaceLeft,leftLayout,tab.Cleanup,0)
+ local rightLayout=E.list(interfaceRight,14) E.fit(interfaceRight,rightLayout,tab.Cleanup,0)
  local sections={
-  Appearance=Group.new(tab,{Id='appearance',Name='INTERFACE',Icon='settings'},groups.Interface),
-  Colors=Group.new(tab,{Id='colors',Name='TEMAS E CORES',Icon='palette'},groups.Interface),
+  Appearance=Group.new(tab,{Id='appearance',Name='INTERFACE',Icon='settings'},interfaceLeft),
+  Colors=Group.new(tab,{Id='colors',Name='TEMAS E CORES',Icon='palette'},interfaceRight),
   Config=Group.new(tab,{Id='storage',Name='CONFIGURAÇÃO',Icon='settings'},configLeft),
   Profiles=Group.new(tab,{Id='profiles',Name='PERFIS',Icon='user'},configRight),
  }
@@ -1553,18 +1760,18 @@ function Settings.create(w,o)
  if w.Storage.Values['@ui/accent']==nil and type(o.Theme)=='table' then preset=nil end
  if preset then w:SetTheme(preset) end
  -- Real buttons with live selection; previews are assembled from GUI objects.
- local gallery=E.new('Frame',{Name='ThemeGallery',BackgroundTransparency=1,Size=UDim2.new(1,0,0,224)},sections.Colors.Page)
+ local gallery=E.new('Frame',{Name='ThemeGallery',BackgroundTransparency=1,Size=UDim2.new(1,0,0,202)},sections.Colors.Page)
  local grid=E.new('UIGridLayout',{CellPadding=UDim2.fromOffset(10,10),CellSize=UDim2.new(.25,-8,0,106),SortOrder=Enum.SortOrder.LayoutOrder},gallery)
  local cards={}
  for index,themeName in ipairs(themeNames) do
   local palette=presets[themeName]
-  local card=E.button(gallery,'') card.LayoutOrder=index E.corner(card,16)
-  w.Theme:Bind(card,'BackgroundColor3','Surface')
+  local card=E.button(gallery,'') card.LayoutOrder=index E.corner(card,12)
+  w.Theme:Bind(card,'BackgroundColor3','SurfaceHover')
   local border=E.new('UIStroke',{Thickness=1,Transparency=.5},card) w.Theme:Bind(border,'Color','Border')
-  local preview=E.new('Frame',{BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,Position=UDim2.fromOffset(10,10),Size=UDim2.new(1,-20,0,52)},card) E.corner(preview,10)
+  local preview=E.new('Frame',{BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,Position=UDim2.fromOffset(10,10),Size=UDim2.new(1,-20,0,38)},card) E.corner(preview,10)
   E.new('UIGradient',{Color=ColorSequence.new(palette.Surface,palette.Primary),Rotation=25},preview)
   local bar=E.new('Frame',{BackgroundColor3=palette.Primary,BorderSizePixel=0,Position=UDim2.new(0,10,1,-18),Size=UDim2.new(.45,0,0,6)},preview) E.corner(bar,3)
-  local label=E.text(card,themeName,12) label.Position=UDim2.fromOffset(10,69) label.Size=UDim2.new(1,-20,0,26) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','Text')
+  local label=E.text(card,themeName,12) label.Position=UDim2.fromOffset(10,56) label.Size=UDim2.new(1,-20,0,22) label.TextTruncate=Enum.TextTruncate.AtEnd w.Theme:Bind(label,'TextColor3','Text')
   cards[themeName]={Button=card,Border=border}
   tab.Cleanup:Add(card.Activated:Connect(function() controls.theme:SetValue(themeName) end))
  end
@@ -1576,14 +1783,25 @@ function Settings.create(w,o)
   end
  end
  tab.ThemeCards=cards
+ local function galleryLayout()
+  local width=sections.Colors.Page.AbsoluteSize.X
+  local columns=width>=640 and 4 or width>=340 and 2 or 1
+  grid.CellSize=UDim2.new(1/columns,-10*(columns-1)/columns,0,90)
+  gallery.Size=UDim2.new(1,0,0,math.ceil(#themeNames/columns)*100-10)
+ end
+ tab.Cleanup:Add(sections.Colors.Page:GetPropertyChangedSignal('AbsoluteSize'):Connect(galleryLayout))
  tab.Relayout=function(width)
-  local wide=width>=650
-  groupLayouts.Config.FillDirection=wide and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical
-  configLeft.Size=UDim2.new(wide and .45 or 1,wide and -5 or 0,0,0)
-  configRight.Size=UDim2.new(wide and .55 or 1,wide and -5 or 0,0,0)
-  local columns=width>=600 and 4 or width>=290 and 2 or 1
-  grid.CellSize=UDim2.new(1/columns,-10*(columns-1)/columns,0,106)
-  gallery.Size=UDim2.new(1,0,0,math.ceil(#themeNames/columns)*116-10)
+  local wide=width>=800
+  for _,name in ipairs({'Config','Interface'}) do groupLayouts[name].FillDirection=wide and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical end
+  for _,frame in ipairs({configLeft,configRight,interfaceLeft,interfaceRight}) do
+   local size=frame.Size
+   frame.Size=UDim2.new(wide and .5 or 1,wide and -7 or 0,0,size.Y.Offset)
+  end
+  for index,name in ipairs({'Interface','Config'}) do
+   local buttonWidth=math.min(150,math.max(1,(width-12)/2))
+   buttons[name].Size=UDim2.fromOffset(buttonWidth,38) buttons[name].Position=UDim2.fromOffset((index-1)*(buttonWidth+10),0)
+  end
+  galleryLayout()
  end
  tab.Relayout(tab.Page.AbsoluteSize.X-24) refreshGallery()
  add('Slider','scale','Tamanho da janela (%)',w.ScalePercent,{Min=0,Max=100,Suffix='%'},function(value) w:SetScale(value) end)
@@ -1654,6 +1872,7 @@ function Settings.create(w,o)
    end
   end
   refresh() if self.RefreshProfiles then self.RefreshProfiles() end
+  if self.HomeTab then self.HomeTab:Refresh() end
  end
  w.ProfileControls=Profiles.create(w,function(kind,props) props.Persistent=false return create('Profiles',kind,props) end)
  refresh() select('Interface')
@@ -1666,14 +1885,16 @@ end
 __modules["init"] = function()
 local Window=__require("Core/Window")
 local Dashboard=__require("Pages/Dashboard")
+local Overview=__require("Pages/Overview")
 local Settings=__require("Pages/Settings")
 local Options=__require("Core/Options")
-local Library={Version='1.6.0',Windows={}}
+local Library={Version='1.7.0',Windows={}}
 function Library:CreateWindow(options)
  options=Options.normalize(options)
  local id=options.Id or 'ConexaoUI'
  if self.Windows[id] then self.Windows[id]:Destroy() end
  local window=Window.new(options)
+ window.Version=self.Version
  self.Windows[id]=window
  local library=self local destroy=window.Destroy
  function window:Destroy()
@@ -1681,6 +1902,7 @@ function Library:CreateWindow(options)
   if library.Windows[id]==self then library.Windows[id]=nil end
  end
  function window:CreateDashboard(settings) return Dashboard.create(self,settings) end
+ if options.Home~=false then Overview.create(window,options) end
  Settings.create(window,options)
  return window
 end

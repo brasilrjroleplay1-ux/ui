@@ -44,5 +44,5 @@ Opcoes:CreateDropdown({
     Callback = function(values) print(table.concat(values, ", ")) end,
 })
 
--- A aba Configurações e o salvamento já são criados pela library.
+-- Dashboard com avatar/nome/executor, Configurações e salvamento são automáticos.
 -- Este arquivo não faz parte do código interno da library.

@@ -71,11 +71,11 @@ Recursos:Update({Name = "RECURSOS", Collapsed = false})
 -- Recursos:Destroy() -- Destrói também seus controles e desconecta eventos.
 ```
 
-`Compact = false` pode ser passado em um componente específico. Campos `MultiLine` mantêm o formato maior. O seletor de cor expande seu conteúdo abaixo da linha, sem cobrir os controles seguintes.
+`Compact = false` pode ser passado em um componente específico. Campos `MultiLine` mantêm o formato maior. O seletor de cor abre um painel separado e não altera a altura da linha nem cobre os controles seguintes do formulário.
 
 ## Configurações, perfis e busca
 
-A aba Configurações continua automática e agora usa os mesmos grupos visuais. Nenhuma aba de jogo, botão de exemplo ou dashboard é criado automaticamente.
+O Dashboard com avatar/nome/executor e a aba Configurações são automáticos e usam os mesmos estilos. Nenhuma aba de jogo ou controle de demonstração é acrescentado pela library. Use `Home = false` para desativar explicitamente a página inicial.
 
 Os controles de grupos participam do salvamento e da restauração de perfis. IDs explícitos não mudam ao mover um controle de grupo; sem ID, a chave usa a aba, o grupo e o nome do controle. Mantenha esses identificadores estáveis entre execuções. Renomear um grupo por `SetValue` mantém sua chave original.
 
@@ -94,8 +94,8 @@ local AbaComTabela = Window:CreateTab({name = "Mais", icon = "info"})
 
 Os nomes de propriedades aceitam `Name`/`name`, `Callback`/`callback`, etc. Uma chave com inicial maiúscula tem prioridade se as duas formas forem fornecidas. Isso não altera os nomes dos métodos nem os nomes dos campos da API: use `Default`, `Min`, `Max` e `Multi`, conforme a documentação.
 
-A sidebar usa ícones por padrão; `expanded` mostra os nomes quando há espaço. O perfil no rodapé pode receber `Avatar` na criação da janela; `ShowProfile = false` o oculta. O título de cada aba aparece no conteúdo usando o nome escolhido pelo seu script.
+A sidebar usa ícones por padrão; `expanded` mostra os nomes quando há espaço. O perfil no rodapé já usa o avatar real, também exibido na página inicial com nome e executor. Ele pode receber `Avatar` na criação da janela; `ShowProfile = false` o oculta. O título de cada aba aparece no conteúdo usando o nome escolhido pelo seu script.
 
 ## Validação
 
-O teste de ciclo de vida carrega a distribuição real com um host Roblox simulado e verifica que importar a library não cria interface, que apenas as configurações prontas aparecem em `CreateWindow`, que grupos participam dos perfis/busca e que reexecutar/destruir limpa os objetos. A demo completa também é iniciada e encerrada nesse host. Aparência, tipografia e toque ainda precisam ser conferidos no Roblox real.
+O teste de ciclo de vida carrega a distribuição real com um host Roblox simulado e verifica que importar a library não cria interface, que somente as páginas nativas de identidade/configurações aparecem em `CreateWindow`, que grupos participam dos perfis/busca e que reexecutar/destruir limpa os objetos. A demo completa também é iniciada e encerrada nesse host. Aparência, tipografia e toque ainda precisam ser conferidos no Roblox real.

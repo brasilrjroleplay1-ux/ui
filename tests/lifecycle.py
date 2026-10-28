@@ -38,7 +38,7 @@ local methods={}
 function methods:GetChildren() return table.clone(self._children) end
 function methods:GetDescendants() local result={} for _,child in ipairs(self._children) do table.insert(result,child) for _,desc in ipairs(child:GetDescendants()) do table.insert(result,desc) end end return result end
 function methods:IsDescendantOf(root) local parent=self.Parent while parent do if parent==root then return true end parent=parent.Parent end return false end
-function methods:IsA(class) return self.ClassName==class end
+function methods:IsA(class) return self.ClassName==class or (class=='GuiObject' and (self.ClassName=='Frame' or self.ClassName=='CanvasGroup' or self.ClassName=='TextLabel' or self.ClassName=='TextButton' or self.ClassName=='TextBox' or self.ClassName=='ImageLabel' or self.ClassName=='ScrollingFrame')) end
 function methods:FindFirstChild(name) for _,child in ipairs(self._children) do if child.Name==name then return child end end end
 function methods:WaitForChild(name) return assert(self:FindFirstChild(name),'missing '..name) end
 function methods:FindFirstChildOfClass(class) for _,child in ipairs(self._children) do if child:IsA(class) then return child end end end
@@ -95,9 +95,10 @@ local checks=0
 local function check(ok,message) assert(ok,message) checks+=1 end
 check(made==beforeImport and next(UI.Windows)==nil,'loading library creates no windows, buttons or demo')
 local w=UI:CreateWindow({id='test',title='Our UI'}) settle()
-check(#w.Tabs==1 and w.SettingsTab.Internal,'CreateWindow only adds the built-in settings tab')
+check(#w.Tabs==2 and w.SettingsTab.Internal and w.HomeTab.Internal,'CreateWindow adds built-in identity and settings pages')
 local tab=w:CreateTab('Principal','house')
-check(w.ActiveTab==tab and tab.Id=='Principal','caller creates and selects own tab using string form')
+check(w.ActiveTab==w.HomeTab and tab.Id=='Principal','caller creates tabs while the identity page remains the initial view')
+w:SelectTab(tab)
 local group=tab:CreateGroup({name='Controles',id='controls',column=1})
 local other=tab:CreateGroup({Name='Extras',Column=2})
 check(group.Name=='Controles' and #tab.Groups==2,'groups accept lowercase properties and column layout')
@@ -115,7 +116,7 @@ group:Filter('') check(not group.Page.Visible and toggle.Instance.Visible,'clear
 group:SetCollapsed(false) w:SetTransparency(.3)
 check(group.Instance.BackgroundTransparency==.3 and toggle.Instance.BackgroundTransparency==1,'window transparency keeps compact rows transparent')
 local color=group:CreateColorPicker({Name='Cor',Default='#ABCDEF'})
-check(color.Expansion~=nil and color:GetValue()=='#ABCDEF','grouped color picker retains expandable controls')
+check(color.Popup~=nil and color.Expansion==nil and color:GetValue()=='#ABCDEF','grouped color picker uses a separate editor instead of expanding the row')
 local text=group:CreateTextbox({Name='Nome',Default='Visitante'})
 check(text.Widget.Text=='Visitante' and text.ErrorLabel~=nil,'grouped textbox retains validation UI')
 local full=other:CreateTextbox({Name='JSON',MultiLine=true})
@@ -139,7 +140,7 @@ check(called==beforeRestore+1,'profile switching reapplies grouped control callb
 group:Destroy() check(#tab.Groups==1 and not w.Ids.resource and not table.find(tab.Controls,toggle),'group destruction unregisters its controls')
 check(not pcall(function() group:CreateToggle({Name='late'}) end),'destroyed groups reject new controls')
 local replacement=UI:CreateWindow({Id='test',Title='Replacement'}) settle()
-check(w.Destroyed and #replacement.Tabs==1,'reinitialization destroys old UI without duplicating script tabs')
+check(w.Destroyed and #replacement.Tabs==2,'reinitialization destroys old UI without duplicating script tabs')
 replacement:Destroy() check(not pcall(function() replacement:CreateTab('late') end),'destroyed window rejects new tabs')
 check(next(UI.Windows)==nil,'destroyed windows are removed from library registry')
 UI:Destroy()
@@ -153,7 +154,7 @@ with tempfile.TemporaryDirectory() as folder:
  demo.write_text(host[:host.rfind('local UI=(function()')]+(root/'dist/Demo.luau').read_text()+'''
 settle()
 assert(#playerGui:GetChildren()==1)
-assert(UI.Version=='1.6.0')
+assert(UI.Version=='1.7.0')
 UI:Destroy()
 assert(#playerGui:GetChildren()==0)
 print('PASS: standalone demo creates and tears down its own UI without external library imports (GUI host mocked)')

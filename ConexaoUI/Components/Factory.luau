@@ -6,6 +6,7 @@ local UIS=game:GetService('UserInputService')
 local DropdownPanel=require(script.Parent.DropdownPanel)
 local Options=require(script.Parent.Parent.Core.Options)
 local RowLayout=require(script.Parent.RowLayout)
+local ColorPanel=require(script.Parent.ColorPanel)
 local Factory={}
 function Factory.create(tab,kind,o)
  o=Options.normalize(o)
@@ -70,18 +71,18 @@ function Factory.create(tab,kind,o)
  if kind=='Button' then
   title.Visible=false
   local b=button(o.Name or 'Button')
-  w.Theme:Bind(b,'BackgroundColor3',o.Variant=='Destructive' and 'Error' or o.Variant=='Secondary' and 'SurfaceHover' or 'Primary')
+  w.Theme:Bind(b,'BackgroundColor3',o.Variant=='Destructive' and 'Error' or o.Variant=='Primary' and 'Primary' or 'SurfaceHover')
   if o.Icon then local icon=E.icon(b,o.Icon) icon.Position=UDim2.new(0,12,.5,-12) end
   clean:Add(b.Activated:Connect(function() if not c.Disabled then callback() end end))
   function c:SetValue(value) b.Text=tostring(value) end
  elseif kind=='Toggle' then
   local b=button('')
-  local indicator=E.new('Frame',{Size=UDim2.fromOffset(38,24),Position=UDim2.new(1,-50,.5,-12),BorderSizePixel=0},b) E.corner(indicator,12)
-  local knob=E.new('Frame',{Size=UDim2.fromOffset(18,18),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0},indicator) E.corner(knob,9)
+  local indicator=E.new('Frame',{Size=UDim2.fromOffset(46,26),Position=UDim2.new(1,-46,.5,-13),BorderSizePixel=0},b) E.corner(indicator,12)
+  local knob=E.new('Frame',{Size=UDim2.fromOffset(20,20),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0},indicator) E.corner(knob,9)
   function c:SetValue(value,silent)
    value=value==true
    w.Theme:Bind(indicator,'BackgroundColor3',value and 'Primary' or 'Border')
-   Animate(knob,{Position=UDim2.fromOffset(value and 17 or 3,3)})
+   Animate(knob,{Position=UDim2.fromOffset(value and 23 or 3,3)})
    b.Text=(o.Compact==true or (o.Compact==nil and tab.Compact)) and '' or (value and 'Ativado' or 'Desativado') commit(value,silent)
   end
   clean:Add(b.Activated:Connect(function() if not c.Disabled then c:SetValue(not c.Value) end end))
@@ -184,34 +185,35 @@ function Factory.create(tab,kind,o)
   clean:Add(function() if w.Capturing==c then w.Capturing=nil end end)
   c:SetValue(initial or o.Key or 'RightControl',true)
  elseif kind=='ColorPicker' then
-  local preview=button('') local panel=E.new('Frame',{BackgroundTransparency=1,AutomaticSize=Enum.AutomaticSize.Y,Size=UDim2.new(1,0,0,0),Visible=false},row) c.Expansion=panel E.list(panel,8)
-  local fields={}
-  local function parse(v)
-   if typeof(v)=='Color3' then return v end
-   if type(v)=='string' and v:match('^#?%x%x%x%x%x%x$') then return Color3.fromHex(v:gsub('#','')) end
-   if type(v)=='table' and tonumber(v[1]) and tonumber(v[2]) and tonumber(v[3]) then return Color3.fromRGB(math.clamp(tonumber(v[1]),0,255),math.clamp(tonumber(v[2]),0,255),math.clamp(tonumber(v[3]),0,255)) end
-   return nil
+  local preview=button('')
+  -- This swatch represents a user value; theme refresh must not recolor it.
+  if w.Theme.Bindings and w.Theme.Bindings[preview] then
+   w.Theme.Bindings[preview].BackgroundColor3=nil w.Theme.Bindings[preview].TextColor3=nil
+  end
+  local function parse(value)
+   if typeof(value)=='Color3' then return value end
+   if type(value)=='string' and value:match('^#?%x%x%x%x%x%x$') then return Color3.fromHex(value:gsub('#','')) end
+   if type(value)=='table' then
+    local r,g,b=tonumber(value[1]),tonumber(value[2]),tonumber(value[3])
+    if r and g and b and r==r and g==g and b==b then return Color3.fromRGB(math.clamp(r,0,255),math.clamp(g,0,255),math.clamp(b,0,255)) end
+   end
   end
   function c:SetValue(value,silent)
    value=parse(value) if not value then return false end
-   self.Color=value self.Value='#'..value:ToHex() preview.BackgroundColor3=value preview.Text=self.Value
-   for index,field in ipairs(fields) do local channel=({value.R,value.G,value.B})[index] field.Text=tostring(math.floor(channel*255+.5)) end
-   save(self.Value) if not silent then callback(value) end return true
+   self.Color=value self.Value='#'..value:ToHex()
+   preview.BackgroundColor3=value preview.Text=self.Value preview.TextSize=12
+   preview.TextColor3=(value.R*.299+value.G*.587+value.B*.114)>.65 and Color3.fromRGB(20,22,28) or Color3.new(1,1,1)
+   save(self.Value) if not silent then callback(value) end
+   if self.Popup then self.Popup:Refresh() end
+   return true
   end
-  local hex=E.new('TextBox',{Text='',PlaceholderText='#RRGGBB',Size=UDim2.new(1,0,0,38),Font=Enum.Font.Gotham,TextSize=14,ClearTextOnFocus=false},panel) w.Theme:Bind(hex,'BackgroundColor3','SurfaceHover') w.Theme:Bind(hex,'TextColor3','Text') E.corner(hex)
-  clean:Add(hex.FocusLost:Connect(function() if not c.Disabled then c:SetValue(hex.Text) hex.Text=c.Value end end))
-  for index,channel in ipairs({'R','G','B'}) do
-   local group=E.new('Frame',{BackgroundTransparency=1,Size=UDim2.new(1,0,0,76)},panel)
-   local field=E.new('TextBox',{Text='',PlaceholderText=channel,Size=UDim2.new(1,0,0,36),Font=Enum.Font.Gotham,TextSize=14,ClearTextOnFocus=false},group) fields[index]=field E.corner(field) w.Theme:Bind(field,'BackgroundColor3','SurfaceHover') w.Theme:Bind(field,'TextColor3','Text')
-   local rail=E.new('Frame',{Active=true,Size=UDim2.new(1,0,0,32),Position=UDim2.fromOffset(0,40),BorderSizePixel=0},group) E.corner(rail) w.Theme:Bind(rail,'BackgroundColor3','Border')
-   local function setChannel(n)
-    local color=c.Color local values={color.R*255,color.G*255,color.B*255} values[index]=n c:SetValue(values) hex.Text=c.Value
-   end
-   Input.slider(rail,clean,function(f) if not c.Disabled then setChannel(math.floor(f*255+.5)) end end)
-   clean:Add(field.FocusLost:Connect(function() if not c.Disabled then setChannel(math.clamp(tonumber(field.Text) or 0,0,255)) end end))
-  end
-  clean:Add(preview.Activated:Connect(function() if not c.Disabled then panel.Visible=not panel.Visible end end))
-  if not c:SetValue(initial,true) then if not c:SetValue(o.Default,true) then c:SetValue('#9070F7',true) end end hex.Text=c.Value
+  c.Popup=ColorPanel.new(w,{Name=o.Name,Default=o.Default or '#9070F7',GetColor=function() return c.Color end,SetValue=function(value) if not dead and not c.Disabled then c:SetValue(value) end end})
+  clean:Add(c.Popup)
+  function c:Open() if not dead and not self.Disabled then self.Popup:Open() end end
+  function c:Close() self.Popup:Close() end
+  clean:Add(preview.Activated:Connect(function() c:Open() end))
+  if not c:SetValue(initial,true) then if not c:SetValue(o.Default,true) then c:SetValue('#9070F7',true) end end
+
  else
   local body=E.text(row,o.Content or o.Text or '',13) body.AutomaticSize=Enum.AutomaticSize.Y body.Size=UDim2.new(1,0,0,0) w.Theme:Bind(body,'TextColor3','MutedText')
   if kind=='Divider' then title.Visible=false body.Visible=false row.Size=UDim2.new(1,0,0,2) row.AutomaticSize=Enum.AutomaticSize.None end
@@ -219,6 +221,7 @@ function Factory.create(tab,kind,o)
   function c:SetValue(value) self.Value=value body.Text=tostring(value) end
  end
  RowLayout.apply(c,tab,kind,o,row,title,rowList,padding,clean)
+ if not c.RowTransparent and kind~='Divider' then E.fit(row,rowList,clean,24) end
  c:SetDisabled(c.Disabled)
  if persistent and o.FireOnInit~=false and o.Callback and kind~='Keybind' then callback(kind=='ColorPicker' and c.Color or c:GetValue()) end
  table.insert(tab.Controls,c)

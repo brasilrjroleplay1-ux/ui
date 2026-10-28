@@ -1,4 +1,4 @@
-# Conexão UI · 1.6.0
+# Conexão UI · 1.7.0
 
 Biblioteca de interface Roblox em Luau, com módulos locais e versão em arquivo único. Visual inspirado na referência fornecida: janela escura, navegação lateral com ícones, header, boas-vindas com gradiente dourado/roxo, ações rápidas, estatísticas e novidades. As informações do dashboard são demonstrativas. Não inclui funcionalidades específicas de jogos.
 
@@ -8,7 +8,17 @@ Biblioteca de interface Roblox em Luau, com módulos locais e versão em arquivo
 - **Seu script:** [Starter.luau](Starter.luau) carrega a library e cria sua própria janela, abas e grupos. Use como base.
 - **Demonstração:** `dist/Demo.luau` contém a library com um script separado que cria o dashboard e os controles de exemplo.
 
-`CreateWindow` inclui somente o sistema de configurações pronto. Os controles do seu hub são definidos pelas chamadas do seu script.
+`CreateWindow` inclui o Dashboard do jogador (avatar, nome, usuário e executor identificado) e o sistema de configurações pronto. Os controles do seu hub são definidos pelas chamadas do seu script.
+
+## Perfil automático e correções da v1.7
+
+Ao criar uma janela, a library já mostra um Dashboard com avatar real do Roblox, DisplayName, `@username`, ID, executor identificado e perfil ativo. O mesmo avatar aparece no rodapé da sidebar. Nenhuma linha de código adicional é necessária no script para montar esse painel.
+
+A identificação do executor usa `identifyexecutor` ou `getexecutorname`, quando fornecidos pelo ambiente. Em Studio, mostra Roblox Studio; sem uma identificação confiável, mostra Não identificado. A biblioteca não inventa o nome. O avatar usa a miniatura oficial do Roblox e pode ser substituído por `Avatar` na criação da janela.
+
+`Home = false` desativa explicitamente o Dashboard automático; `ShowProfile = false` oculta o rodapé. Os controles e funções do jogo continuam sendo criados pelo seu script.
+
+Os campos agora têm larguras limitadas por tipo. Botões comuns usam fundo neutro; use `Variant = "Primary"` para destaque preenchido. Seletores de cor abrem um painel separado, e mudanças de tema não alteram a prévia da cor escolhida. Grupos e colunas calculam altura pelo `UIListLayout.AbsoluteContentSize`; a grade de temas reserva espaço para todas as suas linhas.
 
 ## Exemplos: comece aqui
 
@@ -176,7 +186,7 @@ key:SetValue(Enum.KeyCode.F7)
 local color = tab:CreateColorPicker({
     Id = 'cor', Name = 'Cor', Default = '#9070F7',
     Callback = function(value) window:SetTheme({Primary = value}) end,
-}) -- Expande campos RGB, barras RGB arrastáveis e campo hexadecimal.
+}) -- Abre um painel de cor separado com RGB e hexadecimal.
 color:SetValue(Color3.fromRGB(90, 130, 255))
 -- Aceita também '#5A82FF' e {90, 130, 255}.
 -- GetValue retorna hex para persistência; .Color contém o Color3 atual.
@@ -337,9 +347,9 @@ Notificações incluem fila, ícones, tipos Info/Success/Warning/Error, ações,
 ```
 ConexaoUI/
   init.luau
-  Core/        Window, Options, Theme, Animation, Elements, Input, Cleanup, Storage, Notifications, Dialogs
-  Components/  Factory, Group, RowLayout, DropdownPanel e entradas por componente
-  Pages/       Dashboard, Settings
+  Core/        Window, Options, Theme, Animation, Elements, Input, Cleanup, Storage, Identity, Notifications, Dialogs
+  Components/  Factory, Group, RowLayout, DropdownPanel, ColorPanel e entradas por componente
+  Pages/       Overview, Dashboard, Settings
   Examples/    Demo.client.luau, Minimal.client.luau
 dist/          Biblioteca, demo e modelo Studio gerados
 tools/         bundle.py
@@ -359,6 +369,7 @@ python3 tests/sliders.py /workspace/tools/luau/luau
 python3 tests/dropdowns.py /workspace/tools/luau/luau
 python3 tests/feedback.py /workspace/tools/luau/luau
 python3 tests/lifecycle.py /workspace/tools/luau/luau
+python3 tests/geometry.py /workspace/tools/luau/luau
 /workspace/tools/luau/luau-compile dist/ConexaoUI.luau >/dev/null
 /workspace/tools/luau/luau-compile dist/Demo.luau >/dev/null
 ```
@@ -367,9 +378,9 @@ O compilador/CLI Luau foi obtido da distribuição oficial `luau-lang/luau` por 
 
 ## Validação e limites
 
-Executado neste ambiente: compilação Luau dos arquivos de distribuição e 172 verificações com serviços/elementos simulados: 28 da importação/ciclo de vida da library e dos grupos, 46 de persistência/cleanup e gerenciamento de perfis, 17 do factory real de sliders/barras de progresso/cores, 21 do dropdown/painel real, 23 da integração das configurações nativas e 37 dos módulos reais de notificações/popups (restauração, cartões selecionáveis, presets, escala, gradiente, escurecimento do jogo, atalho, opt-out de salvamento e reset preservando as escolhas do aplicativo). Inclui round-trip de escolhas, debounce, gravação final, falhas de leitura/escrita, conteúdo inválido, backend sem arquivos, diretório existente e limpeza idempotente. A distribuição de demonstração também é iniciada e destruída no host simulado. Esses testes não validam o motor Roblox, seu codec JSON real nem a aparência.
+Executado neste ambiente: compilação Luau dos arquivos de distribuição e 172 verificações de API/ciclo de vida com serviços/elementos simulados: 28 da importação/ciclo de vida da library e dos grupos, 46 de persistência/cleanup e gerenciamento de perfis, 17 do factory real de sliders/barras de progresso/cores, 21 do dropdown/painel real, 23 da integração das configurações nativas e 37 dos módulos reais de notificações/popups (restauração, cartões selecionáveis, presets, escala, gradiente, escurecimento do jogo, atalho, opt-out de salvamento e reset preservando as escolhas do aplicativo). Inclui round-trip de escolhas, debounce, gravação final, falhas de leitura/escrita, conteúdo inválido, backend sem arquivos, diretório existente e limpeza idempotente. A distribuição de demonstração também é iniciada e destruída no host simulado. Há ainda um modelo aproximado de geometria com 371 verificações em cinco resoluções para limitar campos, reservar a altura da grade e testar o editor de cores e a identidade automática; ele não renderiza Roblox. Esses testes não validam o motor Roblox, seu codec JSON real nem a aparência.
 
-**Não executado em Roblox Studio ou executor real.** Antes de publicar, execute a demo e confira:
+**O motor Roblox não foi executado neste ambiente.** Os bugs visuais reportados pelo usuário na v1.6 demonstraram que testes de API não garantem a aparência. A v1.7 troca os tamanhos automáticos encadeados por alturas de conteúdo observadas, define a ordem dos elementos e separa o editor de cor do formulário. Ainda é necessário verificar o resultado no cliente real. Antes de publicar, execute a demo e confira:
 
 - Abrir, fechar, restaurar, minimizar e reexecutar com o mesmo Id.
 - Arrastar usando mouse e toque; redimensionar/rotacionar a tela.
