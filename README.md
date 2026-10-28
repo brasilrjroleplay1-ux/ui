@@ -2,6 +2,14 @@
 
 Biblioteca de interface Roblox em Luau, com módulos locais e versão em arquivo único. Visual inspirado na referência fornecida: janela escura, navegação lateral com ícones, header, boas-vindas com gradiente dourado/roxo, ações rápidas, estatísticas e novidades. As informações do dashboard são demonstrativas. Não inclui funcionalidades específicas de jogos.
 
+## Exemplos: comece aqui
+
+- **[Guia passo a passo de todos os componentes](docs/EXEMPLOS.md)** — janela, abas, Button, Toggle, Slider, Dropdown, Textbox, Keybind, ColorPicker e componentes informativos.
+- **[Script completo organizado em Luau](Example.luau)** — carregue nossa library e veja cada criação em uma seção separada, pronta para copiar.
+- **[Código bruto do exemplo](https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/Example.luau)** — somente o código, sem a página do GitHub.
+
+O exemplo inclui seleção única/múltipla, callbacks, atualização de valores, notificações, confirmação, dashboard e limpeza da interface. A aba Configurações e o salvamento automático já vêm na library.
+
 ## Links e carregamento
 
 - [Biblioteca em Luau](https://github.com/brasilrjroleplay1-ux/ui/blob/main/dist/ConexaoUI.luau)
