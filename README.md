@@ -1,4 +1,4 @@
-# Conexão UI 3.3.2 · Conexão Studio
+# Conexão UI 3.4.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -38,10 +38,10 @@ tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "A", "B", "C" }, 
 ## O que já vem pronto
 
 - Perfil da sidebar clicável: abre uma página dentro do painel principal com banner em gradiente, avatar maior, nome, @usuário e badges do cliente. Os cartões de executor/versão e ID se organizam em duas colunas ou uma no celular. Há ações para copiar o ID, abrir Configurações/Temas e voltar à aba anterior.
-- Página **Configurações** pronta e visível na sidebar: transparência, tamanho manual/automático, salvamento/restauração, temas com prévias, atalhos e as opções nativas do Gen2. A engrenagem continua abrindo essa mesma página.
+- Página **Configurações** pronta e visível na sidebar: transparência, tamanho manual/automático, salvamento/restauração, temas com prévias, atalhos e opções nativas com nomes e descrições em português. A engrenagem continua abrindo essa mesma página.
 - Dropdown dentro da área de conteúdo, mantendo a sidebar acessível: busca, cartões de opções, seleção única/múltipla, Padrão, Limpar e Selecionar todos. Voltar, Escape ou selecionar outra aba encerra o seletor. Em telas estreitas usa uma coluna, e o cabeçalho do controle separa o título do valor.
 - Salvamento e carregamento automáticos habilitados por padrão, incluindo toggles, sliders, dropdowns únicos/múltiplos, inputs, teclas e cores. Use `flag` estável e único por controle.
-- Seis novos temas com gradientes e cores mais vivas; os seis temas originais também continuam disponíveis. As prévias usam as mesmas cores aplicadas à janela.
+- **60 temas com paletas distintas:** 54 da Conexão e seis clássicos da base. A galeria inclui busca e filtros por família, com temas claros, escuros e neon. As prévias usam as mesmas cores aplicadas à janela.
 - Busca, notificações, toasts, popups, grupos, estatísticas, progresso e console da base oficial.
 - Tamanho automático ativado desde `CreateWindow`: acompanha a resolução, o redimensionamento, a rotação do celular e a troca de câmera. No celular em pé, a janela aproveita a altura disponível. `sidebarLayout = false` usa o layout original com abas no topo.
 
@@ -71,7 +71,29 @@ As páginas e os seletores recalculam a área rolável a partir do conteúdo e d
 | `sakura` | Rosa e lavanda |
 | `onyx` | Dourado sobre carvão |
 
-Os temas originais são `default`, `amethyst`, `cobalt`, `ember`, `frost` e `rose`. A galeria completa abre dentro do painel e mostra as 12 prévias. A escolha é aplicada na hora e lembrada na próxima execução, mantendo a transparência configurada. Para fixar o tema definido pelo script, use `rememberTheme = false` em `CreateWindow`.
+Os seis temas acima continuam disponíveis. A galeria completa oferece **60 prévias**, com as famílias Assinatura, Neon, Natureza, Cósmicos, Claros, Minerais e Clássicos. A busca aceita nome, ID, cores e estilo, inclusive sem acentos. Os filtros funcionam junto com a busca, e a lista se adapta à largura do painel.
+
+Veja o [catálogo completo e o mapa das paletas](docs/TEMAS.md). Os temas originais mantêm os IDs `default`, `amethyst`, `cobalt`, `ember`, `frost` e `rose`. A escolha é aplicada na hora e lembrada na próxima execução, mantendo a transparência configurada. Para fixar o tema definido pelo script, use `rememberTheme = false` em `CreateWindow`.
+
+```lua
+window:ChangeTheme("cyberpunk")
+window:OpenThemes()
+```
+
+## Opções de interação
+
+Os controles nativos agora vêm em português, mantendo seus valores salvos e callbacks:
+
+| Opção | Função |
+| --- | --- |
+| Tecla para abrir / fechar | Troca o atalho que mostra ou oculta a janela. |
+| Liberar cursor com o menu aberto | Permite usar o mouse quando o jogo prende o cursor. |
+| Aviso de boas-vindas | Exibe o aviso inicial com seu nome. |
+| Vibração ao tocar | Ativa o retorno tátil em aparelhos compatíveis. |
+| Estatísticas anônimas de uso | Controla a telemetria da base Sirius/Gen2; vem desativada em uma instalação nova. |
+| Mostrar meu perfil na lateral | Mostra ou oculta foto e nome no rodapé. |
+
+O idioma padrão é `pt-br`. O script pode usar `locale = "en"` ou fornecer `translations`/`translator` pela API Gen2. O tradutor do projeto e as traduções fornecidas em `CreateWindow` têm prioridade.
 
 ## Configuração automática
 

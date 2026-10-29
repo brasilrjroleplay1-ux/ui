@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.3 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.4 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local Gen2 = require(script.Gen2)
 local DropdownPanel = require(script.Features.Dropdown)
@@ -11,6 +11,7 @@ local Responsive = require(script.Features.Responsive)
 local Appearance = require(script.Features.Appearance)
 local Scrolling = require(script.Features.Scrolling)
 local Startup = require(script.Features.Startup)
+local Localization = require(script.Features.Localization)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
@@ -25,7 +26,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.3.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.4.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -106,6 +107,7 @@ end
 
 function Library:CreateWindow(options)
     local p = type(options) == "table" and table.clone(options) or {}
+    Localization.configure(p)
     p.name = p.name or p.Name or p.Title or "Conexão UI"
     p.showName = p.showName or p.ShowName or p.name
     if p.sidebarLayout == nil and p.SidebarLayout == nil then p.sidebarLayout = true end

@@ -1,10 +1,13 @@
 -- Runs against the actual generated bundle inside the upstream Roblox-service shim.
 local checks = 0
 local function check(value, message) assert(value, message) checks += 1 end
+local function childOfClass(parent, class)
+    for _, child in ipairs(parent:GetChildren()) do if child:IsA(class) then return child end end
+end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.3.2", "new entry point is bundled")
+check(UI.Version == "3.4.0", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -26,6 +29,27 @@ check(w.layout.mode == "sidebar", "profile layout is automatic")
 check(w.configuration.autoSave and w.configuration.autoLoad, "configuration works without additional setup")
 check(w.profileText == "Roblox Studio", "profile subtitle comes from the runtime")
 check(w.settings.usageAnalytics == false, "the fork starts with analytics disabled")
+local nativeControls = {}
+for _, element in ipairs(w.SettingsTab.elements) do
+    if element.name then nativeControls[element.name] = element end
+end
+for source, translated in pairs({
+    ["Toggle Keybind"] = "Tecla para abrir / fechar",
+    ["Unlock cursor while open"] = "Liberar cursor com o menu aberto",
+    ["Welcome toast"] = "Aviso de boas-vindas",
+    ["Haptics"] = "Vibração ao tocar",
+    ["Usage analytics"] = "Estatísticas anônimas de uso",
+    ["Show profile"] = "Mostrar meu perfil na lateral",
+    ["Keep window on screen"] = "Manter a janela dentro da tela",
+}) do
+    check(nativeControls[source] and nativeControls[source].title.Text == translated, "native setting is translated: " .. source)
+end
+check(nativeControls["Haptics"].descriptor.titleLabel.Text:find("Vibração leve", 1, true), "settings descriptions are translated through the native locale bindings")
+local haptics = nativeControls["Haptics"]
+local previousHaptics = haptics.value
+haptics:Set(not previousHaptics)
+check(w.settings.haptics == not previousHaptics, "translated controls still call their original setting callbacks")
+haptics:Set(previousHaptics)
 check(w.SettingsTab == w.rfSettings, "settings are provided by the actual Gen2 implementation")
 check(not w.SettingsTab.neglectSelector and w.SettingsTab.topbarItem and w.selectedTab == w.SettingsTab, "settings are visible in the sidebar and open by default without demo tabs")
 check(w.TransparencySlider and w.WindowSizeSlider and w.AutoSizeToggle, "transparency, window size and automatic sizing controls are built into settings")
@@ -157,7 +181,7 @@ check(w.selectedTab == w.SettingsTab, "the profile settings action opens the bui
 w:OpenProfile()
 profile.themesButton.MouseButton1Click:Fire()
 local profileThemes = w._conexaoPanel
-check(profileThemes and #profileThemes.cards == 12 and profileThemes.root.Parent == w.elements, "the profile theme action opens theme previews inside the same panel")
+check(profileThemes and #profileThemes.cards == 60 and profileThemes.root.Parent == w.elements, "the profile theme action opens theme previews inside the same panel")
 profileThemes:Close()
 check(w.selectedTab == w.ProfileTab, "returning from theme selection restores the redesigned profile")
 w:CloseProfile()
@@ -238,16 +262,76 @@ check(not multi._isOpen and not w._conexaoPanel and w.selectedTab == w.ProfileTa
 w:CloseProfile()
 
 check(w.SettingsTab.name == "Configurações" and w.AutoSaveToggle and w.AutoLoadToggle and w.ThemeGallery, "settings and theme previews are included without script-side setup")
-check(#w.ThemeGallery.cards == 6 and #UI.Themes == 12, "six vivid presets and six original themes have palettes and previews")
+check(#w.ThemeGallery.cards == 6 and #UI.Themes == 60, "six featured previews and sixty complete palettes are available")
 w.ThemeGallery.cards[5].hit.MouseButton1Click:Fire()
-check(w.ThemeId == "sakura" and w.ThemeGallery.cards[5].selected.Visible, "a preview applies its real theme and marks the selection")
+check(w.ThemeId == "porcelana" and w.ThemeGallery.cards[5].selected.Visible, "a preview applies its real theme and marks the selection")
 check(w.ProfilePage.fields[1].valueLabel.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
 local themes = w:OpenThemes()
-check(#themes.cards == 12, "the complete theme picker renders all twelve previews")
+check(#themes.cards == 60, "the complete theme picker renders all sixty previews")
+check(themes.visibleCount == 60 and #themes.filters == 8 and themes.root.Parent == w.elements, "theme search and family filters belong to the content panel")
+local function searchThemes(query)
+    themes.search.Text = query
+    themes.search:GetPropertyChangedSignal("Text"):Fire()
+end
+searchThemes("conexao")
+check(themes.visibleCount == 1 and themes.cards[1].frame.Visible, "theme search matches accents and names")
+searchThemes("ÔNIX")
+check(themes.visibleCount == 1 and themes.cards[6].frame.Visible, "theme search accepts upper-case accented characters")
+searchThemes("magenta")
+check(themes.visibleCount == 1 and themes.cards[7].frame.Visible, "search matches palette descriptions")
+themes.filters[6].button.MouseButton1Click:Fire()
+check(themes.group == "Claros" and themes.visibleCount == 0 and themes.empty.Visible, "family filters combine with the current query and show an empty state")
+searchThemes("")
+check(themes.visibleCount == 10 and not themes.empty.Visible, "the light family contains ten authored themes")
+themes._scrollers[1].desiredY, themes._scrollers[1].atEnd = 800, true
+themes:SetGroup("Todos")
+check(themes.visibleCount == 60 and themes._scrollers[1].desiredY == 0 and not themes._scrollers[1].atEnd, "filter changes reset the gallery scroll instead of staying at an old bottom")
+local originalPickerSize = w.elements.AbsoluteSize
+for _, viewportWidth in ipairs({ 280, 520, 820 }) do
+    w.elements.AbsoluteSize = Vector2.new(viewportWidth, 600)
+    themes:Layout()
+    local expectedColumns = viewportWidth < 460 and 1 or (viewportWidth >= 740 and 3 or 2)
+    local grid = childOfClass(themes.list, "UIGridLayout")
+    check(math.abs(grid.CellSize.X.Scale - 1 / expectedColumns) < 0.001, "gallery adapts to available phone, tablet and desktop content widths")
+end
+w.elements.AbsoluteSize = originalPickerSize
+themes:Layout()
+local function luminance(color)
+    local function linear(c) return c <= 0.04045 and c / 12.92 or ((c + 0.055) / 1.055)^2.4 end
+    return 0.2126 * linear(color.R) + 0.7152 * linear(color.G) + 0.0722 * linear(color.B)
+end
+local function contrast(a, b)
+    local first, second = luminance(a), luminance(b)
+    return (math.max(first, second) + 0.05) / (math.min(first, second) + 0.05)
+end
+local ids, names, signatures = {}, {}, {}
+local beforeThemeInstances = #w.instances
+for index, entry in ipairs(UI.Themes) do
+    local theme = entry.theme
+    local signature = theme.AccentColor:ToHex()
+    for _, key in ipairs({ "WindowColor", "SliderProgress" }) do
+        for _, point in ipairs(theme[key].Keypoints) do signature ..= "/" .. point.Value:ToHex() end
+    end
+    check(not ids[entry.id] and not names[entry.name] and not signatures[signature], "theme ids, names and complete palettes must be unique: " .. entry.id)
+    ids[entry.id], names[entry.name], signatures[signature] = true, true, true
+    for _, key in ipairs({ "WindowColor", "ElementGradient", "TabBackground" }) do
+        for _, point in ipairs(theme[key].Keypoints) do
+            assert(contrast(theme.ContentColor, point.Value) >= 4.5, "unreadable text in " .. entry.id .. " / " .. key)
+        end
+    end
+    check(contrast(theme.ContentColor, theme.StatBackground) >= 4.5, "theme text has sufficient contrast on preview and card surfaces: " .. entry.id)
+    themes.cards[index].hit.MouseButton1Click:Fire()
+    check(w.ThemeId == entry.id and themes.cards[index].selected.Visible and w.theme.ContentColor == theme.ContentColor, "every preview applies the corresponding complete theme: " .. entry.id)
+    check(themes.cards[index].title.TextColor3 == theme.ContentColor and childOfClass(themes.cards[index].preview, "UIGradient").Color == theme.WindowColor, "preview keeps its own text and window colors after theme switches: " .. entry.id)
+end
+check(#w.instances == beforeThemeInstances, "cycling through all sixty themes reuses existing preview instances")
 themes.cards[2].hit.MouseButton1Click:Fire()
 check(w.ThemeId == "aurora" and themes.cards[2].selected.Visible and w.theme.AccentColor == UI.Themes[2].theme.AccentColor, "theme preview colors match the applied palette")
 w:OpenSettings()
 check(w.selectedTab == w.SettingsTab and themes.closed, "opening settings closes the overlay")
+local beforeThemeConnections, beforeReopenInstances = #w.connections, #w.instances
+for i = 1, 3 do w:OpenThemes():Close() end
+check(#w.connections == beforeThemeConnections and #w.instances == beforeReopenInstances, "reopening the sixty-theme gallery releases its previews and filter handlers")
 
 -- Native autosave and late restoration, through the integration's default configuration.
 -- There is deliberately no explicit Save/Load in this scenario.
@@ -355,6 +439,24 @@ check(ew.selectedTab == ew.ProfileTab and ew.ProfilePage.content.Parent == ew.el
 ew:Unload()
 check(not ew.ProfilePage and not ew.ProfileTab and #ew.connections == 0, "unloading with a profile open releases its page references and handlers")
 _G.identifyexecutor = previousIdentify
+
+local themeWindow = UI:CreateWindow({ Id = "ThemePersist34", name = "ThemePersist34" })
+themeWindow:ChangeTheme("porcelana")
+themeWindow.TransparencySlider:Set(23)
+themeWindow:Unload()
+themeWindow = UI:CreateWindow({ Id = "ThemePersist34", name = "ThemePersist34" })
+check(themeWindow.ThemeId == "porcelana" and luminance(themeWindow.theme.ContentColor) < 0.1 and themeWindow.TransparencySlider.value == 23, "a newly added light theme and its transparency survive reexecution")
+themeWindow:Unload()
+local localeWindow = UI:CreateWindow({ Id = "LocaleOverride34", translations = { ["pt-br"] = { Haptics = "Vibração personalizada" } } })
+for _, element in ipairs(localeWindow.SettingsTab.elements) do
+    if element.name == "Haptics" then check(element.title.Text == "Vibração personalizada", "developer translations override the built-in Portuguese pack") end
+end
+localeWindow:Unload()
+localeWindow = UI:CreateWindow({ Id = "English34", locale = "en" })
+for _, element in ipairs(localeWindow.SettingsTab.elements) do
+    if element.name == "Haptics" then check(element.title.Text == "Haptics", "explicit native English locale remains supported") end
+end
+localeWindow:Unload()
 
 local row = tab:CreateGroup()
 local col = row:CreateGroup({ direction = "column" })

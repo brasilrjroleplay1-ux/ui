@@ -1,6 +1,6 @@
 # Base oficial Gen2
 
-Conexão UI 3.3 utiliza [SiriusSoftwareLtd/rayfield-gen2](https://github.com/SiriusSoftwareLtd/rayfield-gen2/tree/576c1ff19448285f9506b50bee221977aef3ffbb), versão 1.2.1, commit `576c1ff19448285f9506b50bee221977aef3ffbb`.
+Conexão UI 3.4 utiliza [SiriusSoftwareLtd/rayfield-gen2](https://github.com/SiriusSoftwareLtd/rayfield-gen2/tree/576c1ff19448285f9506b50bee221977aef3ffbb), versão 1.2.1, commit `576c1ff19448285f9506b50bee221977aef3ffbb`.
 
 Os componentes e os seis temas são os arquivos dessa base. A construção visual de `components/window.luau` foi preservada; a alteração nesse arquivo é o valor inicial de analytics. O diretório de arquivos e o nome do arquivo de preferências também foram separados para a Conexão. As alterações estão registradas em [UPSTREAM.json](../vendor/rayfield-gen2/UPSTREAM.json).
 
@@ -19,5 +19,7 @@ Em 3.3, `Features/ProfileDashboard.luau` fornece a apresentação do perfil: ban
 Em 3.3.1, `Features/Scrolling.luau` mede o canvas das páginas e seletores, limita o scroll após mudanças de tamanho e revalida os layouts depois das animações. O slider de tamanho mantém apenas uma prévia durante o arraste e aplica/salva ao soltar. `Features/Startup.luau` fornece a abertura Conexão Studio; `src/init.luau` do vendor recebe um callback opcional, registrado em `UPSTREAM.json`, para preservar o restante do ciclo de criação.
 
 Em 3.3.2, o ajuste automático também atualiza o valor e o indicador do slider. A sincronização usa `Set(value, true)`, preserva o modo automático e não sobrescreve o último tamanho manual salvo. O percentual segue a dimensão principal do layout na escala compacto–espaço disponível.
+
+Em 3.4, `Features/Themes.luau` oferece 54 paletas da Conexão mais os seis temas clássicos, com contraste de texto adaptado para superfícies claras e escuras. A galeria de configurações tem prévias reais, busca sem distinção de acentos e filtros por família. `Features/Localization.luau` fornece nomes e descrições em português pela API de localização da base, mantendo flags, callbacks e os arquivos do vendor intactos. O [catálogo](TEMAS.md) lista os 60 temas.
 
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

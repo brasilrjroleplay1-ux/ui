@@ -78,12 +78,14 @@ local function cards(window, parent, owner, entries, z)
             AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -5, 0, 3), Size = UDim2.fromOffset(22, 22),
             TextSize = 20, ZIndex = z + 4, TextXAlignment = Enum.TextXAlignment.Center,
         })
+        window.themeProperties[selected].TextColor3 = nil
+        selected.TextColor3 = theme.ContentColor
         local hit = window:Create("TextButton", {
             Parent = card, Text = "", BackgroundTransparency = 1, AutoButtonColor = false,
             Size = UDim2.fromScale(1, 1), ZIndex = z + 5,
         })
         owner:Connect(hit.MouseButton1Click, function() window:ChangeTheme(entry.id) end)
-        table.insert(results, { id = entry.id, frame = card, stroke = stroke, selected = selected, hit = hit })
+        table.insert(results, { id = entry.id, entry = entry, frame = card, preview = mini, title = title, stroke = stroke, selected = selected, hit = hit })
     end
     return results
 end
@@ -97,24 +99,88 @@ local function selection(window, entries)
 end
 
 function Settings.openThemes(window)
-    local picker = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.", { width = 570, height = 650 })
-    local scroll = window:Create("ScrollingFrame", {
-        Parent = picker.content, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ZIndex = 4012,
+    local picker = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.")
+    picker.group = "Todos"
+    picker.search = window:Create("TextBox", {
+        Name = "ThemeSearch", Parent = picker.content, Size = UDim2.new(1, 0, 0, 40),
+        Text = "", PlaceholderText = "Buscar tema, cor ou estilo...", ClearTextOnFocus = false,
+        TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0,
+        BackgroundTransparency = 0.88, ZIndex = 4016,
+    }, { TextColor3 = "ContentColor", FontFace = "Font", BackgroundColor3 = "AccentColor", PlaceholderColor3 = "PlaceholderColor" })
+    Surface.round(window, picker.search, 11)
+    window:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+    local families = window:Create("ScrollingFrame", {
+        Name = "ThemeFamilies", Parent = picker.content, Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 0, 38),
+        BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2,
+        Active = true, ScrollingEnabled = true, ScrollingDirection = Enum.ScrollingDirection.X, CanvasSize = UDim2.new(), ZIndex = 4013,
     }, { ScrollBarImageColor3 = "AccentColor" })
+    local groups = { "Todos" }
+    for _, group in ipairs(Themes.groups) do table.insert(groups, group) end
+    picker.filters = {}
+    local left = 0
+    for _, group in ipairs(groups) do
+        local width = 24 + utf8.len(group) * 8
+        local chip = Surface.button(window, families, group, {
+            Position = UDim2.fromOffset(left, 0), Size = UDim2.fromOffset(width, 30), TextSize = 12,
+        })
+        picker:Connect(chip.MouseButton1Click, function() picker:SetGroup(group) end)
+        table.insert(picker.filters, { group = group, button = chip })
+        left += width + 8
+    end
+    families.CanvasSize = UDim2.fromOffset(left, 0)
+    local scroll = window:Create("ScrollingFrame", {
+        Name = "ThemeResults", Parent = picker.content, Position = UDim2.fromOffset(0, 94), Size = UDim2.new(1, 0, 1, -94), BackgroundTransparency = 1, BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ZIndex = 4012,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+    }, { ScrollBarImageColor3 = "AccentColor" })
+    picker.list = scroll
     local grid = window:Create("UIGridLayout", {
         Parent = scroll, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.new(0.5, -10, 0, 156), SortOrder = Enum.SortOrder.LayoutOrder,
     })
     Scrolling.frame(window, picker, scroll, grid)
     window:Create("UIPadding", { Parent = scroll, PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 4) })
     picker.cards = cards(window, scroll, picker, Themes.catalog, 4013)
-    function picker:RefreshTheme() selection(window, self.cards) end
+    picker.empty = Surface.label(window, picker.content, "Nenhum tema encontrado. Tente outra busca ou família.", {
+        Position = UDim2.fromOffset(8, 104), Size = UDim2.new(1, -16, 0, 52), TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
+    })
+    function picker:RefreshTheme()
+        selection(window, self.cards)
+        for _, filter in ipairs(self.filters) do
+            filter.button.BackgroundTransparency = self.group == filter.group and 0 or 0.65
+            filter.button.TextTransparency = self.group == filter.group and 0 or 0.3
+        end
+    end
+    function picker:Filter()
+        if self.closed then return end
+        local count = 0
+        for _, item in ipairs(self.cards) do
+            item.frame.Visible = Themes.matches(item.entry, self.search.Text, self.group)
+            if item.frame.Visible then count += 1 end
+        end
+        self.visibleCount = count
+        self.empty.Visible = count == 0
+        self.subtitle.Text = string.format("%d de %d temas · toque na prévia para aplicar", count, #Themes.catalog)
+        scroll.CanvasPosition = Vector2.new(0, 0)
+        if self._scrollers then
+            for _, controller in ipairs(self._scrollers) do
+                controller.desiredY, controller.atEnd = 0, false
+                controller:Queue()
+            end
+        end
+        self:RefreshTheme()
+    end
+    function picker:SetGroup(group)
+        self.group = group
+        self:Filter()
+    end
+    picker:Connect(picker.search:GetPropertyChangedSignal("Text"), function() picker:Filter() end)
     picker.onLayout = function(width)
-        local columns = width < 420 and 1 or 2
-        grid.CellSize = UDim2.new(1 / columns, columns == 1 and -12 or -13, 0, 156)
+        local columns = width < 420 and 1 or (width >= 700 and 3 or 2)
+        grid.CellSize = UDim2.new(1 / columns, -(12 * (columns - 1) + 12) / columns, 0, 156)
     end
     picker:Layout()
-    picker:RefreshTheme()
+    picker:Filter()
     return picker
 end
 
@@ -133,9 +199,11 @@ local function gallery(window, tab)
         Parent = self.gridFrame, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.new(0.5, -6, 0, 156), SortOrder = Enum.SortOrder.LayoutOrder,
     })
     local featured = {}
-    for i = 1, 6 do featured[i] = Themes.catalog[i] end
+    for _, id in ipairs({ "conexao", "cyberpunk", "floresta", "nebula", "porcelana", "obsidiana" }) do
+        table.insert(featured, Themes.entry(id))
+    end
     self.cards = cards(window, self.gridFrame, self, featured, 7)
-    self.more = Surface.button(window, self.main, "Ver todos os temas · 12 prévias", {
+    self.more = Surface.button(window, self.main, string.format("Ver todos os temas · %d prévias", #Themes.catalog), {
         Position = UDim2.new(0, 3, 1, -44), Size = UDim2.new(1, -6, 0, 40), ZIndex = 12,
     })
     self:Connect(self.more.MouseButton1Click, function() Settings.openThemes(window) end)
