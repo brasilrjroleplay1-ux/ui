@@ -31,7 +31,7 @@ local assetResolver = variables.assetResolver
 -- raw host, not the /blob/ page: that 302s and executors that dont follow redirects
 -- would cache the redirect body instead of the png
 local assetBase = "https://raw.githubusercontent.com/SiriusSoftwareLtd/rayfield-gen2/main/assets/"
-local headshotPx = 48
+local headshotPx = 420
 local thumbEndpoint =
     "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=%dx%d&format=Png&isCircular=false"
 
@@ -73,7 +73,7 @@ local function cacheFile(filePath: string, url: string): string?
 end
 
 local function avatarPath(userId: number): string
-    return path.join(cacheFolder, "avatar_" .. tostring(userId) .. ".png")
+    return path.join(cacheFolder, "avatar_" .. tostring(userId) .. "_420.png")
 end
 
 local function decodeThumbnailUrl(body: string): string?

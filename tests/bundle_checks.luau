@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.4.0", "new entry point is bundled")
+check(UI.Version == "3.4.1", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -143,11 +143,25 @@ w.ProfileButton.MouseButton1Click:Fire()
 local profile = w.ProfilePage
 check(profile and profile.playerName.Text == game:GetService("Players").LocalPlayer.DisplayName, "clicking the sidebar opens the actual player's profile")
 check(profile.details[2][2] == "Roblox Studio" and profile.avatar.Image ~= "", "profile includes runtime identification and the player's thumbnail")
+check(profile.avatar.Image:find("w=420&h=420", 1, true) and w.profileAvatar.Image:find("w=420&h=420", 1, true), "both profile and sidebar use a 420px thumbnail instead of upscaling the old 48px headshot")
+check(profile.avatar.ScaleType == Enum.ScaleType.Fit and profile.avatar.ResampleMode == Enum.ResamplerMode.Default, "avatar keeps its aspect ratio and smooth resampling")
+check(profile.platformIcon.kind == "studio" and #profile.platformIcon.parts == 4 and profile.fields[2].icon.kind == "roblox", "platform and account have local Studio and Roblox marks")
 check(#profile.fields == 2 and w.profileAvatar.Size.X.Offset == 40 and w.ProfileCard.BackgroundTransparency < 1 and w.ProfileButton.ZIndex > w.profileName.ZIndex, "the player card is styled, clickable above its labels and shows only account and executor details")
 check(w.selectedTab == w.ProfileTab and profile.content.Parent == w.elements, "the profile opens in the main content panel as a native page")
 check(not w._conexaoPanel and not w.screenGui:FindFirstChild("ConexaoOverlay") and #w.screenGui:GetChildren() == windowChildren, "opening the profile creates no floating window or screen-darkening layer")
 local dashboard = profile.dashboard
-for _, width in ipairs({ 240, 320, 426, 640, 900 }) do
+check(not dashboard.banner:FindFirstChild("Shading") and not dashboard.banner:FindFirstChild("Orbit"), "the rounded banner contains no rectangular shade or clipped off-canvas circles")
+local function rect(node, parentWidth, parentHeight)
+    local size, at, anchor = node.Size, node.Position, node.AnchorPoint
+    local width = size.X.Scale * parentWidth + size.X.Offset
+    local height = size.Y.Scale * parentHeight + size.Y.Offset
+    return at.X.Scale * parentWidth + at.X.Offset - anchor.X * width, at.Y.Scale * parentHeight + at.Y.Offset - anchor.Y * height, width, height
+end
+local function inside(node, width, height, name)
+    local x, y, w, h = rect(node, width, height)
+    assert(x >= 0 and y >= 0 and w > 0 and h > 0 and x + w <= width + 0.01 and y + h <= height + 0.01, name .. " must fit without clipping")
+end
+for _, width in ipairs({ 180, 240, 320, 426, 440, 559, 560, 640, 900 }) do
     dashboard.main.AbsoluteSize = Vector2.new(width, 600)
     dashboard:Layout()
     local previousRight, previousBottom = 0, 0
@@ -163,6 +177,18 @@ for _, width in ipairs({ 240, 320, 426, 640, 900 }) do
     end
     assert(dashboard.actions.Position.Y.Offset >= dashboard.cards.Position.Y.Offset + dashboard.cards.Size.Y.Offset, "actions must remain below the account cards")
     assert(dashboard.main.Size.Y.Offset >= dashboard.actions.Position.Y.Offset + dashboard.actions.Size.Y.Offset, "profile content must remain scrollable through its last action")
+    local bannerHeight = dashboard.banner.Size.Y.Offset
+    for _, node in ipairs({ dashboard.plate, dashboard.connected, profile.playerName, profile.username, dashboard.badges }) do inside(node, width, bannerHeight, node.Name) end
+    inside(profile.avatar, 112, 112, "avatar")
+    local badgeWidth, badgeHeight = dashboard.badges.Size.X.Offset, dashboard.badges.Size.Y.Offset
+    inside(dashboard.executorPill, badgeWidth, badgeHeight, "executor badge")
+    inside(dashboard.platformPill, badgeWidth, badgeHeight, "platform badge")
+    inside(profile.settingsButton, width, dashboard.actions.Size.Y.Offset, "settings action")
+    inside(profile.themesButton, width, dashboard.actions.Size.Y.Offset, "themes action")
+    for _, field in ipairs(profile.fields) do
+        local fieldWidth = field.main.Size.X.Scale * width + field.main.Size.X.Offset
+        for _, node in ipairs({ field.heading, field.valueLabel, field.subtitle, field.icon.root.Parent }) do inside(node, fieldWidth, field.main.Size.Y.Offset, "account card content") end
+    end
 end
 check(true, "profile cards and actions fit phone, tablet and desktop content widths without overlapping")
 dashboard.main.AbsoluteSize = Vector2.new(420, 120)
@@ -266,6 +292,7 @@ check(#w.ThemeGallery.cards == 6 and #UI.Themes == 60, "six featured previews an
 w.ThemeGallery.cards[5].hit.MouseButton1Click:Fire()
 check(w.ThemeId == "porcelana" and w.ThemeGallery.cards[5].selected.Visible, "a preview applies its real theme and marks the selection")
 check(w.ProfilePage.fields[1].valueLabel.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
+check(w.ProfilePage.platformIcon.parts[1].BackgroundColor3 == Color3.new(1, 1, 1), "banner platform marks remain white after switching to a light theme")
 local themes = w:OpenThemes()
 check(#themes.cards == 60, "the complete theme picker renders all sixty previews")
 check(themes.visibleCount == 60 and #themes.filters == 8 and themes.root.Parent == w.elements, "theme search and family filters belong to the content panel")
@@ -439,6 +466,42 @@ check(ew.selectedTab == ew.ProfileTab and ew.ProfilePage.content.Parent == ew.el
 ew:Unload()
 check(not ew.ProfilePage and not ew.ProfileTab and #ew.connections == 0, "unloading with a profile open releases its page references and handlers")
 _G.identifyexecutor = previousIdentify
+
+local previousAsset, previousStudio = _G.getcustomasset, game:GetService("RunService").IsStudio
+_G.identifyexecutor = function() return "Delta", "1.174.31136" end
+_G.getcustomasset = nil
+game:GetService("RunService").IsStudio = function() return false end
+local deltaWindow = UI:CreateWindow({ Id = "DeltaFallback341" })
+local deltaPage = deltaWindow:OpenProfile()
+check(deltaPage.executorIcon.kind == "delta" and not deltaPage.executorIcon.artwork and #deltaPage.executorIcon.parts == 3, "Delta has a local geometric fallback when custom assets are unavailable")
+check(deltaPage.platformIcon.kind == "roblox" and deltaPage.platformBadge.Text == "Roblox", "a Roblox client shows the Roblox mark and platform name")
+deltaWindow:Unload()
+local localAssetCalls, localAssetPath = 0, nil
+_G.getcustomasset = function(path)
+    localAssetCalls += 1
+    localAssetPath = path
+    local decoded
+    for _, candidate in ipairs(game:GetService("ReplicatedStorage"):GetChildren()) do
+        if candidate.Name == "Filesystem" then
+            local node = candidate
+            for part in string.gmatch(path, "[^/]+") do node = node and node:FindFirstChild(part) end
+            if node then decoded = node.Value end
+        end
+    end
+    check(decoded == fs.readFile(root .. "/../../assets/delta.png"), "embedded logo decodes to the exact packaged PNG before the local asset API loads it")
+    return "rbxasset://local/delta-logo.png"
+end
+deltaWindow = UI:CreateWindow({ Id = "DeltaArtwork341" })
+deltaPage = deltaWindow:OpenProfile()
+check(deltaPage.executorIcon.artwork and deltaPage.fields[1].icon.artwork and deltaPage.executorIcon.parts[1].Image == "rbxasset://local/delta-logo.png", "Delta badge and executor card render the embedded logo through the local asset API")
+check(localAssetCalls == 1 and localAssetPath:find("delta-logo-256-v1.png", 1, true), "the bundled logo is cached locally once instead of downloaded for each badge")
+deltaWindow:Hide()
+check(deltaPage.executorIcon.parts[1].ImageTransparency == 1 and deltaPage.platformIcon.parts[1].BackgroundTransparency == 1, "image and vector logos fade with the profile")
+deltaWindow:Show()
+check(deltaPage.executorIcon.parts[1].ImageTransparency == 0 and deltaPage.platformIcon.parts[1].BackgroundTransparency == 0, "reopening restores both logo types")
+deltaWindow:Unload()
+_G.getcustomasset, _G.identifyexecutor = previousAsset, previousIdentify
+game:GetService("RunService").IsStudio = previousStudio
 
 local themeWindow = UI:CreateWindow({ Id = "ThemePersist34", name = "ThemePersist34" })
 themeWindow:ChangeTheme("porcelana")

@@ -64,7 +64,7 @@ return function()
         end)
 
         it("returns avatar thumbnails directly outside secure mode", function()
-            expect(image.avatar(99)).to.equal("rbxthumb://type=AvatarHeadShot&id=99&w=48&h=48")
+            expect(image.avatar(99)).to.equal("rbxthumb://type=AvatarHeadShot&id=99&w=420&h=420")
         end)
 
         it("delegates avatar thumbnails to the secure cache in secure mode", function()

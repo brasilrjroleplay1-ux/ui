@@ -70,9 +70,10 @@ function Profile.attach(window, executorInfo, version)
     if window.profile then
         window.profileAvatar.Size = UDim2.fromOffset(40, 40)
         window.profileAvatar.ZIndex = 123
+        window.profileAvatar.ScaleType, window.profileAvatar.ResampleMode = Enum.ScaleType.Fit, Enum.ResamplerMode.Default
         window.profileContainer.ZIndex, window.profileLabels.ZIndex = 121, 121
         window.profileLabels.AutomaticSize = Enum.AutomaticSize.None
-        window.profileLabels.Size = UDim2.new(1, -60, 0, 40)
+        window.profileLabels.Size = UDim2.new(1, -64, 0, 40)
         window.profileName.Size = UDim2.new(1, 0, 0, 20)
         window.profileName.AutomaticSize = Enum.AutomaticSize.None
         window.profileName.TextSize, window.profileName.ZIndex = 16, 123

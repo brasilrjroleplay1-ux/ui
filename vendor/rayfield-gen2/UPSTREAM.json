@@ -9,7 +9,11 @@
     "src/utility/persistencePaths.luau": "Settings file is conexao.rfld.",
     "tests/utility/persistencePaths.spec.luau": "Expect the isolated Conexao settings filename.",
     "tests/utility/persistenceSettings.spec.luau": "Expect the isolated Conexao settings filename.",
-    "src/init.luau": "Optional startup factory hook. Conexao supplies its own Conexão Studio splash while preserving the upstream lifecycle and fallback."
+    "src/init.luau": "Optional startup factory hook. Conexao supplies its own Conex\u00e3o Studio splash while preserving the upstream lifecycle and fallback.",
+    "src/utility/image.luau": "Avatar headshots request 420x420 instead of upscaling 48x48 in the profile.",
+    "src/utility/imageCache.luau": "Secure avatar cache fetches 420x420 headshots with a separate _420 filename to avoid old low-resolution entries.",
+    "tests/utility/image.spec.luau": "Expect the higher-resolution avatar thumbnail URI.",
+    "tests/utility/imageCache.spec.luau": "Expect the resolution-specific cache filename; verify high-resolution requests and old-cache migration."
   },
   "original_sha256": {
     "src/components/action.luau": "fcdb6268c488eb105cbe375a3477b10affd7804dfb8e5d807cc09ebc86938ec5",

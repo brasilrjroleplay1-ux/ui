@@ -63,7 +63,7 @@ end
 
 function image.avatar(userId: number, onReady: AvatarCallback?): string
     if not variables.secureMode then
-        return `rbxthumb://type=AvatarHeadShot&id={userId}&w=48&h=48`
+        return `rbxthumb://type=AvatarHeadShot&id={userId}&w=420&h=420`
     end
 
     return imageCache.avatar(userId, onReady)

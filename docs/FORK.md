@@ -22,4 +22,6 @@ Em 3.3.2, o ajuste automático também atualiza o valor e o indicador do slider.
 
 Em 3.4, `Features/Themes.luau` oferece 54 paletas da Conexão mais os seis temas clássicos, com contraste de texto adaptado para superfícies claras e escuras. A galeria de configurações tem prévias reais, busca sem distinção de acentos e filtros por família. `Features/Localization.luau` fornece nomes e descrições em português pela API de localização da base, mantendo flags, callbacks e os arquivos do vendor intactos. O [catálogo](TEMAS.md) lista os 60 temas.
 
+Em 3.4.1, os helpers `utility/image.luau` e `utility/imageCache.luau` passam a solicitar headshots de 420 × 420 px; o cache local usa o sufixo `_420` para não reaproveitar a miniatura antiga de 48 px. Os testes e o verificador de procedência registram essas alterações. O perfil usa uma superfície arredondada sem overlays retangulares, moldura com espaço para o avatar, badges com logos, cartões mais altos e ações responsivas. A imagem do Delta está incorporada em `Features/BrandAssets.luau`; `BrandIcon.luau` também oferece identificadores geométricos sem imagens externas. [Créditos da imagem](../assets/README.md).
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

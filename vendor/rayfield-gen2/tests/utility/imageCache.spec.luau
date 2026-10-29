@@ -182,12 +182,12 @@ return function()
                 return "asset://" .. path
             end
             filesystem.isfile = function(path)
-                return path:match("avatar_42%.png$") ~= nil
+                return path:match("avatar_42_420%.png$") ~= nil
             end
 
             -- the exact custom-asset uri, not just anything ("" is the failure value)
             local expected = "asset://"
-                .. pathUtility.join(variables.fileSystemManager:getAssetsFolder(), "avatar_42.png")
+                .. pathUtility.join(variables.fileSystemManager:getAssetsFolder(), "avatar_42_420.png")
             expect(imageCache.avatar(42)).to.equal(expected)
             expect(imageCache.avatar("42")).to.equal("")
         end)
@@ -203,6 +203,24 @@ return function()
             end)).to.equal("")
 
             expect(readyUri).to.be.ok()
+        end)
+
+        it("requests 420px headshots without reusing an old 48px cache file", function()
+            local folder = variables.fileSystemManager:getAssetsFolder()
+            local old = pathUtility.join(folder, "avatar_2042.png")
+            local current = pathUtility.join(folder, "avatar_2042_420.png")
+            files[old] = "old 48px avatar"
+            local requests, ready = {}, nil
+            getfenv().getcustomasset = function(file) return "asset://" .. file end
+            variables.assetResolver.getAssetContentFromUrl = function(_, url)
+                table.insert(requests, url)
+                return "\137PNG\r\n\26\nnew avatar"
+            end
+            imageCache.avatar(2042, function(uri) ready = uri end)
+            expect(string.find(requests[1], "size=420x420", 1, true)).to.be.ok()
+            expect(ready).to.equal("asset://" .. current)
+            expect(files[old]).to.equal("old 48px avatar")
+            expect(files[current]).to.equal("\137PNG\r\n\26\nnew avatar")
         end)
 
         it("rejects non-png bodies instead of writing them to disk", function()

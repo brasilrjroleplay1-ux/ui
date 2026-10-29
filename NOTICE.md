@@ -12,6 +12,8 @@ Conexão UI 3 is a fork and integration of **Rayfield Gen2 1.2.1** by Sirius / C
 
 Existing copyright and license headers remain in the source and generated bundles. The source is readable and is distributed alongside the executable bundles. The integration layer, tools and examples supplied for Conexão UI are also provided under MPL-2.0.
 
+The Delta identification artwork in `assets/delta.png` and its embedded copy retain their respective owner's rights and are not covered by the code's MPL grant. Source and use are documented in [assets/README.md](assets/README.md). Product names and marks identify their respective products without implying affiliation or endorsement.
+
 The original Rayfield names and graphics identify the upstream project. Conexão UI is an independently maintained fork, with no claim of endorsement by Sirius or Corridon Capital.
 
 The previous independently implemented Conexão UI 2.1 is preserved in [legacy/v2](legacy/v2).

@@ -1,4 +1,4 @@
-# Conexão UI 3.4.0 · Conexão Studio
+# Conexão UI 3.4.1 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -11,6 +11,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/
 A demo abre diretamente em **Configurações**, com transparência, tamanho, salvamento e temas. Usa o tema `conexao`. Clique no cartão com avatar/nome no rodapé da sidebar para abrir seu perfil.
 
 A abertura mostra **Conexão Studio**, com marca em vetores e texto local. Os créditos da base permanecem no código e no repositório. O nome da sua janela continua personalizável em `CreateWindow`.
+
+Na **3.4.1**, o perfil e o rodapé usam miniaturas de **420 × 420 px**. O banner tem uma única superfície arredondada, sem camadas retangulares ou círculos cortados. Avatar, identificação e cartões se reorganizam conforme a largura; os botões ficam empilhados nas telas menores. A logo do Delta está incluída no pacote e carrega localmente quando o cliente oferece `getcustomasset`/`getsynasset`; sem essas APIs, aparece um símbolo Δ junto ao nome. Roblox/Studio têm ícones vetoriais locais. [Origem da imagem](assets/README.md).
 
 Os exemplos de botões, campos, avisos e grupos estão separados em [dist/Components.luau](dist/Components.luau) e no [script completo](Example.luau). A library cria as configurações; as abas do seu projeto são criadas pelo seu script.
 
@@ -125,7 +127,7 @@ O [default.project.json](default.project.json) também mapeia o projeto para Roj
 
 ## Origem, alterações e versão anterior
 
-Os arquivos da base estão fixados em um commit conhecido. Os ajustes nela são o diretório de armazenamento da Conexão, o nome do arquivo de preferências, analytics inicialmente desligado e um callback opcional para a abertura personalizada. A camada [ConexaoUI/init.luau](ConexaoUI/init.luau) e os módulos em [ConexaoUI/Features](ConexaoUI/Features) implementam as extensões da Conexão. O renderer da versão 2 foi arquivado.
+Os arquivos da base estão fixados em um commit conhecido. Os ajustes nela são o diretório de armazenamento da Conexão, o nome do arquivo de preferências, analytics inicialmente desligado, miniaturas de avatar em alta resolução com cache separado e um callback opcional para a abertura personalizada. A camada [ConexaoUI/init.luau](ConexaoUI/init.luau) e os módulos em [ConexaoUI/Features](ConexaoUI/Features) implementam as extensões da Conexão. O renderer da versão 2 foi arquivado.
 
 A 3.x usa a API Gen2. `CreateGroup` cria layouts em linha/coluna; dropdowns usam `multiSelect`; sliders usam `range`; valores iniciais usam `value`. A 3.1 continua lendo as configurações `.rfld` da 3.0. Veja os exemplos atualizados. A versão 2.1 completa, com seus fontes, testes, documentação e distribuição, está em [legacy/v2](legacy/v2).
 
