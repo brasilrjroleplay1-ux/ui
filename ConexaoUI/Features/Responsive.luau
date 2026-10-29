@@ -47,6 +47,7 @@ function Responsive.attach(window)
     -- their two-second backstop. No additional polling loop is needed.
     function window:_applyWindowSize()
         if self.unloaded then return end
+        if self.WindowSizeSlider and self.WindowSizeSlider.dragging then self._pendingResize = true return end
         local screen = viewport()
         local state = self.UIPreferences
         local size = Responsive.fit(screen, self.layout.mode, state.autoSize, state.sizePercent)

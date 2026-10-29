@@ -131,7 +131,8 @@ function rayfield:CreateWindow(properties: types.WindowProps): types.Window
     end
 
     -- after the preload, so secure mode can show the banner from the icon cache
-    local banner = createBanner()
+    local bannerFactory = if typeof(properties) == "table" then (properties :: any).startup else nil
+    local banner = if typeof(bannerFactory) == "function" then bannerFactory() else createBanner()
 
     -- the banner is only torn down once the window is up, so a throw in here (bad props) would
     -- otherwise strand it in the gui container for the rest of the session

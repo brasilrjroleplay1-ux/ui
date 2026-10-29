@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: MPL-2.0
 -- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
 local Surface = require(script.Parent.Surface)
+local Scrolling = require(script.Parent.Scrolling)
 local Dropdown = {}
 
 function Dropdown.attach(control, props)
@@ -38,6 +39,7 @@ function Dropdown.attach(control, props)
         control.selectedLabel.TextWrapped, control.selectedLabel.TextTruncate = false, Enum.TextTruncate.AtEnd
     end
     control.window:ConnectFor(control, control.main:GetPropertyChangedSignal("AbsoluteSize"), layoutHeader)
+    control._layoutConexaoHeader = layoutHeader
     layoutHeader()
 
     function control:_close()
@@ -74,6 +76,7 @@ function Dropdown.attach(control, props)
             Parent = picker.list, CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.5, -7, 0, 50),
             SortOrder = Enum.SortOrder.LayoutOrder,
         })
+        Scrolling.frame(w, picker, picker.list, picker.grid)
         w:Create("UIPadding", { Parent = picker.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
         picker.empty = Surface.label(w, picker.content, "Nenhuma opção encontrada", {
             Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, Visible = false,

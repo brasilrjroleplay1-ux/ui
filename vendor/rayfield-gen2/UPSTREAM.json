@@ -8,7 +8,8 @@
     "src/utility/filesystemManager.luau": "Storage root is ConexaoUI to isolate fork files.",
     "src/utility/persistencePaths.luau": "Settings file is conexao.rfld.",
     "tests/utility/persistencePaths.spec.luau": "Expect the isolated Conexao settings filename.",
-    "tests/utility/persistenceSettings.spec.luau": "Expect the isolated Conexao settings filename."
+    "tests/utility/persistenceSettings.spec.luau": "Expect the isolated Conexao settings filename.",
+    "src/init.luau": "Optional startup factory hook. Conexao supplies its own Conexão Studio splash while preserving the upstream lifecycle and fallback."
   },
   "original_sha256": {
     "src/components/action.luau": "fcdb6268c488eb105cbe375a3477b10affd7804dfb8e5d807cc09ebc86938ec5",

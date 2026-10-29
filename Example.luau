@@ -4,7 +4,7 @@ local previousDemo = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstC
 if previousDemo and previousDemo:IsA("ScreenGui") then previousDemo:Destroy() end
 local window = UI:CreateWindow({
     Id = "ConexaoComponents",
-    name = "CONEXÃO UI", subtitle = "3.3.0", sidebarLayout = true,
+    name = "CONEXÃO STUDIO", subtitle = "3.3.1", sidebarLayout = true,
     theme = "conexao",
     configuration = { fileName = "conexao_componentes_v3" },
 })

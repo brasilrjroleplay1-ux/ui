@@ -4,8 +4,24 @@ local function check(value, message) assert(value, message) checks += 1 end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.3.0", "new entry point is bundled")
+check(UI.Version == "3.3.1", "new entry point is bundled")
+local instanceNew = Instance.new
+local openingNodes = {}
+Instance.new = function(className)
+    local node = instanceNew(className)
+    if className == "ScreenGui" or className == "TextLabel" or className == "ImageLabel" then table.insert(openingNodes, node) end
+    return node
+end
 local w = UI:CreateWindow({ Id = "BundleTest", name = "Conexão", theme = "amethyst" })
+Instance.new = instanceNew
+local openingBrand, openingGui, rayfieldBanner
+for _, node in ipairs(openingNodes) do
+    if node.Name == "ConexaoStudioStartup" then openingGui = node end
+    if node.Text == "Conexão Studio" then openingBrand = node end
+    if node:IsA("ImageLabel") and node.Name == "Banner" then rayfieldBanner = node end
+end
+check(openingBrand and openingGui and not rayfieldBanner, "startup shows Conexão Studio instead of the upstream image banner")
+check(openingGui.Parent == nil, "the branded startup GUI is torn down after opening")
 check(w.layout.mode == "sidebar", "profile layout is automatic")
 check(w.configuration.autoSave and w.configuration.autoLoad, "configuration works without additional setup")
 check(w.profileText == "Roblox Studio", "profile subtitle comes from the runtime")
@@ -17,6 +33,23 @@ local initiallySelected = w.selectedTab
 w:CloseProfile()
 check(w.selectedTab == initiallySelected and not w.ProfilePage, "closing the profile before it was opened leaves navigation unchanged")
 check(w.SizeStatus and w.SizeInfo.automatic, "settings and automatic sizing are included with CreateWindow alone")
+local scrollFrame, scrollLayout = w.SettingsTab.tabPage, w.SettingsTab.tabPageLayout
+local originalScrollView = scrollFrame.AbsoluteWindowSize
+local originalContentSize = scrollLayout.AbsoluteContentSize
+scrollFrame.AbsoluteWindowSize = Vector2.new(420, 300)
+scrollLayout.AbsoluteContentSize = Vector2.new(420, 1800)
+scrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Fire()
+check(scrollFrame.AutomaticCanvasSize == Enum.AutomaticSize.None and scrollFrame.CanvasSize.Y.Offset == 1843 and scrollFrame.ScrollBarImageTransparency < 1, "page scroll height includes layout content plus top/bottom padding and shows a scrollbar")
+scrollFrame.CanvasPosition = Vector2.new(0, 1543)
+scrollFrame:GetPropertyChangedSignal("CanvasPosition"):Fire()
+scrollFrame.AbsoluteWindowSize = Vector2.new(420, 600)
+scrollFrame:GetPropertyChangedSignal("AbsoluteWindowSize"):Fire()
+check(scrollFrame.CanvasPosition.Y == 1243, "a page scrolled to the bottom stays at the valid bottom after resizing")
+scrollLayout.AbsoluteContentSize = Vector2.new(420, 100)
+scrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Fire()
+check(scrollFrame.CanvasPosition.Y == 0 and scrollFrame.ScrollBarImageTransparency == 1, "scroll offset resets when the resized content fits instead of leaving empty scroll space")
+scrollFrame.AbsoluteWindowSize, scrollLayout.AbsoluteContentSize = originalScrollView, originalContentSize
+scrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Fire()
 local originalCamera = workspace.CurrentCamera
 local camera = Instance.new("Camera")
 camera.ViewportSize = Vector2.new(1024, 768)
@@ -247,6 +280,30 @@ bw:Hide() bw:Show()
 check(math.abs(bw.windowGradient.Transparency.Keypoints[1].Value - 0.37) < 0.001 and bw.bottomFadeGradient.Transparency.Keypoints[1].Value >= 0.37, "reopening retains the selected transparency and the fade also remains transparent")
 bw:ChangeTheme("aurora")
 check(bw.ThemeId == "aurora" and math.abs(bw.windowGradient.Transparency.Keypoints[1].Value - 0.37) < 0.001, "theme changes retain transparency and the theme identity")
+bw:OpenSettings()
+local sizeSlider = bw.WindowSizeSlider
+local beforeGestureSize, beforeGesturePercent = bw.main.Size, bw.UIPreferences.sizePercent
+local previousMouse = game:GetService("UserInputService"):GetMouseLocation()
+local refreshSize = bw.RefreshSize
+local appliedSizes = 0
+bw.RefreshSize = function(self, ...) appliedSizes += 1 return refreshSize(self, ...) end
+game:GetService("UserInputService")._setMouseLocation(Vector2.new(sizeSlider.track.AbsolutePosition.X + 20, 0))
+sizeSlider.interact.InputBegan:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
+check(sizeSlider.dragging and bw.main.Size == beforeGestureSize and bw.UIPreferences.sizePercent == beforeGesturePercent and appliedSizes == 0, "holding the size handle previews a value without resizing or committing preferences")
+check(not bw.SettingsTab.tabPage.ScrollingEnabled and bw.SizeStatus.text:find("solte", 1, true), "page scroll is held during the gesture and the pending size is clearly labeled")
+game:GetService("UserInputService")._setMouseLocation(Vector2.new(sizeSlider.track.AbsolutePosition.X + 300, 0))
+game:GetService("RunService").RenderStepped:Fire()
+game:GetService("RunService").Heartbeat:Fire(2.1)
+check(bw.main.Size == beforeGestureSize and appliedSizes == 0, "drag updates and the viewport backstop cannot move the slider's window while held")
+local releasedSizeValue = sizeSlider.value
+game:GetService("UserInputService").InputEnded:Fire({ UserInputType = Enum.UserInputType.MouseButton1 })
+check(not sizeSlider.dragging and bw.UIPreferences.sizePercent == releasedSizeValue and appliedSizes == 1 and bw.SettingsTab.tabPage.ScrollingEnabled, "release commits the final size once and restores page scrolling")
+game:GetService("UserInputService")._setMouseLocation(Vector2.new(sizeSlider.track.AbsolutePosition.X + 20, 0))
+sizeSlider.interact.InputBegan:Fire({ UserInputType = Enum.UserInputType.Touch })
+game:GetService("UserInputService").WindowFocusReleased:Fire()
+check(not sizeSlider.dragging and appliedSizes == 2 and bw.SettingsTab.tabPage.ScrollingEnabled and not bw._sizePreview, "focus loss finishes a size gesture and releases the scroll hold")
+bw.RefreshSize = refreshSize
+game:GetService("UserInputService")._setMouseLocation(previousMouse)
 bw.WindowSizeSlider:Set(100)
 check(not bw.AutoSizeToggle.value and not bw.SizeInfo.automatic and bw.size.X.Offset >= bw.SizeInfo.screenWidth * 0.9 and bw.size.X.Offset <= bw.SizeInfo.screenWidth, "dragging size enables manual mode and 100 percent fills the available screen")
 bMulti:Open()

@@ -1,4 +1,4 @@
-# Conexão UI 3.3 · Rayfield Gen2
+# Conexão UI 3.3.1 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -9,6 +9,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/
 ```
 
 A demo abre diretamente em **Configurações**, com transparência, tamanho, salvamento e temas. Usa o tema `conexao`. Clique no cartão com avatar/nome no rodapé da sidebar para abrir seu perfil.
+
+A abertura mostra **Conexão Studio**, com marca em vetores e texto local. Os créditos da base permanecem no código e no repositório. O nome da sua janela continua personalizável em `CreateWindow`.
 
 Os exemplos de botões, campos, avisos e grupos estão separados em [dist/Components.luau](dist/Components.luau) e no [script completo](Example.luau). A library cria as configurações; as abas do seu projeto são criadas pelo seu script.
 
@@ -51,9 +53,11 @@ Não é necessário criar a página de configurações no seu script. A janela o
 
 - **Transparência do fundo, 0–100%:** 0 deixa o fundo sólido e 100 o deixa transparente. Texto e ícones mantêm sua opacidade.
 - **Ajustar tamanho automaticamente:** vem ativado e acompanha o tamanho/orientação da tela.
-- **Tamanho da janela, 0–100%:** arrastar ativa o modo manual. 0 mantém um tamanho compacto acessível; 100 usa o espaço disponível, preservando margens para os controles do Roblox. Mesmo no modo manual, a proporção é recalculada ao mudar de tela.
+- **Tamanho da janela, 0–100%:** o arraste mostra uma prévia do valor e mantém a janela parada. Ao soltar, aplica o tamanho, ativa o modo manual e salva a escolha. 0 mantém um tamanho compacto acessível; 100 usa o espaço disponível, preservando margens para os controles do Roblox. Mesmo no modo manual, a proporção é recalculada ao mudar de tela.
 
 Essas escolhas são lembradas por janela. Você pode ativar o ajuste automático novamente a qualquer momento.
+
+As páginas e os seletores recalculam a área rolável a partir do conteúdo e das margens. A barra aparece quando há mais conteúdo; após redimensionar, a posição permanece dentro do intervalo válido. Ao reabrir a janela, os layouts são conferidos depois da animação.
 
 ## Temas com prévia
 
@@ -98,7 +102,7 @@ O [default.project.json](default.project.json) também mapeia o projeto para Roj
 
 ## Origem, alterações e versão anterior
 
-Os arquivos da base estão fixados em um commit conhecido. Os ajustes nela são o diretório de armazenamento da Conexão, o nome do arquivo de preferências e analytics inicialmente desligado. A camada [ConexaoUI/init.luau](ConexaoUI/init.luau) e os módulos em [ConexaoUI/Features](ConexaoUI/Features) implementam as extensões da Conexão. O renderer da versão 2 foi arquivado.
+Os arquivos da base estão fixados em um commit conhecido. Os ajustes nela são o diretório de armazenamento da Conexão, o nome do arquivo de preferências, analytics inicialmente desligado e um callback opcional para a abertura personalizada. A camada [ConexaoUI/init.luau](ConexaoUI/init.luau) e os módulos em [ConexaoUI/Features](ConexaoUI/Features) implementam as extensões da Conexão. O renderer da versão 2 foi arquivado.
 
 A 3.x usa a API Gen2. `CreateGroup` cria layouts em linha/coluna; dropdowns usam `multiSelect`; sliders usam `range`; valores iniciais usam `value`. A 3.1 continua lendo as configurações `.rfld` da 3.0. Veja os exemplos atualizados. A versão 2.1 completa, com seus fontes, testes, documentação e distribuição, está em [legacy/v2](legacy/v2).
 

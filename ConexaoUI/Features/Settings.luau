@@ -5,6 +5,7 @@ local Themes = require(script.Parent.Themes)
 local Preferences = require(script.Parent.Preferences)
 local selector = require(script.Parent.Parent.Gen2.components.tabSelector)
 local constants = require(script.Parent.Parent.Gen2.utility.constants)
+local Scrolling = require(script.Parent.Scrolling)
 local Settings = {}
 
 -- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
@@ -104,6 +105,7 @@ function Settings.openThemes(window)
     local grid = window:Create("UIGridLayout", {
         Parent = scroll, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.new(0.5, -10, 0, 156), SortOrder = Enum.SortOrder.LayoutOrder,
     })
+    Scrolling.frame(window, picker, scroll, grid)
     window:Create("UIPadding", { Parent = scroll, PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 4) })
     picker.cards = cards(window, scroll, picker, Themes.catalog, 4013)
     function picker:RefreshTheme() selection(window, self.cards) end
@@ -179,7 +181,15 @@ function Settings.attach(window)
         window:RefreshSize()
         Preferences.save(window)
     end })
-    window.WindowSizeSlider = tab:CreateSlider({ name = "Tamanho da janela", range = { 0, 100 }, value = window.UIPreferences.sizePercent or 75, suffix = "%", description = "Arrastar ativa o tamanho manual. 0% é compacto; 100% usa o espaço disponível da tela.", callback = function(value)
+    window.WindowSizeSlider = tab:CreateSlider({ name = "Tamanho da janela", range = { 0, 100 }, value = window.UIPreferences.sizePercent or 75, suffix = "%", description = "Solte para aplicar. 0% é compacto; 100% usa o espaço disponível da tela.", callback = function(value, dragging)
+        if dragging then
+            window._sizePreview = value
+            tab._scrollController:SetHeld(true)
+            if window.RefreshSizeStatus then window:RefreshSizeStatus() end
+            return
+        end
+        window._sizePreview = nil
+        tab._scrollController:SetHeld(false)
         window.UIPreferences.sizePercent, window.UIPreferences.autoSize = value, false
         window.AutoSizeToggle:Set(false, true)
         window:RefreshSize()
@@ -190,7 +200,8 @@ function Settings.attach(window)
     function window:RefreshSizeStatus()
         if self.unloaded or not self.SizeInfo then return end
         local info = self.SizeInfo
-        sizeStatus:Set(string.format("%s · %d × %d px", info.automatic and "Automático" or "Manual", info.width, info.height))
+        if self._sizePreview then sizeStatus:Set(string.format("%d%% · solte para aplicar", self._sizePreview))
+        else sizeStatus:Set(string.format("%s · %d × %d px", info.automatic and "Automático" or "Manual", info.width, info.height)) end
     end
     window:RefreshSizeStatus()
     local mode, persistent = Preferences.storage()

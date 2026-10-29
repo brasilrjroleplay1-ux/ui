@@ -9,6 +9,8 @@ local Preferences = require(script.Features.Preferences)
 local Settings = require(script.Features.Settings)
 local Responsive = require(script.Features.Responsive)
 local Appearance = require(script.Features.Appearance)
+local Scrolling = require(script.Features.Scrolling)
+local Startup = require(script.Features.Startup)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
@@ -23,7 +25,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.3.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.3.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -59,6 +61,7 @@ end
 local function adaptHost(host)
     if host._conexaoAdapted then return host end
     host._conexaoAdapted = true
+    if host.tabPageLayout then Scrolling.tab(host) end
     if host.Select then
         local select = host.Select
         function host:Select(...)
@@ -122,6 +125,7 @@ function Library:CreateWindow(options)
     if p.rememberTheme ~= false and type(requestedTheme) ~= "table" and Themes.entry(preferences.theme) then themeId = preferences.theme end
     p.theme = Themes.resolve(themeId) or requestedTheme
     p.configuration = cfg
+    p.startup = Startup.new
     local id = tostring(p.Id or p.name)
     if windows[id] and not windows[id].unloaded then windows[id]:Unload() end
     local window = Gen2:CreateWindow(p)
@@ -163,6 +167,7 @@ function Library:CreateWindow(options)
     Responsive.attach(window)
     Appearance.attach(window)
     Settings.attach(window)
+    Scrolling.attachWindow(window)
     if window.searchAction then
         local search = window.searchAction.callback
         window.searchAction.callback = function(...)

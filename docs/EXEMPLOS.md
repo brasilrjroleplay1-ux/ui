@@ -107,6 +107,8 @@ window:OpenThemes()
 
 Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual e ajuste automático. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
+No slider de tamanho, a janela fica parada durante o arraste e aplica o valor ao soltar. Nos seus próprios sliders, o callback nativo recebe `(value, dragging)`: `dragging` é `true` durante o movimento e `false` na confirmação.
+
 O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. Ele abre como página interna, com banner no gradiente do tema, avatar, nome, usuário e cartões de executor/versão e ID. Os botões permitem copiar o ID, abrir Configurações/Temas e voltar. Copiar depende da API do cliente. A galeria de temas também usa uma página interna, com seis temas novos e seis originais. As miniaturas são GuiObjects com as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
 
 As propriedades nativas aceitam camelCase e PascalCase. Para novos scripts, use a API Gen2 documentada aqui. A API anterior, seus exemplos e suas distribuições estão em [legacy/v2](../legacy/v2).
