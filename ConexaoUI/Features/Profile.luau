@@ -16,8 +16,14 @@ local function buildPage(window, player, executorInfo, version)
     hero.main = window:Create("Frame", {
         Name = "PlayerProfile", Parent = tab.tabPage, Size = UDim2.new(1, -20, 0, 114),
         BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1,
-    })
+    }, { BackgroundTransparency = "ElementTransparency" })
     hero.stroke = window:StyleElementBody(hero.main)
+    local plate = window:Create("Frame", {
+        Parent = hero.main, Position = UDim2.fromOffset(12, 18), Size = UDim2.fromOffset(72, 72),
+        BorderSizePixel = 0, BackgroundTransparency = 1, ZIndex = 4,
+    }, { BackgroundColor3 = "AccentColor" })
+    Surface.round(window, plate, 36)
+    local plateStroke = window:Create("UIStroke", { Parent = plate, Thickness = 1, Transparency = 1 }, { Color = "AccentStroke" })
     page.avatar = window:Create("ImageLabel", {
         Parent = hero.main, Position = UDim2.fromOffset(16, 22), Size = UDim2.fromOffset(64, 64),
         BackgroundTransparency = 1, ImageTransparency = 1, ZIndex = 5,
@@ -37,14 +43,18 @@ local function buildPage(window, player, executorInfo, version)
         TextSize = 13, TextTransparency = 1, TextWrapped = false,
         TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
     })
+    page.playerName.FontFace = window.theme.TitleFont
+    window.themeProperties[page.playerName].FontFace = "TitleFont"
     hero.title, hero.iconLabel = page.playerName, page.avatar
     function hero:_setShown(shown, animate)
         if shown then window:_revealCommon(self, animate) else window:_hideCommon(self, animate) end
         window:_reveal(page.username, { TextTransparency = shown and 0.3 or 1 }, animate)
+        window:_reveal(plate, { BackgroundTransparency = shown and 0.83 or 1 }, animate)
+        window:_reveal(plateStroke, { Transparency = shown and 0.35 or 1 }, animate)
     end
     tab:_register(hero)
     page.backButton = tab:CreateButton({ name = "Voltar para a aba anterior", callback = function() window:CloseProfile() end })
-    tab:CreateSection({ name = "Informações do cliente" })
+    tab:CreateSection({ name = "Conta e executor" })
 
     function page:Refresh()
         player = game:GetService("Players").LocalPlayer or player
@@ -59,7 +69,11 @@ local function buildPage(window, player, executorInfo, version)
             { "Conexão UI", version },
             { "Armazenamento", storage },
         }
-        for index, detail in ipairs(self.details) do
+        local shown = {
+            { "Executor", executorInfo.name .. (executorInfo.version and (" · " .. executorInfo.version) or "") },
+            self.details[1],
+        }
+        for index, detail in ipairs(shown) do
             if self.fields[index] then self.fields[index]:Set(detail[2])
             else self.fields[index] = tab:CreateText({ name = detail[1], text = detail[2] }) end
         end
@@ -82,7 +96,7 @@ function Profile.attach(window, executorInfo, version)
         if not previous or not previous.tabPage or not table.find(self.tabs, previous) then
             previous = self.SettingsTab
             for _, candidate in ipairs(self.tabs) do
-                if not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
+                if candidate ~= self.SettingsTab and not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
             end
         end
         if previous then previous:Select() end
@@ -91,7 +105,7 @@ function Profile.attach(window, executorInfo, version)
         if self.unloaded then return end
         local player = game:GetService("Players").LocalPlayer
         if not player then return end
-        if self._conexaoModal then self._conexaoModal:Close() end
+        if self._conexaoPanel then self._conexaoPanel:Close() end
         if self.selectedTab ~= self.ProfileTab then self._profilePreviousTab = self.selectedTab end
         local page = self.ProfilePage or buildPage(self, player, executorInfo, version)
         page:Refresh()
@@ -99,9 +113,30 @@ function Profile.attach(window, executorInfo, version)
         return page
     end
     if window.profile then
+        window.profileAvatar.Size = UDim2.fromOffset(40, 40)
+        window.profileAvatar.ZIndex = 123
+        window.profileContainer.ZIndex, window.profileLabels.ZIndex = 121, 121
+        window.profileLabels.AutomaticSize = Enum.AutomaticSize.None
+        window.profileLabels.Size = UDim2.new(1, -60, 0, 40)
+        window.profileName.Size = UDim2.new(1, 0, 0, 20)
+        window.profileName.AutomaticSize = Enum.AutomaticSize.None
+        window.profileName.TextSize, window.profileName.ZIndex = 16, 123
+        window.profileName.FontFace = window.theme.TitleFont
+        window.themeProperties[window.profileName].FontFace = "TitleFont"
+        window.profileName.TextWrapped, window.profileName.TextTruncate = false, Enum.TextTruncate.AtEnd
+        window.profileSubtitle.Size = UDim2.new(1, 0, 0, 16)
+        window.profileSubtitle.AutomaticSize = Enum.AutomaticSize.None
+        window.profileSubtitle.TextSize, window.profileSubtitle.ZIndex = 12, 123
+        window.profileSubtitle.TextWrapped, window.profileSubtitle.TextTruncate = false, Enum.TextTruncate.AtEnd
+        window.ProfileCard = window:Create("Frame", {
+            Name = "PlayerCard", Parent = window.profile, BorderSizePixel = 0,
+            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 4), Size = UDim2.new(1, -16, 1, -8), ZIndex = 120,
+        }, { BackgroundColor3 = "AccentColor" })
+        Surface.round(window, window.ProfileCard, 12)
+        window:Create("UIStroke", { Parent = window.ProfileCard, Transparency = 0.7, Thickness = 1 }, { Color = "AccentStroke" })
         window.ProfileButton = window:Create("TextButton", {
-            Name = "OpenProfile", Parent = window.profile, Text = "", AutoButtonColor = false,
-            BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 120,
+            Name = "OpenProfile", Parent = window.ProfileCard, Text = "", AutoButtonColor = false,
+            BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 125,
         })
         window:Connect(window.ProfileButton.MouseButton1Click, function() window:OpenProfile() end)
     end

@@ -9,6 +9,7 @@ local Themes = require(script.Features.Themes)
 local Preferences = require(script.Features.Preferences)
 local Settings = require(script.Features.Settings)
 local Responsive = require(script.Features.Responsive)
+local Appearance = require(script.Features.Appearance)
 
 export type Window = Gen2.Window &amp; {
     OpenSettings: (self: any) -&gt; (),
@@ -23,7 +24,7 @@ export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: b
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.1.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.2.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -59,6 +60,14 @@ end
 local function adaptHost(host)
     if host._conexaoAdapted then return host end
     host._conexaoAdapted = true
+    if host.Select then
+        local select = host.Select
+        function host:Select(...)
+            local panel = self.window._conexaoPanel
+            if panel and panel.tab ~= self then panel:Close(false) end
+            return select(self, ...)
+        end
+    end
     for _, element in ipairs(host.elements or {}) do
         if element.__type == "Dropdown" then DropdownPanel.attach(element)
         elseif element.__type == "Group" then adaptHost(element) end
@@ -124,32 +133,51 @@ function Library:CreateWindow(options)
     local createTab = window.CreateTab
     function window:CreateTab(props, icon)
         if type(props) == "string" then props = { name = props, icon = icon } end
-        return adaptHost(createTab(self, props))
+        local tab = adaptHost(createTab(self, props))
+        if not tab.neglectSelector then
+            local firstUserTab = true
+            for _, other in ipairs(self.tabs) do
+                if other ~= tab and other ~= self.SettingsTab and not other.neglectSelector then firstUserTab = false break end
+            end
+            if firstUserTab then tab:Select(true) end
+        end
+        return tab
     end
     adaptHost(window.SettingsTab)
     local changeTheme = window.ChangeTheme
     function window:ChangeTheme(theme)
-        changeTheme(self, Themes.resolve(theme) or theme)
+        local resolved = Themes.resolve(theme) or (type(theme) == "table" and table.clone(theme))
+        if resolved then resolved.ElementTransparency = (self.UIPreferences.transparency or 0) / 100 end
+        changeTheme(self, resolved or theme)
         self.ThemeId = type(theme) == "string" and theme:lower() or nil
+        if self.ApplyTransparency then self:ApplyTransparency() end
         if p.rememberTheme ~= false then
             self.UIPreferences.theme = self.ThemeId
             Preferences.save(self)
         end
         if self.ThemeGallery then self.ThemeGallery:_refreshTheme() end
-        if self._conexaoModal and self._conexaoModal.RefreshTheme then self._conexaoModal:RefreshTheme() end
+        if self._conexaoPanel and self._conexaoPanel.RefreshTheme then self._conexaoPanel:RefreshTheme() end
     end
     Profile.attach(window, executorInfo, self.Version)
     Responsive.attach(window)
+    Appearance.attach(window)
     Settings.attach(window)
+    if window.searchAction then
+        local search = window.searchAction.callback
+        window.searchAction.callback = function(...)
+            if window._conexaoPanel then window._conexaoPanel:Close() end
+            return search(...)
+        end
+    end
     local hide = window.Hide
     function window:Hide(...)
-        if self._conexaoModal then self._conexaoModal:Close() end
+        if self._conexaoPanel then self._conexaoPanel:Close() end
         return hide(self, ...)
     end
     local unload = window.Unload
     function window:Unload()
         if self.unloaded then return end
-        if self._conexaoModal then self._conexaoModal:Close() end
+        if self._conexaoPanel then self._conexaoPanel:Close() end
         if self.configuration.autoSave and (not self.configuration.autoLoad or self._autoLoaded) then pcall(self.Save, self) end
         unload(self)
         if windows[id] == self then windows[id] = nil end
@@ -20157,7 +20185,51 @@ function windowSizing.fit(viewport: Vector2?, mode: layouts.Mode?): UDim2
 end
 
 return windowSizing
-</ProtectedString></Properties></Item></Item></Item><Item class="Folder"><Properties><string name="Name">Features</string></Properties><Item class="ModuleScript"><Properties><string name="Name">Dropdown</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item></Item></Item><Item class="Folder"><Properties><string name="Name">Features</string></Properties><Item class="ModuleScript"><Properties><string name="Name">Appearance</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+local Appearance = {}
+local tweens = game:GetService("TweenService")
+local instant = TweenInfo.new(0)
+
+function Appearance.attach(window)
+    function window:ApplyTransparency()
+        if self.unloaded then return end
+        local alpha = math.clamp(tonumber(self.UIPreferences.transparency) or 0, 0, 100) / 100
+        self.theme.ElementTransparency = alpha
+        -- Preserve readable text/icons; change the window and control backgrounds only.
+        for instance, bindings in pairs(self.themeProperties) do
+            if bindings.BackgroundTransparency == "ElementTransparency" then
+                -- Replace an in-flight reveal/theme tween for this property as well.
+                tweens:Create(instance, instant, { BackgroundTransparency = alpha }):Play()
+            end
+        end
+        -- Alpha on the gradients composes with Gen2's reveal tweens, rather than fighting
+        -- the main frame's combined size/background animation during a restore.
+        self.windowGradient.Transparency = NumberSequence.new(alpha)
+        local points = {}
+        for _, point in ipairs(self.layout.fadeTransparency.Keypoints) do
+            table.insert(points, NumberSequenceKeypoint.new(point.Time, 1 - (1 - point.Value) * (1 - alpha), point.Envelope * (1 - alpha)))
+        end
+        self.bottomFadeGradient.Transparency = NumberSequence.new(points)
+    end
+    local fade = window._fadeSurfaces
+    function window:_fadeSurfaces(shown, info)
+        fade(self, shown, info)
+        if shown and self.profile and self.profile.Visible then
+            tweens:Create(self.profileSubtitle, info or instant, { TextTransparency = 0.25 }):Play()
+        end
+    end
+    local show = window.Show
+    function window:Show(...)
+        local result = show(self, ...)
+        self:ApplyTransparency()
+        return result
+    end
+    window:ApplyTransparency()
+end
+
+return Appearance
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Dropdown</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
 local Surface = require(script.Parent.Surface)
@@ -20173,6 +20245,31 @@ function Dropdown.attach(control, props)
     default = type(default) == "table" and table.clone(default) or {}
     control.defaultValue = default
     control.panel.Visible = false
+    if not props or not (props.placeholder or props.Placeholder) then control.placeholderText = "Selecionar" end
+    control._updateSelectedLabel = function()
+        control.selectedLabel.Text = #control.value == 0 and control.placeholderText
+            or (#control.value == 1 and control.value[1] or (tostring(#control.value) .. " selecionadas"))
+    end
+    control._updateSelectedLabel()
+    local function layoutHeader()
+        local narrow = control.main.AbsoluteSize.X &gt; 0 and control.main.AbsoluteSize.X &lt; 360
+        local height = narrow and 70 or 41
+        control.main.Size = UDim2.new(1, -20, 0, height)
+        control.top.Size, control.interact.Size = UDim2.new(1, 0, 0, height), UDim2.new(1, 0, 0, height)
+        control.container.AnchorPoint = Vector2.new(0, narrow and 0 or 0.5)
+        control.container.Position = narrow and UDim2.fromOffset(20, 10) or UDim2.new(0, 20, 0.5, 0)
+        control.container.Size = narrow and UDim2.new(1, -60, 0, 20) or UDim2.fromOffset(170, 16)
+        control.title.AutomaticSize = narrow and Enum.AutomaticSize.None or Enum.AutomaticSize.X
+        control.title.Size = narrow and UDim2.new(1, control.icon and -24 or 0, 0, 20) or UDim2.fromOffset(150, 16)
+        control.title.TextWrapped, control.title.TextTruncate = false, Enum.TextTruncate.AtEnd
+        control.selectedLabel.AnchorPoint = narrow and Vector2.new(0, 0) or Vector2.new(1, 0.5)
+        control.selectedLabel.Position = narrow and UDim2.fromOffset(20, 38) or UDim2.new(1, -41, 0.5, 0)
+        control.selectedLabel.Size = narrow and UDim2.new(1, -60, 0, 20) or UDim2.fromOffset(168, 15)
+        control.selectedLabel.TextXAlignment = narrow and Enum.TextXAlignment.Left or Enum.TextXAlignment.Right
+        control.selectedLabel.TextWrapped, control.selectedLabel.TextTruncate = false, Enum.TextTruncate.AtEnd
+    end
+    control.window:ConnectFor(control, control.main:GetPropertyChangedSignal("AbsoluteSize"), layoutHeader)
+    layoutHeader()
 
     function control:_close()
         if self.selectionPanel then self.selectionPanel:Close() end
@@ -20182,38 +20279,38 @@ function Dropdown.attach(control, props)
     function control:_open()
         if self._isOpen or self.locked or self.window.unloaded then return end
         local w = self.window
-        local modal = Surface.new(w, self.name, self.multiSelect and "Escolha uma ou mais opções" or "Escolha uma opção", { footer = true })
-        self.selectionPanel, self._isOpen = modal, true
+        local picker = Surface.new(w, self.name, self.multiSelect and "Escolha uma ou mais opções" or "Escolha uma opção", { footer = true })
+        self.selectionPanel, self._isOpen = picker, true
         self.chevron.Rotation = 0
-        modal.onClose = function()
+        picker.onClose = function()
             self.selectionPanel, self._isOpen = nil, false
             if self.chevron.Parent then self.chevron.Rotation = 180 end
         end
-        modal:Connect(self.main.Destroying, function() modal:Close() end)
-        modal.search = w:Create("TextBox", {
-            Name = "Filter", Parent = modal.content, Size = UDim2.new(1, 0, 0, 40),
+        picker:Connect(self.main.Destroying, function() picker:Close() end)
+        picker.search = w:Create("TextBox", {
+            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 40),
             Text = "", PlaceholderText = "Buscar opção...", ClearTextOnFocus = false,
             TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0,
             BackgroundTransparency = 0.88, ZIndex = 4016,
         }, { TextColor3 = "ContentColor", FontFace = "Font", BackgroundColor3 = "AccentColor", PlaceholderColor3 = "PlaceholderColor" })
-        Surface.round(w, modal.search, 11)
-        w:Create("UIPadding", { Parent = modal.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
-        modal.list = w:Create("ScrollingFrame", {
-            Parent = modal.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
+        Surface.round(w, picker.search, 11)
+        w:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+        picker.list = w:Create("ScrollingFrame", {
+            Parent = picker.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
             BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
             AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
             ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 4012,
         }, { ScrollBarImageColor3 = "AccentColor" })
-        modal.grid = w:Create("UIGridLayout", {
-            Parent = modal.list, CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.5, -7, 0, 50),
+        picker.grid = w:Create("UIGridLayout", {
+            Parent = picker.list, CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.5, -7, 0, 50),
             SortOrder = Enum.SortOrder.LayoutOrder,
         })
-        w:Create("UIPadding", { Parent = modal.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
-        modal.empty = Surface.label(w, modal.content, "Nenhuma opção encontrada", {
+        w:Create("UIPadding", { Parent = picker.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
+        picker.empty = Surface.label(w, picker.content, "Nenhuma opção encontrada", {
             Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         })
-        modal.items, modal.optionConnections = {}, {}
-        function modal:Sync()
+        picker.items, picker.optionConnections = {}, {}
+        function picker:Sync()
             if self.closed then return end
             local query, count = string.lower(self.search.Text), 0
             for _, item in ipairs(self.items) do
@@ -20228,7 +20325,7 @@ function Dropdown.attach(control, props)
             self.empty.Visible = count == 0
             self.subtitle.Text = control.multiSelect and (tostring(#control.value) .. " selecionadas · " .. tostring(count) .. " opções") or "Escolha uma opção"
         end
-        function modal:Rebuild()
+        function picker:Rebuild()
             if self.closed then return end
             w:DisconnectMany(self, self.optionConnections)
             self.optionConnections = {}
@@ -20269,30 +20366,30 @@ function Dropdown.attach(control, props)
             end
             self:Sync()
         end
-        modal:Connect(modal.search:GetPropertyChangedSignal("Text"), function()
-            modal.list.CanvasPosition = Vector2.new(0, 0)
-            modal:Sync()
+        picker:Connect(picker.search:GetPropertyChangedSignal("Text"), function()
+            picker.list.CanvasPosition = Vector2.new(0, 0)
+            picker:Sync()
         end)
         local actions = {
             { "Padrão", function() control:Set(table.clone(default)) end },
             { "Limpar", function() control:Set({}) end },
         }
         if self.multiSelect then table.insert(actions, { "Selecionar todos", function() control:Set(table.clone(control.options)) end }) end
-        modal.actions = {}
+        picker.actions = {}
         for index, action in ipairs(actions) do
-            local button = Surface.button(w, modal.footer, action[1], {
+            local button = Surface.button(w, picker.footer, action[1], {
                 Position = UDim2.new((index - 1) / #actions, index == 1 and 0 or 3, 0, 0),
                 Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 12,
             }, index == #actions)
-            modal.actions[index] = button
-            modal:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
+            picker.actions[index] = button
+            picker:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
         end
-        modal.onLayout = function(width)
+        picker.onLayout = function(width)
             local cols = width &lt; 420 and 1 or 2
-            modal.grid.CellSize = UDim2.new(1 / cols, cols == 1 and -8 or -9, 0, 50)
+            picker.grid.CellSize = UDim2.new(1 / cols, cols == 1 and -8 or -9, 0, 50)
         end
-        modal:Layout()
-        modal:Rebuild()
+        picker:Layout()
+        picker:Rebuild()
     end
     -- The inline card remains collapsed, even when the native methods refresh/filter options.
     control._resizeToOptions = function() end
@@ -20332,6 +20429,10 @@ function Preferences.load(configuration, name)
     if type(data.theme) == "string" then state.theme = data.theme end
     if type(data.autoSave) == "boolean" then state.autoSave = data.autoSave end
     if type(data.autoLoad) == "boolean" then state.autoLoad = data.autoLoad end
+    if type(data.autoSize) == "boolean" then state.autoSize = data.autoSize end
+    for _, key in ipairs({ "sizePercent", "transparency" }) do
+        if type(data[key]) == "number" and data[key] == data[key] then state[key] = math.clamp(data[key], 0, 100) end
+    end
     return state, dir, path
 end
 
@@ -20374,8 +20475,14 @@ local function buildPage(window, player, executorInfo, version)
     hero.main = window:Create("Frame", {
         Name = "PlayerProfile", Parent = tab.tabPage, Size = UDim2.new(1, -20, 0, 114),
         BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1,
-    })
+    }, { BackgroundTransparency = "ElementTransparency" })
     hero.stroke = window:StyleElementBody(hero.main)
+    local plate = window:Create("Frame", {
+        Parent = hero.main, Position = UDim2.fromOffset(12, 18), Size = UDim2.fromOffset(72, 72),
+        BorderSizePixel = 0, BackgroundTransparency = 1, ZIndex = 4,
+    }, { BackgroundColor3 = "AccentColor" })
+    Surface.round(window, plate, 36)
+    local plateStroke = window:Create("UIStroke", { Parent = plate, Thickness = 1, Transparency = 1 }, { Color = "AccentStroke" })
     page.avatar = window:Create("ImageLabel", {
         Parent = hero.main, Position = UDim2.fromOffset(16, 22), Size = UDim2.fromOffset(64, 64),
         BackgroundTransparency = 1, ImageTransparency = 1, ZIndex = 5,
@@ -20395,14 +20502,18 @@ local function buildPage(window, player, executorInfo, version)
         TextSize = 13, TextTransparency = 1, TextWrapped = false,
         TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
     })
+    page.playerName.FontFace = window.theme.TitleFont
+    window.themeProperties[page.playerName].FontFace = "TitleFont"
     hero.title, hero.iconLabel = page.playerName, page.avatar
     function hero:_setShown(shown, animate)
         if shown then window:_revealCommon(self, animate) else window:_hideCommon(self, animate) end
         window:_reveal(page.username, { TextTransparency = shown and 0.3 or 1 }, animate)
+        window:_reveal(plate, { BackgroundTransparency = shown and 0.83 or 1 }, animate)
+        window:_reveal(plateStroke, { Transparency = shown and 0.35 or 1 }, animate)
     end
     tab:_register(hero)
     page.backButton = tab:CreateButton({ name = "Voltar para a aba anterior", callback = function() window:CloseProfile() end })
-    tab:CreateSection({ name = "Informações do cliente" })
+    tab:CreateSection({ name = "Conta e executor" })
 
     function page:Refresh()
         player = game:GetService("Players").LocalPlayer or player
@@ -20417,7 +20528,11 @@ local function buildPage(window, player, executorInfo, version)
             { "Conexão UI", version },
             { "Armazenamento", storage },
         }
-        for index, detail in ipairs(self.details) do
+        local shown = {
+            { "Executor", executorInfo.name .. (executorInfo.version and (" · " .. executorInfo.version) or "") },
+            self.details[1],
+        }
+        for index, detail in ipairs(shown) do
             if self.fields[index] then self.fields[index]:Set(detail[2])
             else self.fields[index] = tab:CreateText({ name = detail[1], text = detail[2] }) end
         end
@@ -20440,7 +20555,7 @@ function Profile.attach(window, executorInfo, version)
         if not previous or not previous.tabPage or not table.find(self.tabs, previous) then
             previous = self.SettingsTab
             for _, candidate in ipairs(self.tabs) do
-                if not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
+                if candidate ~= self.SettingsTab and not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
             end
         end
         if previous then previous:Select() end
@@ -20449,7 +20564,7 @@ function Profile.attach(window, executorInfo, version)
         if self.unloaded then return end
         local player = game:GetService("Players").LocalPlayer
         if not player then return end
-        if self._conexaoModal then self._conexaoModal:Close() end
+        if self._conexaoPanel then self._conexaoPanel:Close() end
         if self.selectedTab ~= self.ProfileTab then self._profilePreviousTab = self.selectedTab end
         local page = self.ProfilePage or buildPage(self, player, executorInfo, version)
         page:Refresh()
@@ -20457,9 +20572,30 @@ function Profile.attach(window, executorInfo, version)
         return page
     end
     if window.profile then
+        window.profileAvatar.Size = UDim2.fromOffset(40, 40)
+        window.profileAvatar.ZIndex = 123
+        window.profileContainer.ZIndex, window.profileLabels.ZIndex = 121, 121
+        window.profileLabels.AutomaticSize = Enum.AutomaticSize.None
+        window.profileLabels.Size = UDim2.new(1, -60, 0, 40)
+        window.profileName.Size = UDim2.new(1, 0, 0, 20)
+        window.profileName.AutomaticSize = Enum.AutomaticSize.None
+        window.profileName.TextSize, window.profileName.ZIndex = 16, 123
+        window.profileName.FontFace = window.theme.TitleFont
+        window.themeProperties[window.profileName].FontFace = "TitleFont"
+        window.profileName.TextWrapped, window.profileName.TextTruncate = false, Enum.TextTruncate.AtEnd
+        window.profileSubtitle.Size = UDim2.new(1, 0, 0, 16)
+        window.profileSubtitle.AutomaticSize = Enum.AutomaticSize.None
+        window.profileSubtitle.TextSize, window.profileSubtitle.ZIndex = 12, 123
+        window.profileSubtitle.TextWrapped, window.profileSubtitle.TextTruncate = false, Enum.TextTruncate.AtEnd
+        window.ProfileCard = window:Create("Frame", {
+            Name = "PlayerCard", Parent = window.profile, BorderSizePixel = 0,
+            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 4), Size = UDim2.new(1, -16, 1, -8), ZIndex = 120,
+        }, { BackgroundColor3 = "AccentColor" })
+        Surface.round(window, window.ProfileCard, 12)
+        window:Create("UIStroke", { Parent = window.ProfileCard, Transparency = 0.7, Thickness = 1 }, { Color = "AccentStroke" })
         window.ProfileButton = window:Create("TextButton", {
-            Name = "OpenProfile", Parent = window.profile, Text = "", AutoButtonColor = false,
-            BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 120,
+            Name = "OpenProfile", Parent = window.ProfileCard, Text = "", AutoButtonColor = false,
+            BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 125,
         })
         window:Connect(window.ProfileButton.MouseButton1Click, function() window:OpenProfile() end)
     end
@@ -20478,11 +20614,18 @@ local function valid(viewport)
         and viewport.X &lt; math.huge and viewport.Y &lt; math.huge
 end
 
-function Responsive.fit(viewport, mode)
+function Responsive.fit(viewport, mode, automatic, percent)
     viewport = valid(viewport) and viewport or Vector2.new(1024, 768)
     local fitted = sizing.fit(viewport, mode)
     local width, height = fitted.X.Offset, fitted.Y.Offset
-    if mode == "sidebar" and viewport.X &lt; 700 and viewport.Y &gt; viewport.X * 1.1 then
+    if automatic == false then
+        local availableX = math.max(1, viewport.X - math.min(24, viewport.X * 0.08))
+        local availableY = math.max(1, viewport.Y - math.min(72, viewport.Y * 0.12))
+        local minimumX, minimumY = math.min(320, availableX), math.min(260, availableY)
+        local ratio = math.clamp(tonumber(percent) or 75, 0, 100) / 100
+        width = minimumX + (availableX - minimumX) * ratio
+        height = minimumY + (availableY - minimumY) * ratio
+    elseif mode == "sidebar" and viewport.X &lt; 700 and viewport.Y &gt; viewport.X * 1.1 then
         -- A phone held upright can use its height instead of being forced into a letterbox.
         width = math.min(viewport.X * 0.92, viewport.X - 24)
         height = math.min(640, viewport.Y * 0.88, viewport.Y - 72)
@@ -20509,16 +20652,17 @@ function Responsive.attach(window)
     function window:_applyWindowSize()
         if self.unloaded then return end
         local screen = viewport()
-        local size = Responsive.fit(screen, self.layout.mode)
+        local state = self.UIPreferences
+        local size = Responsive.fit(screen, self.layout.mode, state.autoSize, state.sizePercent)
         local changed = size ~= self.size
         local previous = self.SizeInfo
         self.size = size
         self.SizeInfo = {
-            automatic = true, width = size.X.Offset, height = size.Y.Offset,
+            automatic = state.autoSize ~= false, width = size.X.Offset, height = size.Y.Offset,
             screenWidth = screen.X, screenHeight = screen.Y,
         }
         self:_applyRailWidth()
-        if self.RefreshSizeStatus and (changed or not previous or previous.screenWidth ~= screen.X or previous.screenHeight ~= screen.Y) then
+        if self.RefreshSizeStatus and (changed or not previous or previous.automatic ~= self.SizeInfo.automatic or previous.screenWidth ~= screen.X or previous.screenHeight ~= screen.Y) then
             self:RefreshSizeStatus()
         end
         if self.hidden or self.minimised or self.animating or self._revealing then
@@ -20545,6 +20689,8 @@ return Responsive
 local Surface = require(script.Parent.Surface)
 local Themes = require(script.Parent.Themes)
 local Preferences = require(script.Parent.Preferences)
+local selector = require(script.Parent.Parent.Gen2.components.tabSelector)
+local constants = require(script.Parent.Parent.Gen2.utility.constants)
 local Settings = {}
 
 -- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
@@ -20636,24 +20782,24 @@ local function selection(window, entries)
 end
 
 function Settings.openThemes(window)
-    local modal = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.", { width = 570, height = 650 })
+    local picker = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.", { width = 570, height = 650 })
     local scroll = window:Create("ScrollingFrame", {
-        Parent = modal.content, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+        Parent = picker.content, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ZIndex = 4012,
     }, { ScrollBarImageColor3 = "AccentColor" })
     local grid = window:Create("UIGridLayout", {
         Parent = scroll, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.new(0.5, -10, 0, 156), SortOrder = Enum.SortOrder.LayoutOrder,
     })
     window:Create("UIPadding", { Parent = scroll, PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 4) })
-    modal.cards = cards(window, scroll, modal, Themes.catalog, 4013)
-    function modal:RefreshTheme() selection(window, self.cards) end
-    modal.onLayout = function(width)
+    picker.cards = cards(window, scroll, picker, Themes.catalog, 4013)
+    function picker:RefreshTheme() selection(window, self.cards) end
+    picker.onLayout = function(width)
         local columns = width &lt; 420 and 1 or 2
         grid.CellSize = UDim2.new(1 / columns, columns == 1 and -12 or -13, 0, 156)
     end
-    modal:Layout()
-    modal:RefreshTheme()
-    return modal
+    picker:Layout()
+    picker:RefreshTheme()
+    return picker
 end
 
 local function gallery(window, tab)
@@ -20695,13 +20841,42 @@ end
 function Settings.attach(window)
     local tab = window.SettingsTab
     tab.name, tab.tabPage.Name = "Configurações", "Configurações"
+    tab.icon, tab.neglectSelector = constants.icons.settings, false
+    selector.build(tab, window.layout)
+    window:_applyRailWidth()
+    window:ConnectFor(tab, tab.topbarItemInteract.MouseButton1Click, function() tab:Select() end)
+    window:ConnectFor(tab, tab.topbarItemInteract.MouseEnter, function()
+        if window:_interactive() and window.selectedTab ~= tab then tab:_applyVisual("hover", TweenInfo.new(0.2)) end
+    end)
+    window:ConnectFor(tab, tab.topbarItemInteract.MouseLeave, function()
+        if window.selectedTab ~= tab then tab:_applyVisual("unselected", TweenInfo.new(0.2)) end
+    end)
+    if not window.selectedTab then tab:Select(true) end
+    if not window.hidden then tab:_applyVisual(window.selectedTab == tab and "selected" or "unselected", TweenInfo.new(0)) end
     local first = #tab.elements + 1
-    local sizeStatus = tab:CreateText({ name = "Tamanho automático", text = "Ajustando à sua tela..." })
+    tab:CreateSection({ name = "Aparência e tamanho" })
+    window.TransparencySlider = tab:CreateSlider({ name = "Transparência do fundo", range = { 0, 100 }, value = window.UIPreferences.transparency or 0, suffix = "%", callback = function(value)
+        window.UIPreferences.transparency = value
+        window:ApplyTransparency()
+        Preferences.save(window)
+    end })
+    window.AutoSizeToggle = tab:CreateToggle({ name = "Ajustar tamanho automaticamente", value = window.UIPreferences.autoSize ~= false, callback = function(value)
+        window.UIPreferences.autoSize = value
+        window:RefreshSize()
+        Preferences.save(window)
+    end })
+    window.WindowSizeSlider = tab:CreateSlider({ name = "Tamanho da janela", range = { 0, 100 }, value = window.UIPreferences.sizePercent or 75, suffix = "%", description = "Arrastar ativa o tamanho manual. 0% é compacto; 100% usa o espaço disponível da tela.", callback = function(value)
+        window.UIPreferences.sizePercent, window.UIPreferences.autoSize = value, false
+        window.AutoSizeToggle:Set(false, true)
+        window:RefreshSize()
+        Preferences.save(window)
+    end })
+    local sizeStatus = tab:CreateText({ name = "Tamanho da janela", text = "Ajustando à sua tela..." })
     window.SizeStatus = sizeStatus
     function window:RefreshSizeStatus()
         if self.unloaded or not self.SizeInfo then return end
         local info = self.SizeInfo
-        sizeStatus:Set(string.format("Ativado · Janela %d × %d · Tela %d × %d. Ajusta ao girar o celular ou redimensionar a tela.", info.width, info.height, info.screenWidth, info.screenHeight))
+        sizeStatus:Set(string.format("%s · %d × %d px", info.automatic and "Automático" or "Manual", info.width, info.height))
     end
     window:RefreshSizeStatus()
     local mode, persistent = Preferences.storage()
@@ -20741,13 +20916,13 @@ function Settings.attach(window)
     for index, element in ipairs(added) do tab:_moveElement(element, index) end
     window:RefreshSaveStatus()
     function window:OpenThemes() return Settings.openThemes(self) end
-    function window:OpenSettings() if self._conexaoModal then self._conexaoModal:Close() end self.SettingsTab:Select() end
+    function window:OpenSettings() if self._conexaoPanel then self._conexaoPanel:Close() end self.SettingsTab:Select() end
 end
 
 return Settings
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Surface</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
--- Shared, tracked overlay. All geometry is in the same coordinate space as the window.
+-- Temporary native content pages for pickers. No fullscreen overlay or screen dimming.
 local Surface = {}
 Surface.__index = Surface
 local input = game:GetService("UserInputService")
@@ -20786,80 +20961,61 @@ function Surface.button(window, parent, text, props, primary)
 end
 
 function Surface.new(window, title, subtitle, options)
-    if window._conexaoModal then window._conexaoModal:Close() end
+    if window._conexaoPanel then window._conexaoPanel:Close() end
     options = options or {}
-    local self = setmetatable({ window = window, connections = {}, closed = false }, Surface)
-    window._conexaoModal = self
-    self.root = window:Create("Frame", {
-        Name = "ConexaoOverlay", Parent = window.screenGui, BackgroundTransparency = 1,
-        Size = UDim2.fromScale(1, 1), ZIndex = 4000,
+    local previous = window.selectedTab
+    local tab = window:CreateTab({ name = title, neglectSelector = true, forgetState = true })
+    local self = setmetatable({ window = window, tab = tab, previousTab = previous, connections = {}, closed = false, __type = "ContentPicker" }, Surface)
+    window._conexaoPanel = self
+    self.root = tab.tabPage
+    self.main = window:Create("Frame", {
+        Name = "ContentPicker", Parent = self.root, BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 0, 340), BorderSizePixel = 0,
     })
-    self.scrim = window:Create("TextButton", {
-        Parent = self.root, Size = UDim2.fromScale(1, 1), Text = "", AutoButtonColor = false,
-        BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4,
-        BorderSizePixel = 0, Active = true, Modal = true, ZIndex = 4001,
+    self.panel = self.main
+    self.title = Surface.label(window, self.main, title, {
+        Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, -86, 0, 28), TextSize = 21,
     })
-    self.panel = window:Create("Frame", {
-        Name = "Panel", Parent = self.root, AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Active = true, ZIndex = 4010,
+    self.subtitle = Surface.label(window, self.main, subtitle or "", {
+        Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 0, 28), TextSize = 12, TextTransparency = 0.25,
     })
-    -- A blank area inside the panel must not click through to the outside-dismiss target.
-    self.shield = window:Create("TextButton", {
-        Parent = self.panel, Size = UDim2.fromScale(1, 1), Text = "", BackgroundTransparency = 1,
-        BorderSizePixel = 0, AutoButtonColor = false, Active = true, ZIndex = 4011,
-    })
-    Surface.round(window, self.panel, 18)
-    window:Create("UIGradient", { Parent = self.panel, Rotation = 35 }, { Color = "WindowColor" })
-    window:Create("UIStroke", { Parent = self.panel, Thickness = 1.5, Transparency = 0.2 }, { Color = "AccentStroke" })
-    self.title = Surface.label(window, self.panel, title, {
-        Position = UDim2.fromOffset(20, 18), Size = UDim2.new(1, -82, 0, 25), TextSize = 21,
-    })
-    self.subtitle = Surface.label(window, self.panel, subtitle or "", {
-        Position = UDim2.fromOffset(20, 47), Size = UDim2.new(1, -82, 0, 26), TextSize = 12, TextTransparency = 0.25,
-    })
-    self.closeButton = Surface.button(window, self.panel, "×", {
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.fromOffset(36, 36), TextSize = 24,
+    self.closeButton = Surface.button(window, self.main, "Voltar", {
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(74, 32), TextSize = 12,
     })
     self.content = window:Create("Frame", {
-        Parent = self.panel, BackgroundTransparency = 1, Position = UDim2.fromOffset(18, 88),
-        Size = UDim2.new(1, -36, 1, options.footer and -164 or -108), ZIndex = 4011,
+        Parent = self.main, BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 76),
+        Size = UDim2.new(1, 0, 1, options.footer and -132 or -76), ZIndex = 4011,
     })
     if options.footer then
         self.footer = window:Create("Frame", {
-            Parent = self.panel, BackgroundTransparency = 1, Position = UDim2.new(0, 18, 1, -60),
-            Size = UDim2.new(1, -36, 0, 42), ZIndex = 4011,
+            Parent = self.main, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -42),
+            Size = UDim2.new(1, 0, 0, 42), ZIndex = 4011,
         })
     end
     function self:Layout()
         if self.closed then return end
-        local view = self.root.AbsoluteSize
-        if view.X &lt;= 0 or view.Y &lt;= 0 then
-            local camera = workspace.CurrentCamera
-            view = camera and camera.ViewportSize or Vector2.new(800, 600)
-        end
-        local at, size = window.main.AbsolutePosition, window.main.AbsoluteSize
-        if size.X &lt;= 0 or size.Y &lt;= 0 then size = Vector2.new(700, 520) at = (view - size) / 2 end
-        local width = math.max(1, math.min(options.width or 510, size.X - 24, view.X - 24))
-        local height = math.max(1, math.min(options.height or 570, size.Y - 24, view.Y - 24))
-        local x = at.X + size.X - 12 - width / 2
-        local y = at.Y + size.Y / 2
-        x = math.clamp(x, width / 2 + 12, math.max(width / 2 + 12, view.X - width / 2 - 12))
-        y = math.clamp(y, height / 2 + 12, math.max(height / 2 + 12, view.Y - height / 2 - 12))
-        self.panel.Size = UDim2.fromOffset(width, height)
-        self.panel.Position = UDim2.fromOffset(x, y)
+        local size = window.elements.AbsoluteSize
+        local height = math.max(240, size.Y - 44)
+        local width = math.max(1, size.X - 40)
+        self.main.Size = UDim2.new(1, -20, 0, height)
         if self.onLayout then self.onLayout(width, height) end
     end
-    self:Connect(self.scrim.MouseButton1Click, function() self:Close() end)
+    function self:_setShown() end
     self:Connect(self.closeButton.MouseButton1Click, function() self:Close() end)
     self:Connect(input.InputBegan, function(key)
         if key.KeyCode == Enum.KeyCode.Escape then self:Close() end
     end)
-    self:Connect(self.root:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
-    self:Connect(window.main:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
-    self:Connect(window.main:GetPropertyChangedSignal("AbsolutePosition"), function() self:Layout() end)
+    self:Connect(window.elements:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
     self:Layout()
-    local scale = window:Create("UIScale", { Parent = self.panel, Scale = 0.96 })
-    game:GetService("TweenService"):Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+    tab:_register(self)
+    local remove = tab.Remove
+    self._removeTab = remove
+    function tab:Remove()
+        if self._picker and not self._picker.closed then self._picker:Close()
+        else remove(self) end
+    end
+    tab._picker = self
+    tab:Select()
     return self
 end
 
@@ -20867,13 +21023,22 @@ function Surface:Connect(signal, callback)
     return self.window:ConnectFor(self, signal, callback)
 end
 
-function Surface:Close()
+function Surface:Close(restore)
     if self.closed then return end
     self.closed = true
-    if self.window._conexaoModal == self then self.window._conexaoModal = nil end
-    self.window:DisconnectMany(self, table.clone(self.connections))
+    local window = self.window
+    if window._conexaoPanel == self then window._conexaoPanel = nil end
+    window:DisconnectMany(self, table.clone(self.connections))
     if self.onClose then self.onClose() end
-    self.window:DestroySubtree(self.root)
+    if window.selectedTab == self.tab then
+        if restore ~= false and not window.unloaded then
+            local target = self.previousTab
+            if not target or not target.tabPage or not table.find(window.tabs, target) then target = window.SettingsTab end
+            if target then target:Select(true) else window.selectedTab = nil end
+        else window.selectedTab = nil end
+    end
+    self._removeTab(self.tab)
+    self.tab._picker = nil
 end
 
 return Surface

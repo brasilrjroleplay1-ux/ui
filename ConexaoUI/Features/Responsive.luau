@@ -10,11 +10,18 @@ local function valid(viewport)
         and viewport.X < math.huge and viewport.Y < math.huge
 end
 
-function Responsive.fit(viewport, mode)
+function Responsive.fit(viewport, mode, automatic, percent)
     viewport = valid(viewport) and viewport or Vector2.new(1024, 768)
     local fitted = sizing.fit(viewport, mode)
     local width, height = fitted.X.Offset, fitted.Y.Offset
-    if mode == "sidebar" and viewport.X < 700 and viewport.Y > viewport.X * 1.1 then
+    if automatic == false then
+        local availableX = math.max(1, viewport.X - math.min(24, viewport.X * 0.08))
+        local availableY = math.max(1, viewport.Y - math.min(72, viewport.Y * 0.12))
+        local minimumX, minimumY = math.min(320, availableX), math.min(260, availableY)
+        local ratio = math.clamp(tonumber(percent) or 75, 0, 100) / 100
+        width = minimumX + (availableX - minimumX) * ratio
+        height = minimumY + (availableY - minimumY) * ratio
+    elseif mode == "sidebar" and viewport.X < 700 and viewport.Y > viewport.X * 1.1 then
         -- A phone held upright can use its height instead of being forced into a letterbox.
         width = math.min(viewport.X * 0.92, viewport.X - 24)
         height = math.min(640, viewport.Y * 0.88, viewport.Y - 72)
@@ -41,16 +48,17 @@ function Responsive.attach(window)
     function window:_applyWindowSize()
         if self.unloaded then return end
         local screen = viewport()
-        local size = Responsive.fit(screen, self.layout.mode)
+        local state = self.UIPreferences
+        local size = Responsive.fit(screen, self.layout.mode, state.autoSize, state.sizePercent)
         local changed = size ~= self.size
         local previous = self.SizeInfo
         self.size = size
         self.SizeInfo = {
-            automatic = true, width = size.X.Offset, height = size.Y.Offset,
+            automatic = state.autoSize ~= false, width = size.X.Offset, height = size.Y.Offset,
             screenWidth = screen.X, screenHeight = screen.Y,
         }
         self:_applyRailWidth()
-        if self.RefreshSizeStatus and (changed or not previous or previous.screenWidth ~= screen.X or previous.screenHeight ~= screen.Y) then
+        if self.RefreshSizeStatus and (changed or not previous or previous.automatic ~= self.SizeInfo.automatic or previous.screenWidth ~= screen.X or previous.screenHeight ~= screen.Y) then
             self:RefreshSizeStatus()
         end
         if self.hidden or self.minimised or self.animating or self._revealing then

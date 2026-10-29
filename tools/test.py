@@ -17,7 +17,7 @@ def run(args,label):
 run(['run','scripts/run-tests.luau','--','--coverage-threshold','85.34'],'upstream')
 runner=(VENDOR/'scripts/run-tests.luau').read_text()
 prefix=runner[:runner.index('local results = {')]
-checks=(ROOT/'tests/bundle_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()).replace('-- DEMO',(ROOT/'dist/Demo.luau').read_text())
+checks=(ROOT/'tests/bundle_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()).replace('-- DEMO',(ROOT/'dist/Demo.luau').read_text()).replace('-- COMPONENTS',(ROOT/'dist/Components.luau').read_text())
 with tempfile.TemporaryDirectory() as folder:
     test=Path(folder)/'public-bundle.luau';test.write_text(prefix+checks)
     run(['run',str(test)],'bundle')

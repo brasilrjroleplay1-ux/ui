@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.1 · API Gen2
+# Exemplos da Conexão UI 3.2 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -35,7 +35,7 @@ local multi = tab:CreateDropdown({ name = "Painéis", flag = "paineis", multiSel
 multi:Set({ "Perfil", "Dados" })
 ```
 
-Ao clicar no dropdown, a Conexão abre um painel sobre a janela: busca, cartões em duas colunas (uma no celular) e botões Padrão/Limpar. Dropdown múltiplo também tem Selecionar todos; essa ação seleciona a lista inteira, inclusive se houver filtro. Padrão restaura o `value` inicial definido pelo script. Seleção única fecha o painel ao escolher; seleção múltipla mantém o painel aberto. Os valores são salvos automaticamente.
+Ao clicar no dropdown, a Conexão abre o seletor na própria área de conteúdo, com a sidebar acessível: busca, cartões em duas colunas (uma no celular) e botões Padrão/Limpar. Dropdown múltiplo também tem Selecionar todos; essa ação seleciona a lista inteira, inclusive se houver filtro. Padrão restaura o `value` inicial definido pelo script. Seleção única volta à aba de origem ao escolher; seleção múltipla mantém o seletor aberto. Os valores são salvos automaticamente.
 
 ```lua
 multi:Open()  -- opcional; clicar no controle faz o mesmo
@@ -105,8 +105,8 @@ window:CloseProfile() -- volta à aba que estava aberta
 window:OpenThemes()
 ```
 
-O tamanho também é automático: a library acompanha a tela e a orientação. As configurações mostram as medidas atuais. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
+Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual e ajuste automático. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
-O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. Ele abre como página interna na área de conteúdo da janela, com rolagem e botão Voltar. A sidebar continua acessível. A galeria apresenta seis temas novos e seis temas originais, com miniaturas feitas de GuiObjects que usam as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
+O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. Ele abre como página interna, com avatar, nome, usuário, executor/versão e ID, além de Voltar. A galeria de temas também usa uma página interna, com seis temas novos e seis originais. As miniaturas são GuiObjects com as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
 
 As propriedades nativas aceitam camelCase e PascalCase. Para novos scripts, use a API Gen2 documentada aqui. A API anterior, seus exemplos e suas distribuições estão em [legacy/v2](../legacy/v2).

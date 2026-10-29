@@ -1,6 +1,6 @@
 --!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
--- Shared, tracked overlay. All geometry is in the same coordinate space as the window.
+-- Temporary native content pages for pickers. No fullscreen overlay or screen dimming.
 local Surface = {}
 Surface.__index = Surface
 local input = game:GetService("UserInputService")
@@ -39,80 +39,61 @@ function Surface.button(window, parent, text, props, primary)
 end
 
 function Surface.new(window, title, subtitle, options)
-    if window._conexaoModal then window._conexaoModal:Close() end
+    if window._conexaoPanel then window._conexaoPanel:Close() end
     options = options or {}
-    local self = setmetatable({ window = window, connections = {}, closed = false }, Surface)
-    window._conexaoModal = self
-    self.root = window:Create("Frame", {
-        Name = "ConexaoOverlay", Parent = window.screenGui, BackgroundTransparency = 1,
-        Size = UDim2.fromScale(1, 1), ZIndex = 4000,
+    local previous = window.selectedTab
+    local tab = window:CreateTab({ name = title, neglectSelector = true, forgetState = true })
+    local self = setmetatable({ window = window, tab = tab, previousTab = previous, connections = {}, closed = false, __type = "ContentPicker" }, Surface)
+    window._conexaoPanel = self
+    self.root = tab.tabPage
+    self.main = window:Create("Frame", {
+        Name = "ContentPicker", Parent = self.root, BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 0, 340), BorderSizePixel = 0,
     })
-    self.scrim = window:Create("TextButton", {
-        Parent = self.root, Size = UDim2.fromScale(1, 1), Text = "", AutoButtonColor = false,
-        BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4,
-        BorderSizePixel = 0, Active = true, Modal = true, ZIndex = 4001,
+    self.panel = self.main
+    self.title = Surface.label(window, self.main, title, {
+        Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, -86, 0, 28), TextSize = 21,
     })
-    self.panel = window:Create("Frame", {
-        Name = "Panel", Parent = self.root, AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Active = true, ZIndex = 4010,
+    self.subtitle = Surface.label(window, self.main, subtitle or "", {
+        Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 0, 28), TextSize = 12, TextTransparency = 0.25,
     })
-    -- A blank area inside the panel must not click through to the outside-dismiss target.
-    self.shield = window:Create("TextButton", {
-        Parent = self.panel, Size = UDim2.fromScale(1, 1), Text = "", BackgroundTransparency = 1,
-        BorderSizePixel = 0, AutoButtonColor = false, Active = true, ZIndex = 4011,
-    })
-    Surface.round(window, self.panel, 18)
-    window:Create("UIGradient", { Parent = self.panel, Rotation = 35 }, { Color = "WindowColor" })
-    window:Create("UIStroke", { Parent = self.panel, Thickness = 1.5, Transparency = 0.2 }, { Color = "AccentStroke" })
-    self.title = Surface.label(window, self.panel, title, {
-        Position = UDim2.fromOffset(20, 18), Size = UDim2.new(1, -82, 0, 25), TextSize = 21,
-    })
-    self.subtitle = Surface.label(window, self.panel, subtitle or "", {
-        Position = UDim2.fromOffset(20, 47), Size = UDim2.new(1, -82, 0, 26), TextSize = 12, TextTransparency = 0.25,
-    })
-    self.closeButton = Surface.button(window, self.panel, "×", {
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.fromOffset(36, 36), TextSize = 24,
+    self.closeButton = Surface.button(window, self.main, "Voltar", {
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(74, 32), TextSize = 12,
     })
     self.content = window:Create("Frame", {
-        Parent = self.panel, BackgroundTransparency = 1, Position = UDim2.fromOffset(18, 88),
-        Size = UDim2.new(1, -36, 1, options.footer and -164 or -108), ZIndex = 4011,
+        Parent = self.main, BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 76),
+        Size = UDim2.new(1, 0, 1, options.footer and -132 or -76), ZIndex = 4011,
     })
     if options.footer then
         self.footer = window:Create("Frame", {
-            Parent = self.panel, BackgroundTransparency = 1, Position = UDim2.new(0, 18, 1, -60),
-            Size = UDim2.new(1, -36, 0, 42), ZIndex = 4011,
+            Parent = self.main, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -42),
+            Size = UDim2.new(1, 0, 0, 42), ZIndex = 4011,
         })
     end
     function self:Layout()
         if self.closed then return end
-        local view = self.root.AbsoluteSize
-        if view.X <= 0 or view.Y <= 0 then
-            local camera = workspace.CurrentCamera
-            view = camera and camera.ViewportSize or Vector2.new(800, 600)
-        end
-        local at, size = window.main.AbsolutePosition, window.main.AbsoluteSize
-        if size.X <= 0 or size.Y <= 0 then size = Vector2.new(700, 520) at = (view - size) / 2 end
-        local width = math.max(1, math.min(options.width or 510, size.X - 24, view.X - 24))
-        local height = math.max(1, math.min(options.height or 570, size.Y - 24, view.Y - 24))
-        local x = at.X + size.X - 12 - width / 2
-        local y = at.Y + size.Y / 2
-        x = math.clamp(x, width / 2 + 12, math.max(width / 2 + 12, view.X - width / 2 - 12))
-        y = math.clamp(y, height / 2 + 12, math.max(height / 2 + 12, view.Y - height / 2 - 12))
-        self.panel.Size = UDim2.fromOffset(width, height)
-        self.panel.Position = UDim2.fromOffset(x, y)
+        local size = window.elements.AbsoluteSize
+        local height = math.max(240, size.Y - 44)
+        local width = math.max(1, size.X - 40)
+        self.main.Size = UDim2.new(1, -20, 0, height)
         if self.onLayout then self.onLayout(width, height) end
     end
-    self:Connect(self.scrim.MouseButton1Click, function() self:Close() end)
+    function self:_setShown() end
     self:Connect(self.closeButton.MouseButton1Click, function() self:Close() end)
     self:Connect(input.InputBegan, function(key)
         if key.KeyCode == Enum.KeyCode.Escape then self:Close() end
     end)
-    self:Connect(self.root:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
-    self:Connect(window.main:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
-    self:Connect(window.main:GetPropertyChangedSignal("AbsolutePosition"), function() self:Layout() end)
+    self:Connect(window.elements:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
     self:Layout()
-    local scale = window:Create("UIScale", { Parent = self.panel, Scale = 0.96 })
-    game:GetService("TweenService"):Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+    tab:_register(self)
+    local remove = tab.Remove
+    self._removeTab = remove
+    function tab:Remove()
+        if self._picker and not self._picker.closed then self._picker:Close()
+        else remove(self) end
+    end
+    tab._picker = self
+    tab:Select()
     return self
 end
 
@@ -120,13 +101,22 @@ function Surface:Connect(signal, callback)
     return self.window:ConnectFor(self, signal, callback)
 end
 
-function Surface:Close()
+function Surface:Close(restore)
     if self.closed then return end
     self.closed = true
-    if self.window._conexaoModal == self then self.window._conexaoModal = nil end
-    self.window:DisconnectMany(self, table.clone(self.connections))
+    local window = self.window
+    if window._conexaoPanel == self then window._conexaoPanel = nil end
+    window:DisconnectMany(self, table.clone(self.connections))
     if self.onClose then self.onClose() end
-    self.window:DestroySubtree(self.root)
+    if window.selectedTab == self.tab then
+        if restore ~= false and not window.unloaded then
+            local target = self.previousTab
+            if not target or not target.tabPage or not table.find(window.tabs, target) then target = window.SettingsTab end
+            if target then target:Select(true) else window.selectedTab = nil end
+        else window.selectedTab = nil end
+    end
+    self._removeTab(self.tab)
+    self.tab._picker = nil
 end
 
 return Surface

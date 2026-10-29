@@ -3,10 +3,10 @@ local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjro
 local previousDemo = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("ConexaoDemo")
 if previousDemo and previousDemo:IsA("ScreenGui") then previousDemo:Destroy() end
 local window = UI:CreateWindow({
-    Id = "ConexaoDemo3",
-    name = "CONEXÃO UI", subtitle = "Gen2 · 3.1.2", sidebarLayout = true,
+    Id = "ConexaoComponents",
+    name = "CONEXÃO UI", subtitle = "3.2.0", sidebarLayout = true,
     theme = "conexao",
-    configuration = { fileName = "conexao_demo_gen2_v3" },
+    configuration = { fileName = "conexao_componentes_v3" },
 })
 
 window:CreateSection({ name = "PRINCIPAL" })
@@ -50,5 +50,5 @@ local left = row:CreateGroup({ direction = "column" })
 local right = row:CreateGroup({ direction = "column" })
 left:CreateToggle({ name = "Painel esquerdo", flag = "demo/esquerdo", value = true })
 right:CreateToggle({ name = "Painel direito", flag = "demo/direito", value = true })
-layout:CreateStat({ name = "Controles de exemplo", value = 18 })
+layout:CreateStat({ name = "Exemplo de estatística", value = 128 })
 home:Select()

@@ -8,6 +8,7 @@ local Themes = require(script.Features.Themes)
 local Preferences = require(script.Features.Preferences)
 local Settings = require(script.Features.Settings)
 local Responsive = require(script.Features.Responsive)
+local Appearance = require(script.Features.Appearance)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
@@ -22,7 +23,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.1.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.2.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -58,6 +59,14 @@ end
 local function adaptHost(host)
     if host._conexaoAdapted then return host end
     host._conexaoAdapted = true
+    if host.Select then
+        local select = host.Select
+        function host:Select(...)
+            local panel = self.window._conexaoPanel
+            if panel and panel.tab ~= self then panel:Close(false) end
+            return select(self, ...)
+        end
+    end
     for _, element in ipairs(host.elements or {}) do
         if element.__type == "Dropdown" then DropdownPanel.attach(element)
         elseif element.__type == "Group" then adaptHost(element) end
@@ -123,32 +132,51 @@ function Library:CreateWindow(options)
     local createTab = window.CreateTab
     function window:CreateTab(props, icon)
         if type(props) == "string" then props = { name = props, icon = icon } end
-        return adaptHost(createTab(self, props))
+        local tab = adaptHost(createTab(self, props))
+        if not tab.neglectSelector then
+            local firstUserTab = true
+            for _, other in ipairs(self.tabs) do
+                if other ~= tab and other ~= self.SettingsTab and not other.neglectSelector then firstUserTab = false break end
+            end
+            if firstUserTab then tab:Select(true) end
+        end
+        return tab
     end
     adaptHost(window.SettingsTab)
     local changeTheme = window.ChangeTheme
     function window:ChangeTheme(theme)
-        changeTheme(self, Themes.resolve(theme) or theme)
+        local resolved = Themes.resolve(theme) or (type(theme) == "table" and table.clone(theme))
+        if resolved then resolved.ElementTransparency = (self.UIPreferences.transparency or 0) / 100 end
+        changeTheme(self, resolved or theme)
         self.ThemeId = type(theme) == "string" and theme:lower() or nil
+        if self.ApplyTransparency then self:ApplyTransparency() end
         if p.rememberTheme ~= false then
             self.UIPreferences.theme = self.ThemeId
             Preferences.save(self)
         end
         if self.ThemeGallery then self.ThemeGallery:_refreshTheme() end
-        if self._conexaoModal and self._conexaoModal.RefreshTheme then self._conexaoModal:RefreshTheme() end
+        if self._conexaoPanel and self._conexaoPanel.RefreshTheme then self._conexaoPanel:RefreshTheme() end
     end
     Profile.attach(window, executorInfo, self.Version)
     Responsive.attach(window)
+    Appearance.attach(window)
     Settings.attach(window)
+    if window.searchAction then
+        local search = window.searchAction.callback
+        window.searchAction.callback = function(...)
+            if window._conexaoPanel then window._conexaoPanel:Close() end
+            return search(...)
+        end
+    end
     local hide = window.Hide
     function window:Hide(...)
-        if self._conexaoModal then self._conexaoModal:Close() end
+        if self._conexaoPanel then self._conexaoPanel:Close() end
         return hide(self, ...)
     end
     local unload = window.Unload
     function window:Unload()
         if self.unloaded then return end
-        if self._conexaoModal then self._conexaoModal:Close() end
+        if self._conexaoPanel then self._conexaoPanel:Close() end
         if self.configuration.autoSave and (not self.configuration.autoLoad or self._autoLoaded) then pcall(self.Save, self) end
         unload(self)
         if windows[id] == self then windows[id] = nil end

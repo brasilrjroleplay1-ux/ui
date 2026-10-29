@@ -14,6 +14,31 @@ function Dropdown.attach(control, props)
     default = type(default) == "table" and table.clone(default) or {}
     control.defaultValue = default
     control.panel.Visible = false
+    if not props or not (props.placeholder or props.Placeholder) then control.placeholderText = "Selecionar" end
+    control._updateSelectedLabel = function()
+        control.selectedLabel.Text = #control.value == 0 and control.placeholderText
+            or (#control.value == 1 and control.value[1] or (tostring(#control.value) .. " selecionadas"))
+    end
+    control._updateSelectedLabel()
+    local function layoutHeader()
+        local narrow = control.main.AbsoluteSize.X > 0 and control.main.AbsoluteSize.X < 360
+        local height = narrow and 70 or 41
+        control.main.Size = UDim2.new(1, -20, 0, height)
+        control.top.Size, control.interact.Size = UDim2.new(1, 0, 0, height), UDim2.new(1, 0, 0, height)
+        control.container.AnchorPoint = Vector2.new(0, narrow and 0 or 0.5)
+        control.container.Position = narrow and UDim2.fromOffset(20, 10) or UDim2.new(0, 20, 0.5, 0)
+        control.container.Size = narrow and UDim2.new(1, -60, 0, 20) or UDim2.fromOffset(170, 16)
+        control.title.AutomaticSize = narrow and Enum.AutomaticSize.None or Enum.AutomaticSize.X
+        control.title.Size = narrow and UDim2.new(1, control.icon and -24 or 0, 0, 20) or UDim2.fromOffset(150, 16)
+        control.title.TextWrapped, control.title.TextTruncate = false, Enum.TextTruncate.AtEnd
+        control.selectedLabel.AnchorPoint = narrow and Vector2.new(0, 0) or Vector2.new(1, 0.5)
+        control.selectedLabel.Position = narrow and UDim2.fromOffset(20, 38) or UDim2.new(1, -41, 0.5, 0)
+        control.selectedLabel.Size = narrow and UDim2.new(1, -60, 0, 20) or UDim2.fromOffset(168, 15)
+        control.selectedLabel.TextXAlignment = narrow and Enum.TextXAlignment.Left or Enum.TextXAlignment.Right
+        control.selectedLabel.TextWrapped, control.selectedLabel.TextTruncate = false, Enum.TextTruncate.AtEnd
+    end
+    control.window:ConnectFor(control, control.main:GetPropertyChangedSignal("AbsoluteSize"), layoutHeader)
+    layoutHeader()
 
     function control:_close()
         if self.selectionPanel then self.selectionPanel:Close() end
@@ -23,38 +48,38 @@ function Dropdown.attach(control, props)
     function control:_open()
         if self._isOpen or self.locked or self.window.unloaded then return end
         local w = self.window
-        local modal = Surface.new(w, self.name, self.multiSelect and "Escolha uma ou mais opções" or "Escolha uma opção", { footer = true })
-        self.selectionPanel, self._isOpen = modal, true
+        local picker = Surface.new(w, self.name, self.multiSelect and "Escolha uma ou mais opções" or "Escolha uma opção", { footer = true })
+        self.selectionPanel, self._isOpen = picker, true
         self.chevron.Rotation = 0
-        modal.onClose = function()
+        picker.onClose = function()
             self.selectionPanel, self._isOpen = nil, false
             if self.chevron.Parent then self.chevron.Rotation = 180 end
         end
-        modal:Connect(self.main.Destroying, function() modal:Close() end)
-        modal.search = w:Create("TextBox", {
-            Name = "Filter", Parent = modal.content, Size = UDim2.new(1, 0, 0, 40),
+        picker:Connect(self.main.Destroying, function() picker:Close() end)
+        picker.search = w:Create("TextBox", {
+            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 40),
             Text = "", PlaceholderText = "Buscar opção...", ClearTextOnFocus = false,
             TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0,
             BackgroundTransparency = 0.88, ZIndex = 4016,
         }, { TextColor3 = "ContentColor", FontFace = "Font", BackgroundColor3 = "AccentColor", PlaceholderColor3 = "PlaceholderColor" })
-        Surface.round(w, modal.search, 11)
-        w:Create("UIPadding", { Parent = modal.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
-        modal.list = w:Create("ScrollingFrame", {
-            Parent = modal.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
+        Surface.round(w, picker.search, 11)
+        w:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+        picker.list = w:Create("ScrollingFrame", {
+            Parent = picker.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
             BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
             AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
             ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 4012,
         }, { ScrollBarImageColor3 = "AccentColor" })
-        modal.grid = w:Create("UIGridLayout", {
-            Parent = modal.list, CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.5, -7, 0, 50),
+        picker.grid = w:Create("UIGridLayout", {
+            Parent = picker.list, CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.5, -7, 0, 50),
             SortOrder = Enum.SortOrder.LayoutOrder,
         })
-        w:Create("UIPadding", { Parent = modal.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
-        modal.empty = Surface.label(w, modal.content, "Nenhuma opção encontrada", {
+        w:Create("UIPadding", { Parent = picker.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
+        picker.empty = Surface.label(w, picker.content, "Nenhuma opção encontrada", {
             Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         })
-        modal.items, modal.optionConnections = {}, {}
-        function modal:Sync()
+        picker.items, picker.optionConnections = {}, {}
+        function picker:Sync()
             if self.closed then return end
             local query, count = string.lower(self.search.Text), 0
             for _, item in ipairs(self.items) do
@@ -69,7 +94,7 @@ function Dropdown.attach(control, props)
             self.empty.Visible = count == 0
             self.subtitle.Text = control.multiSelect and (tostring(#control.value) .. " selecionadas · " .. tostring(count) .. " opções") or "Escolha uma opção"
         end
-        function modal:Rebuild()
+        function picker:Rebuild()
             if self.closed then return end
             w:DisconnectMany(self, self.optionConnections)
             self.optionConnections = {}
@@ -110,30 +135,30 @@ function Dropdown.attach(control, props)
             end
             self:Sync()
         end
-        modal:Connect(modal.search:GetPropertyChangedSignal("Text"), function()
-            modal.list.CanvasPosition = Vector2.new(0, 0)
-            modal:Sync()
+        picker:Connect(picker.search:GetPropertyChangedSignal("Text"), function()
+            picker.list.CanvasPosition = Vector2.new(0, 0)
+            picker:Sync()
         end)
         local actions = {
             { "Padrão", function() control:Set(table.clone(default)) end },
             { "Limpar", function() control:Set({}) end },
         }
         if self.multiSelect then table.insert(actions, { "Selecionar todos", function() control:Set(table.clone(control.options)) end }) end
-        modal.actions = {}
+        picker.actions = {}
         for index, action in ipairs(actions) do
-            local button = Surface.button(w, modal.footer, action[1], {
+            local button = Surface.button(w, picker.footer, action[1], {
                 Position = UDim2.new((index - 1) / #actions, index == 1 and 0 or 3, 0, 0),
                 Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 12,
             }, index == #actions)
-            modal.actions[index] = button
-            modal:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
+            picker.actions[index] = button
+            picker:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
         end
-        modal.onLayout = function(width)
+        picker.onLayout = function(width)
             local cols = width < 420 and 1 or 2
-            modal.grid.CellSize = UDim2.new(1 / cols, cols == 1 and -8 or -9, 0, 50)
+            picker.grid.CellSize = UDim2.new(1 / cols, cols == 1 and -8 or -9, 0, 50)
         end
-        modal:Layout()
-        modal:Rebuild()
+        picker:Layout()
+        picker:Rebuild()
     end
     -- The inline card remains collapsed, even when the native methods refresh/filter options.
     control._resizeToOptions = function() end

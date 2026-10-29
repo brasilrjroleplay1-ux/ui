@@ -3,6 +3,8 @@
 local Surface = require(script.Parent.Surface)
 local Themes = require(script.Parent.Themes)
 local Preferences = require(script.Parent.Preferences)
+local selector = require(script.Parent.Parent.Gen2.components.tabSelector)
+local constants = require(script.Parent.Parent.Gen2.utility.constants)
 local Settings = {}
 
 -- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
@@ -94,24 +96,24 @@ local function selection(window, entries)
 end
 
 function Settings.openThemes(window)
-    local modal = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.", { width = 570, height = 650 })
+    local picker = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.", { width = 570, height = 650 })
     local scroll = window:Create("ScrollingFrame", {
-        Parent = modal.content, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+        Parent = picker.content, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ZIndex = 4012,
     }, { ScrollBarImageColor3 = "AccentColor" })
     local grid = window:Create("UIGridLayout", {
         Parent = scroll, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.new(0.5, -10, 0, 156), SortOrder = Enum.SortOrder.LayoutOrder,
     })
     window:Create("UIPadding", { Parent = scroll, PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 4) })
-    modal.cards = cards(window, scroll, modal, Themes.catalog, 4013)
-    function modal:RefreshTheme() selection(window, self.cards) end
-    modal.onLayout = function(width)
+    picker.cards = cards(window, scroll, picker, Themes.catalog, 4013)
+    function picker:RefreshTheme() selection(window, self.cards) end
+    picker.onLayout = function(width)
         local columns = width < 420 and 1 or 2
         grid.CellSize = UDim2.new(1 / columns, columns == 1 and -12 or -13, 0, 156)
     end
-    modal:Layout()
-    modal:RefreshTheme()
-    return modal
+    picker:Layout()
+    picker:RefreshTheme()
+    return picker
 end
 
 local function gallery(window, tab)
@@ -153,13 +155,42 @@ end
 function Settings.attach(window)
     local tab = window.SettingsTab
     tab.name, tab.tabPage.Name = "Configurações", "Configurações"
+    tab.icon, tab.neglectSelector = constants.icons.settings, false
+    selector.build(tab, window.layout)
+    window:_applyRailWidth()
+    window:ConnectFor(tab, tab.topbarItemInteract.MouseButton1Click, function() tab:Select() end)
+    window:ConnectFor(tab, tab.topbarItemInteract.MouseEnter, function()
+        if window:_interactive() and window.selectedTab ~= tab then tab:_applyVisual("hover", TweenInfo.new(0.2)) end
+    end)
+    window:ConnectFor(tab, tab.topbarItemInteract.MouseLeave, function()
+        if window.selectedTab ~= tab then tab:_applyVisual("unselected", TweenInfo.new(0.2)) end
+    end)
+    if not window.selectedTab then tab:Select(true) end
+    if not window.hidden then tab:_applyVisual(window.selectedTab == tab and "selected" or "unselected", TweenInfo.new(0)) end
     local first = #tab.elements + 1
-    local sizeStatus = tab:CreateText({ name = "Tamanho automático", text = "Ajustando à sua tela..." })
+    tab:CreateSection({ name = "Aparência e tamanho" })
+    window.TransparencySlider = tab:CreateSlider({ name = "Transparência do fundo", range = { 0, 100 }, value = window.UIPreferences.transparency or 0, suffix = "%", callback = function(value)
+        window.UIPreferences.transparency = value
+        window:ApplyTransparency()
+        Preferences.save(window)
+    end })
+    window.AutoSizeToggle = tab:CreateToggle({ name = "Ajustar tamanho automaticamente", value = window.UIPreferences.autoSize ~= false, callback = function(value)
+        window.UIPreferences.autoSize = value
+        window:RefreshSize()
+        Preferences.save(window)
+    end })
+    window.WindowSizeSlider = tab:CreateSlider({ name = "Tamanho da janela", range = { 0, 100 }, value = window.UIPreferences.sizePercent or 75, suffix = "%", description = "Arrastar ativa o tamanho manual. 0% é compacto; 100% usa o espaço disponível da tela.", callback = function(value)
+        window.UIPreferences.sizePercent, window.UIPreferences.autoSize = value, false
+        window.AutoSizeToggle:Set(false, true)
+        window:RefreshSize()
+        Preferences.save(window)
+    end })
+    local sizeStatus = tab:CreateText({ name = "Tamanho da janela", text = "Ajustando à sua tela..." })
     window.SizeStatus = sizeStatus
     function window:RefreshSizeStatus()
         if self.unloaded or not self.SizeInfo then return end
         local info = self.SizeInfo
-        sizeStatus:Set(string.format("Ativado · Janela %d × %d · Tela %d × %d. Ajusta ao girar o celular ou redimensionar a tela.", info.width, info.height, info.screenWidth, info.screenHeight))
+        sizeStatus:Set(string.format("%s · %d × %d px", info.automatic and "Automático" or "Manual", info.width, info.height))
     end
     window:RefreshSizeStatus()
     local mode, persistent = Preferences.storage()
@@ -199,7 +230,7 @@ function Settings.attach(window)
     for index, element in ipairs(added) do tab:_moveElement(element, index) end
     window:RefreshSaveStatus()
     function window:OpenThemes() return Settings.openThemes(self) end
-    function window:OpenSettings() if self._conexaoModal then self._conexaoModal:Close() end self.SettingsTab:Select() end
+    function window:OpenSettings() if self._conexaoPanel then self._conexaoPanel:Close() end self.SettingsTab:Select() end
 end
 
 return Settings
