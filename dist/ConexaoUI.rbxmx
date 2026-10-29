@@ -13,6 +13,7 @@ local Responsive = require(script.Features.Responsive)
 export type Window = Gen2.Window &amp; {
     OpenSettings: (self: any) -&gt; (),
     OpenProfile: (self: any) -&gt; any,
+    CloseProfile: (self: any) -&gt; (),
     OpenThemes: (self: any) -&gt; any,
     SettingsTab: Gen2.Tab,
     ThemeId: string?,
@@ -22,7 +23,7 @@ export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: b
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.1.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.1.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -153,6 +154,7 @@ function Library:CreateWindow(options)
         unload(self)
         if windows[id] == self then windows[id] = nil end
         if Library.Windows[id] == self then Library.Windows[id] = nil end
+        self.ProfileTab, self.ProfilePage, self._profilePreviousTab = nil, nil, nil
     end
     window.Destroy = window.Unload
     window.SaveConfig = window.Save
@@ -20361,37 +20363,53 @@ local Preferences = require(script.Parent.Preferences)
 local image = require(script.Parent.Parent.Gen2.utility.image)
 local Profile = {}
 
-function Profile.attach(window, executorInfo, version)
-    window.ExecutorInfo = executorInfo
-    function window:OpenProfile()
-        if self.unloaded then return end
-        local player = game:GetService("Players").LocalPlayer
-        if not player then return end
-        local modal = Surface.new(self, "Seu perfil", "Informações deste cliente", { width = 470, height = 570 })
-        local list = self:Create("ScrollingFrame", {
-            Parent = modal.content, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
-            AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ZIndex = 4012,
-        }, { ScrollBarImageColor3 = "AccentColor" })
-        self:Create("UIListLayout", { Parent = list, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
-        local header = self:Create("Frame", {
-            Parent = list, Size = UDim2.new(1, -6, 0, 88), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 4013,
-        })
-        modal.avatar = self:Create("ImageLabel", {
-            Parent = header, Position = UDim2.fromOffset(2, 2), Size = UDim2.fromOffset(72, 72),
-            BackgroundTransparency = 1, ZIndex = 4014,
-            Image = image.avatar(player.UserId, function(uri)
-                if not modal.closed and modal.avatar then image.assign(modal.avatar, "Image", uri) end
-            end),
-        })
-        Surface.round(self, modal.avatar, 36)
-        modal.playerName = Surface.label(self, header, player.DisplayName, {
-            Position = UDim2.fromOffset(90, 8), Size = UDim2.new(1, -96, 0, 28), TextSize = 20,
-        })
-        Surface.label(self, header, "@" .. player.Name, {
-            Position = UDim2.fromOffset(90, 39), Size = UDim2.new(1, -96, 0, 22), TextTransparency = 0.25,
-        })
+local function buildPage(window, player, executorInfo, version)
+    -- A native content page, like Settings: it is clipped/scrolled by the main panel.
+    local tab = window:CreateTab({ name = "Perfil", neglectSelector = true, forgetState = true })
+    local page = { tab = tab, content = tab.tabPage, details = {}, fields = {} }
+    window.ProfileTab, window.ProfilePage = tab, page
+    tab:CreateSection({ name = "Seu perfil" })
+
+    local hero = { window = window, name = "Perfil do jogador", __type = "ProfileHeader" }
+    hero.main = window:Create("Frame", {
+        Name = "PlayerProfile", Parent = tab.tabPage, Size = UDim2.new(1, -20, 0, 114),
+        BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1,
+    })
+    hero.stroke = window:StyleElementBody(hero.main)
+    page.avatar = window:Create("ImageLabel", {
+        Parent = hero.main, Position = UDim2.fromOffset(16, 22), Size = UDim2.fromOffset(64, 64),
+        BackgroundTransparency = 1, ImageTransparency = 1, ZIndex = 5,
+        Image = image.avatar(player.UserId, function(uri)
+            if not window.unloaded and window.ProfilePage == page and page.avatar and page.avatar.Parent then
+                image.assign(page.avatar, "Image", uri)
+            end
+        end),
+    })
+    Surface.round(window, page.avatar, 32)
+    page.playerName = Surface.label(window, hero.main, player.DisplayName, {
+        Position = UDim2.fromOffset(96, 18), Size = UDim2.new(1, -114, 0, 44),
+        TextSize = 20, TextTransparency = 1, ZIndex = 5,
+    })
+    page.username = Surface.label(window, hero.main, "@" .. player.Name, {
+        Position = UDim2.fromOffset(96, 64), Size = UDim2.new(1, -114, 0, 28),
+        TextSize = 13, TextTransparency = 1, TextWrapped = false,
+        TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
+    })
+    hero.title, hero.iconLabel = page.playerName, page.avatar
+    function hero:_setShown(shown, animate)
+        if shown then window:_revealCommon(self, animate) else window:_hideCommon(self, animate) end
+        window:_reveal(page.username, { TextTransparency = shown and 0.3 or 1 }, animate)
+    end
+    tab:_register(hero)
+    page.backButton = tab:CreateButton({ name = "Voltar para a aba anterior", callback = function() window:CloseProfile() end })
+    tab:CreateSection({ name = "Informações do cliente" })
+
+    function page:Refresh()
+        player = game:GetService("Players").LocalPlayer or player
+        self.playerName.Text = player.DisplayName
+        self.username.Text = "@" .. player.Name
         local storage = Preferences.storage()
-        modal.details = {
+        self.details = {
             { "ID do jogador", tostring(player.UserId) },
             { "Executor", executorInfo.name },
             { "Versão do executor", executorInfo.version or "Não informada" },
@@ -20399,21 +20417,44 @@ function Profile.attach(window, executorInfo, version)
             { "Conexão UI", version },
             { "Armazenamento", storage },
         }
-        for index, detail in ipairs(modal.details) do
-            local row = self:Create("Frame", {
-                Parent = list, Size = UDim2.new(1, -6, 0, 48), BackgroundTransparency = 0.94,
-                BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
-            }, { BackgroundColor3 = "AccentColor" })
-            Surface.round(self, row, 10)
-            Surface.label(self, row, detail[1], {
-                Position = UDim2.fromOffset(12, 4), Size = UDim2.new(0.45, -12, 1, -8), TextSize = 12, TextTransparency = 0.3,
-            })
-            Surface.label(self, row, detail[2], {
-                Position = UDim2.new(0.45, 0, 0, 4), Size = UDim2.new(0.55, -12, 1, -8),
-                TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right,
-            })
+        for index, detail in ipairs(self.details) do
+            if self.fields[index] then self.fields[index]:Set(detail[2])
+            else self.fields[index] = tab:CreateText({ name = detail[1], text = detail[2] }) end
         end
-        return modal
+    end
+    function page:Close() window:CloseProfile() end
+    -- An application may remove the page through the public Tab API. Rebuild safely next time.
+    local remove = tab.Remove
+    function tab:Remove()
+        if window.ProfileTab == self then window.ProfileTab, window.ProfilePage = nil, nil end
+        remove(self)
+    end
+    return page
+end
+
+function Profile.attach(window, executorInfo, version)
+    window.ExecutorInfo = executorInfo
+    function window:CloseProfile()
+        if self.unloaded or not self.ProfileTab or self.selectedTab ~= self.ProfileTab then return end
+        local previous = self._profilePreviousTab
+        if not previous or not previous.tabPage or not table.find(self.tabs, previous) then
+            previous = self.SettingsTab
+            for _, candidate in ipairs(self.tabs) do
+                if not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
+            end
+        end
+        if previous then previous:Select() end
+    end
+    function window:OpenProfile()
+        if self.unloaded then return end
+        local player = game:GetService("Players").LocalPlayer
+        if not player then return end
+        if self._conexaoModal then self._conexaoModal:Close() end
+        if self.selectedTab ~= self.ProfileTab then self._profilePreviousTab = self.selectedTab end
+        local page = self.ProfilePage or buildPage(self, player, executorInfo, version)
+        page:Refresh()
+        page.tab:Select()
+        return page
     end
     if window.profile then
         window.ProfileButton = window:Create("TextButton", {

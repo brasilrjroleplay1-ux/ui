@@ -12,6 +12,7 @@ local Responsive = require(script.Features.Responsive)
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
     OpenProfile: (self: any) -> any,
+    CloseProfile: (self: any) -> (),
     OpenThemes: (self: any) -> any,
     SettingsTab: Gen2.Tab,
     ThemeId: string?,
@@ -21,7 +22,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.1.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.1.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -152,6 +153,7 @@ function Library:CreateWindow(options)
         unload(self)
         if windows[id] == self then windows[id] = nil end
         if Library.Windows[id] == self then Library.Windows[id] = nil end
+        self.ProfileTab, self.ProfilePage, self._profilePreviousTab = nil, nil, nil
     end
     window.Destroy = window.Unload
     window.SaveConfig = window.Save

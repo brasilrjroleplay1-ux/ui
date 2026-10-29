@@ -1,4 +1,4 @@
-# Conexão UI 3.1.1 · Rayfield Gen2
+# Conexão UI 3.1.2 · Rayfield Gen2
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta dropdown em painel separado, perfil clicável, configurações automáticas e uma galeria de temas com prévias feitas na própria interface. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -33,7 +33,7 @@ tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "A", "B", "C" }, 
 
 ## O que já vem pronto
 
-- Perfil da sidebar clicável: abre avatar, nome de exibição, @usuário, ID, executor e versão quando informados pelo ambiente. Se não houver identificação, a interface informa isso.
+- Perfil da sidebar clicável: abre uma página dentro do painel principal, com avatar, nome de exibição, @usuário, ID, executor e versão quando informados pelo ambiente. O perfil mantém a navegação da sidebar e oferece um botão para voltar à aba anterior.
 - Página de configurações pronta: salvamento/restauração, status do armazenamento, temas com prévias, atalho, cursor, toasts, haptics, perfil, posição e gerenciamento de configurações.
 - Dropdown em painel separado com busca sempre visível, cartões de opções, seleção única/múltipla, Padrão, Limpar e Selecionar todos. Fecha pelo X, Escape ou clique fora. Em telas estreitas usa uma coluna.
 - Salvamento e carregamento automáticos habilitados por padrão, incluindo toggles, sliders, dropdowns únicos/múltiplos, inputs, teclas e cores. Use `flag` estável e único por controle.

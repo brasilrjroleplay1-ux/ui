@@ -4,13 +4,16 @@ local function check(value, message) assert(value, message) checks += 1 end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.1.1", "new entry point is bundled")
+check(UI.Version == "3.1.2", "new entry point is bundled")
 local w = UI:CreateWindow({ Id = "BundleTest", name = "Conexão", theme = "amethyst" })
 check(w.layout.mode == "sidebar", "profile layout is automatic")
 check(w.configuration.autoSave and w.configuration.autoLoad, "configuration works without additional setup")
 check(w.profileText == "Roblox Studio", "profile subtitle comes from the runtime")
 check(w.settings.usageAnalytics == false, "the fork starts with analytics disabled")
 check(w.SettingsTab == w.rfSettings, "settings are provided by the actual Gen2 implementation")
+local initiallySelected = w.selectedTab
+w:CloseProfile()
+check(w.selectedTab == initiallySelected and not w.ProfilePage, "closing the profile before it was opened leaves navigation unchanged")
 check(w.SizeStatus and w.SizeInfo.automatic, "settings and automatic sizing are included with CreateWindow alone")
 local originalCamera = workspace.CurrentCamera
 local camera = Instance.new("Camera")
@@ -72,13 +75,29 @@ check(color:GetValue() == "#112233", "color round-trips through actual persisten
 w.configuration.autoSave = true
 
 -- Exercise the actual hit targets, not only the native Set API.
-local baselineConnections, baselineInstances = #w.connections, #w.instances
+local windowChildren = #w.screenGui:GetChildren()
 w.ProfileButton.MouseButton1Click:Fire()
-local profile = w._conexaoModal
+local profile = w.ProfilePage
 check(profile and profile.playerName.Text == game:GetService("Players").LocalPlayer.DisplayName, "clicking the sidebar opens the actual player's profile")
 check(profile.details[2][2] == "Roblox Studio" and profile.avatar.Image ~= "", "profile includes runtime identification and the player's thumbnail")
-profile.closeButton.MouseButton1Click:Fire()
-check(not w._conexaoModal and #w.connections == baselineConnections and #w.instances == baselineInstances, "closing a profile releases its instances and input handlers")
+check(w.selectedTab == w.ProfileTab and profile.content.Parent == w.elements, "the profile opens in the main content panel as a native page")
+check(not w._conexaoModal and not w.screenGui:FindFirstChild("ConexaoOverlay") and #w.screenGui:GetChildren() == windowChildren, "opening the profile creates no floating window or screen-darkening layer")
+profile.backButton.interact.MouseButton1Click:Fire()
+check(w.selectedTab == tab, "the profile back button restores the previous tab")
+local profileConnections, profileInstances, profileTabs = #w.connections, #w.instances, #w.tabs
+for i = 1, 6 do w:OpenProfile() w:CloseProfile() end
+check(w.ProfilePage == profile and #w.connections == profileConnections and #w.instances == profileInstances and #w.tabs == profileTabs, "repeated profile navigation reuses one page without accumulating resources")
+local removedPrevious = w:CreateTab({ name = "Previous" })
+removedPrevious:Select()
+w:OpenProfile()
+removedPrevious:Remove()
+w:CloseProfile()
+check(w.selectedTab == tab, "back navigation falls back safely when the previous tab was removed")
+w.ProfileTab:Remove()
+check(w.ProfilePage == nil and w.ProfileTab == nil, "removing the internal profile page releases its cached references")
+profile = w:OpenProfile()
+check(w.selectedTab == w.ProfileTab and profile.content.Parent == w.elements, "a removed profile page is rebuilt inside the panel on the next click")
+w:CloseProfile()
 multi:Open()
 local panel = multi.selectionPanel
 check(panel and panel.search and #panel.items == 3 and #panel.actions == 3, "multi dropdown opens a separate searchable panel with bulk actions")
@@ -118,13 +137,14 @@ for i = 1, 6 do multi:Open() multi:Close() end
 check(#w.connections == connections and #w.instances == instances, "repeated dropdown use does not accumulate connections or instances")
 multi:Open()
 w:OpenProfile()
-check(not multi._isOpen and w._conexaoModal.playerName ~= nil, "only one overlay is open at a time")
-w._conexaoModal:Close()
+check(not multi._isOpen and not w._conexaoModal and w.selectedTab == w.ProfileTab, "opening the in-panel profile dismisses an existing dropdown overlay")
+w:CloseProfile()
 
 check(w.SettingsTab.name == "Configurações" and w.AutoSaveToggle and w.AutoLoadToggle and w.ThemeGallery, "settings and theme previews are included without script-side setup")
 check(#w.ThemeGallery.cards == 6 and #UI.Themes == 12, "six vivid presets and six original themes have palettes and previews")
 w.ThemeGallery.cards[5].hit.MouseButton1Click:Fire()
 check(w.ThemeId == "sakura" and w.ThemeGallery.cards[5].selected.Visible, "a preview applies its real theme and marks the selection")
+check(w.ProfilePage.playerName.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
 local themes = w:OpenThemes()
 check(#themes.cards == 12, "the complete theme picker renders all twelve previews")
 themes.cards[2].hit.MouseButton1Click:Fire()
@@ -179,16 +199,19 @@ removed:Remove()
 check(not w._conexaoModal and not transient._isOpen, "removing an open dropdown's tab also tears down its overlay")
 w:OpenProfile()
 w:Hide()
-check(not w._conexaoModal, "hiding the window closes transient panels")
+check(not w._conexaoModal and w.selectedTab == w.ProfileTab, "hiding preserves the profile as a normal internal page")
 w:Show()
+check(w.selectedTab == w.ProfileTab and w.ProfilePage.content.Parent == w.elements, "reopening keeps the profile inside the main panel")
+w:CloseProfile()
 
 local previousIdentify = _G.identifyexecutor
 _G.identifyexecutor = function() return "Test Executor", "1.2.3" end
 local ew = UI:CreateWindow({ Id = "ExecutorTest", name = "ExecutorTest", sidebarLayout = false })
 check(not ew.ProfileButton and ew.ExecutorInfo.name == "Test Executor" and ew.ExecutorInfo.version == "1.2.3", "executor identity and version are detected while the top-tab layout stays supported")
 ew:OpenProfile()
+check(ew.selectedTab == ew.ProfileTab and ew.ProfilePage.content.Parent == ew.elements and not ew._conexaoModal, "the top-tab layout also presents the profile inside its content panel")
 ew:Unload()
-check(not ew._conexaoModal and #ew.connections == 0, "unloading with a profile open releases all overlay resources")
+check(not ew.ProfilePage and not ew.ProfileTab and #ew.connections == 0, "unloading with a profile open releases its page references and handlers")
 _G.identifyexecutor = previousIdentify
 
 local row = tab:CreateGroup()

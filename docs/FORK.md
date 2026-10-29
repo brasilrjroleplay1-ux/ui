@@ -10,4 +10,6 @@ O visual final pode variar se o cliente não conseguir carregar os assets e as f
 
 Em 3.1.1, `Features/Responsive.luau` amplia o ajuste automático: aproveita a altura em celulares na vertical, usa o viewport da interface quando a câmera ainda não está pronta e atualiza o cartão de tamanho nas configurações. A coordenação com janelas ocultas/minimizadas mantém o comportamento de abertura do Gen2.
 
+Em 3.1.2, o perfil passa a usar uma página nativa dentro de `window.elements`, com a mesma rolagem e navegação das demais páginas. O clique no avatar reutiliza essa página, e Voltar retorna à aba anterior. Essa mudança é implementada em `Features/Profile.luau`.
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

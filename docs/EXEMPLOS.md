@@ -101,11 +101,12 @@ Eles já existem depois de `CreateWindow`. Não é necessário recriar a aba nem
 ```lua
 window:OpenSettings()
 window:OpenProfile()
+window:CloseProfile() -- volta à aba que estava aberta
 window:OpenThemes()
 ```
 
 O tamanho também é automático: a library acompanha a tela e a orientação. As configurações mostram as medidas atuais. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
-O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. A galeria apresenta seis temas novos e seis temas originais, com miniaturas feitas de GuiObjects que usam as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
+O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. Ele abre como página interna na área de conteúdo da janela, com rolagem e botão Voltar. A sidebar continua acessível. A galeria apresenta seis temas novos e seis temas originais, com miniaturas feitas de GuiObjects que usam as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
 
 As propriedades nativas aceitam camelCase e PascalCase. Para novos scripts, use a API Gen2 documentada aqui. A API anterior, seus exemplos e suas distribuições estão em [legacy/v2](../legacy/v2).
