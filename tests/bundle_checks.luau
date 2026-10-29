@@ -4,7 +4,7 @@ local function check(value, message) assert(value, message) checks += 1 end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.3.1", "new entry point is bundled")
+check(UI.Version == "3.3.2", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -33,6 +33,7 @@ local initiallySelected = w.selectedTab
 w:CloseProfile()
 check(w.selectedTab == initiallySelected and not w.ProfilePage, "closing the profile before it was opened leaves navigation unchanged")
 check(w.SizeStatus and w.SizeInfo.automatic, "settings and automatic sizing are included with CreateWindow alone")
+check(w.WindowSizeSlider.value == w.SizeInfo.percent and w.AutoSizeToggle.value, "the initial slider readout reflects automatic sizing without switching to manual mode")
 local scrollFrame, scrollLayout = w.SettingsTab.tabPage, w.SettingsTab.tabPageLayout
 local originalScrollView = scrollFrame.AbsoluteWindowSize
 local originalContentSize = scrollLayout.AbsoluteContentSize
@@ -64,9 +65,12 @@ local function resize(viewport)
 end
 resize(Vector2.new(390, 844))
 check(w.size.X.Offset <= 366 and w.size.Y.Offset >= 500 and w.size.Y.Offset <= 772, "portrait phone uses its height while fitting within the screen")
+local portraitPercent = w.WindowSizeSlider.value
+check(portraitPercent == w.SizeInfo.percent and portraitPercent ~= 75 and w.UIPreferences.autoSize ~= false, "phone auto fit updates the slider silently instead of leaving a stale manual default")
 check(w.main.Size == w.size and w.SizeInfo.screenWidth == 390 and w.SizeStatus.text:find("Automático", 1, true), "a viewport change resizes the window and refreshes the built-in settings status")
 resize(Vector2.new(844, 390))
 check(w.size.X.Offset <= 820 and w.size.Y.Offset <= 343, "phone rotation fits the new landscape viewport")
+check(w.WindowSizeSlider.value == w.SizeInfo.percent and w.WindowSizeSlider.value ~= portraitPercent and w.AutoSizeToggle.value, "rotation recalculates the displayed percentage and keeps automatic mode enabled")
 w:Hide()
 local collapsedSize = w.main.Size
 resize(Vector2.new(390, 844))
@@ -320,7 +324,15 @@ cw.WindowSizeSlider:Set(0)
 check(cw.size.X.Offset > 0 and cw.size.Y.Offset > 0 and cw.size.X.Offset <= cw.SizeInfo.screenWidth, "zero percent keeps a usable compact window rather than hiding settings")
 cw.AutoSizeToggle:Set(true)
 check(cw.SizeInfo.automatic and cw.SizeStatus.text:find("Automático", 1, true), "the automatic sizing toggle restores automatic fitting")
+check(cw.WindowSizeSlider.value == cw.SizeInfo.percent and cw.WindowSizeSlider.value ~= 0 and cw.UIPreferences.sizePercent == 0, "automatic mode updates the readout while preserving the last saved manual choice")
+cw.AutoSizeToggle:Set(false)
+check(cw.WindowSizeSlider.value == 0 and not cw.SizeInfo.automatic, "returning to manual mode restores its corresponding slider value")
+cw.WindowSizeSlider:Set(49)
+cw.AutoSizeToggle:Set(true)
 cw:Unload()
+local dw = UI:CreateWindow({ Id = "AutoPersist31", name = "AutoPersist31" })
+check(dw.AutoSizeToggle.value and dw.UIPreferences.sizePercent == 49 and dw.WindowSizeSlider.value == dw.SizeInfo.percent and dw.WindowSizeSlider.value ~= 49, "reexecution with automatic mode ignores a stale saved manual percentage for the displayed slider")
+dw:Unload()
 
 local removed = w:CreateTab({ name = "Temporary" })
 local transient = removed:CreateDropdown({ name = "Temporary", options = { "X" } })

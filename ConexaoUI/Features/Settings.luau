@@ -181,7 +181,7 @@ function Settings.attach(window)
         window:RefreshSize()
         Preferences.save(window)
     end })
-    window.WindowSizeSlider = tab:CreateSlider({ name = "Tamanho da janela", range = { 0, 100 }, value = window.UIPreferences.sizePercent or 75, suffix = "%", description = "Solte para aplicar. 0% é compacto; 100% usa o espaço disponível da tela.", callback = function(value, dragging)
+    window.WindowSizeSlider = tab:CreateSlider({ name = "Tamanho da janela", range = { 0, 100 }, value = window.SizeInfo.percent, suffix = "%", description = "No automático, acompanha o ajuste. Solte para aplicar um tamanho manual.", callback = function(value, dragging)
         if dragging then
             window._sizePreview = value
             tab._scrollController:SetHeld(true)

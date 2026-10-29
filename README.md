@@ -1,4 +1,4 @@
-# Conexão UI 3.3.1 · Conexão Studio
+# Conexão UI 3.3.2 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -53,6 +53,7 @@ Não é necessário criar a página de configurações no seu script. A janela o
 
 - **Transparência do fundo, 0–100%:** 0 deixa o fundo sólido e 100 o deixa transparente. Texto e ícones mantêm sua opacidade.
 - **Ajustar tamanho automaticamente:** vem ativado e acompanha o tamanho/orientação da tela.
+- No automático, o slider acompanha o tamanho calculado ao abrir, girar a tela ou ativar essa opção. A porcentagem usa a escala de compacto a espaço disponível, pela largura na sidebar e pela altura no layout com abas no topo. O último tamanho manual continua salvo separadamente.
 - **Tamanho da janela, 0–100%:** o arraste mostra uma prévia do valor e mantém a janela parada. Ao soltar, aplica o tamanho, ativa o modo manual e salva a escolha. 0 mantém um tamanho compacto acessível; 100 usa o espaço disponível, preservando margens para os controles do Roblox. Mesmo no modo manual, a proporção é recalculada ao mudar de tela.
 
 Essas escolhas são lembradas por janela. Você pode ativar o ajuste automático novamente a qualquer momento.

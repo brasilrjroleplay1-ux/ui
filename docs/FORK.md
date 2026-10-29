@@ -18,4 +18,6 @@ Em 3.3, `Features/ProfileDashboard.luau` fornece a apresentação do perfil: ban
 
 Em 3.3.1, `Features/Scrolling.luau` mede o canvas das páginas e seletores, limita o scroll após mudanças de tamanho e revalida os layouts depois das animações. O slider de tamanho mantém apenas uma prévia durante o arraste e aplica/salva ao soltar. `Features/Startup.luau` fornece a abertura Conexão Studio; `src/init.luau` do vendor recebe um callback opcional, registrado em `UPSTREAM.json`, para preservar o restante do ciclo de criação.
 
+Em 3.3.2, o ajuste automático também atualiza o valor e o indicador do slider. A sincronização usa `Set(value, true)`, preserva o modo automático e não sobrescreve o último tamanho manual salvo. O percentual segue a dimensão principal do layout na escala compacto–espaço disponível.
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

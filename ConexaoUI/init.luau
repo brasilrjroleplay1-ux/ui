@@ -25,7 +25,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.3.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.3.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
