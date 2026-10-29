@@ -1,10 +1,10 @@
-# Exemplos da Conexão UI 3 · API Gen2
+# Exemplos da Conexão UI 3.1 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
 ```lua
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/ConexaoUI.luau"))()
-local window = UI:CreateWindow({ name = "Meu Hub", subtitle = "Conexão UI", sidebarLayout = true, theme = "amethyst" })
+local window = UI:CreateWindow({ name = "Meu Hub", subtitle = "Conexão UI", sidebarLayout = true, theme = "conexao" })
 local tab = window:CreateTab({ name = "Principal", icon = 93364949241311 })
 ```
 
@@ -35,7 +35,12 @@ local multi = tab:CreateDropdown({ name = "Painéis", flag = "paineis", multiSel
 multi:Set({ "Perfil", "Dados" })
 ```
 
-Os dropdowns usam o painel nativo Gen2. A busca e as ações de seleção seguem o comportamento da base oficial. Os valores são salvos automaticamente.
+Ao clicar no dropdown, a Conexão abre um painel sobre a janela: busca, cartões em duas colunas (uma no celular) e botões Padrão/Limpar. Dropdown múltiplo também tem Selecionar todos; essa ação seleciona a lista inteira, inclusive se houver filtro. Padrão restaura o `value` inicial definido pelo script. Seleção única fecha o painel ao escolher; seleção múltipla mantém o painel aberto. Os valores são salvos automaticamente.
+
+```lua
+multi:Open()  -- opcional; clicar no controle faz o mesmo
+multi:Close()
+```
 
 ## Input, Keybind e ColorPicker
 
@@ -80,7 +85,7 @@ window:Popup({ title = "Continuar?", content = "Escolha uma ação.", options = 
 ## Atualizar tema, navegar e encerrar
 
 ```lua
-window:ChangeTheme("cobalt")
+window:ChangeTheme("aurora")
 tab:Select()
 window:Save()
 window:Load()
@@ -88,5 +93,17 @@ window:Hide()
 window:Show()
 window:Unload()
 ```
+
+## Configurações, perfil e galeria prontos
+
+Eles já existem depois de `CreateWindow`. Não é necessário recriar a aba nem os controles de configuração no seu script. Para fornecer atalhos adicionais:
+
+```lua
+window:OpenSettings()
+window:OpenProfile()
+window:OpenThemes()
+```
+
+O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. A galeria apresenta seis temas novos e seis temas originais, com miniaturas feitas de GuiObjects que usam as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
 
 As propriedades nativas aceitam camelCase e PascalCase. Para novos scripts, use a API Gen2 documentada aqui. A API anterior, seus exemplos e suas distribuições estão em [legacy/v2](../legacy/v2).

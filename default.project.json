@@ -5,7 +5,8 @@
     "ReplicatedStorage": {
       "ConexaoUI": {
         "$path": "ConexaoUI/init.luau",
-        "Gen2": { "$path": "vendor/rayfield-gen2/src" }
+        "Gen2": { "$path": "vendor/rayfield-gen2/src" },
+        "Features": { "$path": "ConexaoUI/Features" }
       }
     },
     "StarterPlayer": {

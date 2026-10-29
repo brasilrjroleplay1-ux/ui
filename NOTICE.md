@@ -6,7 +6,8 @@ Conexão UI 3 is a fork and integration of **Rayfield Gen2 1.2.1** by Sirius / C
 - Pinned commit: `576c1ff19448285f9506b50bee221977aef3ffbb`
 - Copyright (c) 2026 Corridon Capital.
 - License: **Mozilla Public License 2.0**, included in [LICENSE](LICENSE).
-- Complete covered source: [vendor/rayfield-gen2/src](vendor/rayfield-gen2/src).
+- Complete covered upstream source: [vendor/rayfield-gen2/src](vendor/rayfield-gen2/src).
+- Conexão extensions: [ConexaoUI](ConexaoUI), including the integration and [interface features](ConexaoUI/Features).
 - Changes and provenance: [UPSTREAM.json](vendor/rayfield-gen2/UPSTREAM.json).
 
 Existing copyright and license headers remain in the source and generated bundles. The source is readable and is distributed alongside the executable bundles. The integration layer, tools and examples supplied for Conexão UI are also provided under MPL-2.0.

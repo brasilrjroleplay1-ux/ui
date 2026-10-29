@@ -1,14 +1,25 @@
 --!nonstrict
--- Conexão UI 3.0 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.1 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local Gen2 = require(script.Gen2)
+local DropdownPanel = require(script.Features.Dropdown)
+local Profile = require(script.Features.Profile)
+local Themes = require(script.Features.Themes)
+local Preferences = require(script.Features.Preferences)
+local Settings = require(script.Features.Settings)
 
-export type Window = Gen2.Window
-export type WindowProps = Gen2.WindowProps
+export type Window = Gen2.Window & {
+    OpenSettings: (self: any) -> (),
+    OpenProfile: (self: any) -> any,
+    OpenThemes: (self: any) -> any,
+    SettingsTab: Gen2.Tab,
+    ThemeId: string?,
+}
+export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.0.0", UpstreamVersion = "1.2.1", Windows = {} }
+local Library = { Version = "3.1.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -18,14 +29,17 @@ if type(env.__CONEXAO_UI_V3_WINDOWS) ~= "table" then env.__CONEXAO_UI_V3_WINDOWS
 local windows = env.__CONEXAO_UI_V3_WINDOWS
 
 local function executor()
+    local environment = game:GetService("RunService"):IsStudio() and "Roblox Studio" or "Roblox"
     for _, name in ipairs({ "identifyexecutor", "getexecutorname" }) do
         local fn = env[name] or getfenv()[name]
         if type(fn) == "function" then
-            local ok, value = pcall(fn)
-            if ok and type(value) == "string" and value ~= "" then return value end
+            local ok, value, version = pcall(fn)
+            if ok and type(value) == "string" and value ~= "" then
+                return { name = value, version = type(version) == "string" and version or nil, environment = environment }
+            end
         end
     end
-    return game:GetService("RunService"):IsStudio() and "Roblox Studio" or "Cliente Roblox"
+    return { name = environment == "Roblox Studio" and environment or "Não identificado", environment = environment }
 end
 
 local function properties(value)
@@ -39,6 +53,12 @@ local function properties(value)
 end
 
 local function adaptHost(host)
+    if host._conexaoAdapted then return host end
+    host._conexaoAdapted = true
+    for _, element in ipairs(host.elements or {}) do
+        if element.__type == "Dropdown" then DropdownPanel.attach(element)
+        elseif element.__type == "Group" then adaptHost(element) end
+    end
     for _, kind in ipairs({ "Button", "Toggle", "Slider", "Dropdown", "Input", "Keybind", "ColorPicker", "Text", "Progress", "Console", "Stat", "Divider", "Section", "Group" }) do
         local method = host["Create" .. kind]
         if method then
@@ -48,6 +68,7 @@ local function adaptHost(host)
                 local control = method(self, mapped)
                 if control then
                     if kind == "Group" then adaptHost(control) end
+                    if kind == "Dropdown" then DropdownPanel.attach(control, mapped) end
                     if control.Set then
                         control.SetValue = function(c, value) return c:Set(value) end
                         control.GetValue = function(c)
@@ -71,15 +92,21 @@ function Library:CreateWindow(options)
     p.name = p.name or p.Name or p.Title or "Conexão UI"
     p.showName = p.showName or p.ShowName or p.name
     if p.sidebarLayout == nil and p.SidebarLayout == nil then p.sidebarLayout = true end
-    p.profile = p.profile or p.Profile or executor()
+    local executorInfo = executor()
+    p.profile = p.profile or p.Profile or executorInfo.name
     local cfg = table.clone(p.configuration or p.Configuration or {})
     local old = p.Config or {}
     if cfg.autoSave == nil then cfg.autoSave = cfg.AutoSave end
     if cfg.autoLoad == nil then cfg.autoLoad = cfg.AutoLoad end
-    if cfg.autoSave == nil then cfg.autoSave = old.Enabled ~= false end
-    if cfg.autoLoad == nil then cfg.autoLoad = true end
     cfg.fileName = cfg.fileName or cfg.FileName or old.Name or ((p.Id or p.name) .. "-" .. tostring(game.PlaceId))
     cfg.customFolder = cfg.customFolder or cfg.CustomFolder
+    local preferences, preferencesDir, preferencesPath = Preferences.load(cfg, p.name)
+    if cfg.autoSave == nil then cfg.autoSave = if old.Enabled ~= nil then old.Enabled ~= false elseif preferences.autoSave ~= nil then preferences.autoSave else true end
+    if cfg.autoLoad == nil then cfg.autoLoad = if preferences.autoLoad ~= nil then preferences.autoLoad else true end
+    local requestedTheme = p.theme or p.Theme or "conexao"
+    local themeId = if type(requestedTheme) == "string" then requestedTheme:lower() else nil
+    if p.rememberTheme ~= false and type(requestedTheme) ~= "table" and Themes.entry(preferences.theme) then themeId = preferences.theme end
+    p.theme = Themes.resolve(themeId) or requestedTheme
     p.configuration = cfg
     local id = tostring(p.Id or p.name)
     if windows[id] and not windows[id].unloaded then windows[id]:Unload() end
@@ -87,15 +114,37 @@ function Library:CreateWindow(options)
     windows[id] = window
     self.Windows[id] = window
     window.SettingsTab = window.rfSettings
+    window.UIPreferences, window._preferencesDir, window._preferencesPath = preferences, preferencesDir, preferencesPath
+    window.ThemeId = themeId
     window.screenGui.Name = "ConexaoUI3_" .. id
     local createTab = window.CreateTab
     function window:CreateTab(props, icon)
         if type(props) == "string" then props = { name = props, icon = icon } end
         return adaptHost(createTab(self, props))
     end
+    adaptHost(window.SettingsTab)
+    local changeTheme = window.ChangeTheme
+    function window:ChangeTheme(theme)
+        changeTheme(self, Themes.resolve(theme) or theme)
+        self.ThemeId = type(theme) == "string" and theme:lower() or nil
+        if p.rememberTheme ~= false then
+            self.UIPreferences.theme = self.ThemeId
+            Preferences.save(self)
+        end
+        if self.ThemeGallery then self.ThemeGallery:_refreshTheme() end
+        if self._conexaoModal and self._conexaoModal.RefreshTheme then self._conexaoModal:RefreshTheme() end
+    end
+    Profile.attach(window, executorInfo, self.Version)
+    Settings.attach(window)
+    local hide = window.Hide
+    function window:Hide(...)
+        if self._conexaoModal then self._conexaoModal:Close() end
+        return hide(self, ...)
+    end
     local unload = window.Unload
     function window:Unload()
         if self.unloaded then return end
+        if self._conexaoModal then self._conexaoModal:Close() end
         if self.configuration.autoSave and (not self.configuration.autoLoad or self._autoLoaded) then pcall(self.Save, self) end
         unload(self)
         if windows[id] == self then windows[id] = nil end

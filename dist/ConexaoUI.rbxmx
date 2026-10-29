@@ -1,15 +1,26 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.0 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.1 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local Gen2 = require(script.Gen2)
+local DropdownPanel = require(script.Features.Dropdown)
+local Profile = require(script.Features.Profile)
+local Themes = require(script.Features.Themes)
+local Preferences = require(script.Features.Preferences)
+local Settings = require(script.Features.Settings)
 
-export type Window = Gen2.Window
-export type WindowProps = Gen2.WindowProps
+export type Window = Gen2.Window &amp; {
+    OpenSettings: (self: any) -&gt; (),
+    OpenProfile: (self: any) -&gt; any,
+    OpenThemes: (self: any) -&gt; any,
+    SettingsTab: Gen2.Tab,
+    ThemeId: string?,
+}
+export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: boolean? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.0.0", UpstreamVersion = "1.2.1", Windows = {} }
+local Library = { Version = "3.1.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -19,14 +30,17 @@ if type(env.__CONEXAO_UI_V3_WINDOWS) ~= "table" then env.__CONEXAO_UI_V3_WINDOWS
 local windows = env.__CONEXAO_UI_V3_WINDOWS
 
 local function executor()
+    local environment = game:GetService("RunService"):IsStudio() and "Roblox Studio" or "Roblox"
     for _, name in ipairs({ "identifyexecutor", "getexecutorname" }) do
         local fn = env[name] or getfenv()[name]
         if type(fn) == "function" then
-            local ok, value = pcall(fn)
-            if ok and type(value) == "string" and value ~= "" then return value end
+            local ok, value, version = pcall(fn)
+            if ok and type(value) == "string" and value ~= "" then
+                return { name = value, version = type(version) == "string" and version or nil, environment = environment }
+            end
         end
     end
-    return game:GetService("RunService"):IsStudio() and "Roblox Studio" or "Cliente Roblox"
+    return { name = environment == "Roblox Studio" and environment or "Não identificado", environment = environment }
 end
 
 local function properties(value)
@@ -40,6 +54,12 @@ local function properties(value)
 end
 
 local function adaptHost(host)
+    if host._conexaoAdapted then return host end
+    host._conexaoAdapted = true
+    for _, element in ipairs(host.elements or {}) do
+        if element.__type == "Dropdown" then DropdownPanel.attach(element)
+        elseif element.__type == "Group" then adaptHost(element) end
+    end
     for _, kind in ipairs({ "Button", "Toggle", "Slider", "Dropdown", "Input", "Keybind", "ColorPicker", "Text", "Progress", "Console", "Stat", "Divider", "Section", "Group" }) do
         local method = host["Create" .. kind]
         if method then
@@ -49,6 +69,7 @@ local function adaptHost(host)
                 local control = method(self, mapped)
                 if control then
                     if kind == "Group" then adaptHost(control) end
+                    if kind == "Dropdown" then DropdownPanel.attach(control, mapped) end
                     if control.Set then
                         control.SetValue = function(c, value) return c:Set(value) end
                         control.GetValue = function(c)
@@ -72,15 +93,21 @@ function Library:CreateWindow(options)
     p.name = p.name or p.Name or p.Title or "Conexão UI"
     p.showName = p.showName or p.ShowName or p.name
     if p.sidebarLayout == nil and p.SidebarLayout == nil then p.sidebarLayout = true end
-    p.profile = p.profile or p.Profile or executor()
+    local executorInfo = executor()
+    p.profile = p.profile or p.Profile or executorInfo.name
     local cfg = table.clone(p.configuration or p.Configuration or {})
     local old = p.Config or {}
     if cfg.autoSave == nil then cfg.autoSave = cfg.AutoSave end
     if cfg.autoLoad == nil then cfg.autoLoad = cfg.AutoLoad end
-    if cfg.autoSave == nil then cfg.autoSave = old.Enabled ~= false end
-    if cfg.autoLoad == nil then cfg.autoLoad = true end
     cfg.fileName = cfg.fileName or cfg.FileName or old.Name or ((p.Id or p.name) .. "-" .. tostring(game.PlaceId))
     cfg.customFolder = cfg.customFolder or cfg.CustomFolder
+    local preferences, preferencesDir, preferencesPath = Preferences.load(cfg, p.name)
+    if cfg.autoSave == nil then cfg.autoSave = if old.Enabled ~= nil then old.Enabled ~= false elseif preferences.autoSave ~= nil then preferences.autoSave else true end
+    if cfg.autoLoad == nil then cfg.autoLoad = if preferences.autoLoad ~= nil then preferences.autoLoad else true end
+    local requestedTheme = p.theme or p.Theme or "conexao"
+    local themeId = if type(requestedTheme) == "string" then requestedTheme:lower() else nil
+    if p.rememberTheme ~= false and type(requestedTheme) ~= "table" and Themes.entry(preferences.theme) then themeId = preferences.theme end
+    p.theme = Themes.resolve(themeId) or requestedTheme
     p.configuration = cfg
     local id = tostring(p.Id or p.name)
     if windows[id] and not windows[id].unloaded then windows[id]:Unload() end
@@ -88,15 +115,37 @@ function Library:CreateWindow(options)
     windows[id] = window
     self.Windows[id] = window
     window.SettingsTab = window.rfSettings
+    window.UIPreferences, window._preferencesDir, window._preferencesPath = preferences, preferencesDir, preferencesPath
+    window.ThemeId = themeId
     window.screenGui.Name = "ConexaoUI3_" .. id
     local createTab = window.CreateTab
     function window:CreateTab(props, icon)
         if type(props) == "string" then props = { name = props, icon = icon } end
         return adaptHost(createTab(self, props))
     end
+    adaptHost(window.SettingsTab)
+    local changeTheme = window.ChangeTheme
+    function window:ChangeTheme(theme)
+        changeTheme(self, Themes.resolve(theme) or theme)
+        self.ThemeId = type(theme) == "string" and theme:lower() or nil
+        if p.rememberTheme ~= false then
+            self.UIPreferences.theme = self.ThemeId
+            Preferences.save(self)
+        end
+        if self.ThemeGallery then self.ThemeGallery:_refreshTheme() end
+        if self._conexaoModal and self._conexaoModal.RefreshTheme then self._conexaoModal:RefreshTheme() end
+    end
+    Profile.attach(window, executorInfo, self.Version)
+    Settings.attach(window)
+    local hide = window.Hide
+    function window:Hide(...)
+        if self._conexaoModal then self._conexaoModal:Close() end
+        return hide(self, ...)
+    end
     local unload = window.Unload
     function window:Unload()
         if self.unloaded then return end
+        if self._conexaoModal then self._conexaoModal:Close() end
         if self.configuration.autoSave and (not self.configuration.autoLoad or self._autoLoaded) then pcall(self.Save, self) end
         unload(self)
         if windows[id] == self then windows[id] = nil end
@@ -20103,4 +20152,660 @@ function windowSizing.fit(viewport: Vector2?, mode: layouts.Mode?): UDim2
 end
 
 return windowSizing
-</ProtectedString></Properties></Item></Item></Item></Item></roblox>
+</ProtectedString></Properties></Item></Item></Item><Item class="Folder"><Properties><string name="Name">Features</string></Properties><Item class="ModuleScript"><Properties><string name="Name">Dropdown</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
+local Surface = require(script.Parent.Surface)
+local Dropdown = {}
+
+function Dropdown.attach(control, props)
+    if control._conexaoDropdown then return control end
+    control._conexaoDropdown = true
+    local default
+    if props then default = props.value or props.Value or props.currentOption or props.CurrentOption
+    else default = control.value end
+    if type(default) == "string" then default = { default } end
+    default = type(default) == "table" and table.clone(default) or {}
+    control.defaultValue = default
+    control.panel.Visible = false
+
+    function control:_close()
+        if self.selectionPanel then self.selectionPanel:Close() end
+        self._isOpen = false
+        self.chevron.Rotation = 180
+    end
+    function control:_open()
+        if self._isOpen or self.locked or self.window.unloaded then return end
+        local w = self.window
+        local modal = Surface.new(w, self.name, self.multiSelect and "Escolha uma ou mais opções" or "Escolha uma opção", { footer = true })
+        self.selectionPanel, self._isOpen = modal, true
+        self.chevron.Rotation = 0
+        modal.onClose = function()
+            self.selectionPanel, self._isOpen = nil, false
+            if self.chevron.Parent then self.chevron.Rotation = 180 end
+        end
+        modal:Connect(self.main.Destroying, function() modal:Close() end)
+        modal.search = w:Create("TextBox", {
+            Name = "Filter", Parent = modal.content, Size = UDim2.new(1, 0, 0, 40),
+            Text = "", PlaceholderText = "Buscar opção...", ClearTextOnFocus = false,
+            TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0,
+            BackgroundTransparency = 0.88, ZIndex = 4016,
+        }, { TextColor3 = "ContentColor", FontFace = "Font", BackgroundColor3 = "AccentColor", PlaceholderColor3 = "PlaceholderColor" })
+        Surface.round(w, modal.search, 11)
+        w:Create("UIPadding", { Parent = modal.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+        modal.list = w:Create("ScrollingFrame", {
+            Parent = modal.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
+            BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
+            ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 4012,
+        }, { ScrollBarImageColor3 = "AccentColor" })
+        modal.grid = w:Create("UIGridLayout", {
+            Parent = modal.list, CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.5, -7, 0, 50),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        })
+        w:Create("UIPadding", { Parent = modal.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
+        modal.empty = Surface.label(w, modal.content, "Nenhuma opção encontrada", {
+            Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
+        })
+        modal.items, modal.optionConnections = {}, {}
+        function modal:Sync()
+            if self.closed then return end
+            local query, count = string.lower(self.search.Text), 0
+            for _, item in ipairs(self.items) do
+                local chosen = table.find(control.value, item.name) ~= nil
+                item.frame.Visible = query == "" or string.find(string.lower(item.name), query, 1, true) ~= nil
+                if item.frame.Visible then count += 1 end
+                item.frame.BackgroundTransparency = chosen and 0.65 or 0.95
+                item.stroke.Transparency = chosen and 0.15 or 0.7
+                item.marker.Text = chosen and "✓" or ""
+                item.label.TextTransparency = chosen and 0 or 0.15
+            end
+            self.empty.Visible = count == 0
+            self.subtitle.Text = control.multiSelect and (tostring(#control.value) .. " selecionadas · " .. tostring(count) .. " opções") or "Escolha uma opção"
+        end
+        function modal:Rebuild()
+            if self.closed then return end
+            w:DisconnectMany(self, self.optionConnections)
+            self.optionConnections = {}
+            local roots = {}
+            for _, item in ipairs(self.items) do table.insert(roots, item.frame) end
+            w:DestroySubtrees(roots)
+            self.items = {}
+            for index, name in ipairs(control.options) do
+                local frame = w:Create("Frame", {
+                    Name = name, Parent = self.list, BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
+                }, { BackgroundColor3 = "AccentColor" })
+                Surface.round(w, frame, 12)
+                local stroke = w:Create("UIStroke", { Parent = frame, Thickness = 1 }, { Color = "AccentStroke" })
+                local label = Surface.label(w, frame, name, {
+                    Position = UDim2.fromOffset(12, 4), Size = UDim2.new(1, -46, 1, -8), TextSize = 13,
+                })
+                local marker = Surface.label(w, frame, "", {
+                    AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(22, 22), TextSize = 18,
+                })
+                local hit = w:Create("TextButton", {
+                    Parent = frame, Text = "", BackgroundTransparency = 1, AutoButtonColor = false,
+                    Size = UDim2.fromScale(1, 1), ZIndex = 4017,
+                })
+                local item = { name = name, frame = frame, label = label, marker = marker, stroke = stroke, hit = hit }
+                table.insert(self.items, item)
+                table.insert(self.optionConnections, self:Connect(hit.MouseButton1Click, function()
+                    if control.locked then return end
+                    if control.multiSelect then
+                        local value = table.clone(control.value)
+                        local at = table.find(value, name)
+                        if at then table.remove(value, at) else table.insert(value, name) end
+                        control:Set(value)
+                    else
+                        control:Set(name)
+                        self:Close()
+                    end
+                end))
+            end
+            self:Sync()
+        end
+        modal:Connect(modal.search:GetPropertyChangedSignal("Text"), function()
+            modal.list.CanvasPosition = Vector2.new(0, 0)
+            modal:Sync()
+        end)
+        local actions = {
+            { "Padrão", function() control:Set(table.clone(default)) end },
+            { "Limpar", function() control:Set({}) end },
+        }
+        if self.multiSelect then table.insert(actions, { "Selecionar todos", function() control:Set(table.clone(control.options)) end }) end
+        modal.actions = {}
+        for index, action in ipairs(actions) do
+            local button = Surface.button(w, modal.footer, action[1], {
+                Position = UDim2.new((index - 1) / #actions, index == 1 and 0 or 3, 0, 0),
+                Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 12,
+            }, index == #actions)
+            modal.actions[index] = button
+            modal:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
+        end
+        modal.onLayout = function(width)
+            local cols = width &lt; 420 and 1 or 2
+            modal.grid.CellSize = UDim2.new(1 / cols, cols == 1 and -8 or -9, 0, 50)
+        end
+        modal:Layout()
+        modal:Rebuild()
+    end
+    -- The inline card remains collapsed, even when the native methods refresh/filter options.
+    control._resizeToOptions = function() end
+    for _, name in ipairs({ "Set", "Refresh", "Add", "Remove" }) do
+        local original = control[name]
+        control[name] = function(self, ...)
+            local result = original(self, ...)
+            if self.selectionPanel then
+                if name == "Set" then self.selectionPanel:Sync() else self.selectionPanel:Rebuild() end
+            end
+            return result
+        end
+    end
+    control.Open, control.Close = control._open, control._close
+    return control
+end
+
+return Dropdown
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Preferences</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+local utility = script.Parent.Parent.Gen2.utility
+local files = require(utility.filesystem)
+local atomic = require(utility.persistenceWrite)
+local paths = require(utility.persistencePaths)
+local http = game:GetService("HttpService")
+local Preferences = {}
+
+function Preferences.load(configuration, name)
+    local dir, configPath = paths.getConfigPath({ configuration = configuration, name = name })
+    local path = configPath .. ".ui.json"
+    local function read(file)
+        local ok, value = pcall(function() return http:JSONDecode(files.readfile(file)) end)
+        if ok and type(value) == "table" and value.version == 1 then return value end
+    end
+    local data = read(path) or read(atomic.tempPathFor(path)) or {}
+    local state = { version = 1 }
+    if type(data.theme) == "string" then state.theme = data.theme end
+    if type(data.autoSave) == "boolean" then state.autoSave = data.autoSave end
+    if type(data.autoLoad) == "boolean" then state.autoLoad = data.autoLoad end
+    return state, dir, path
+end
+
+function Preferences.save(window)
+    local state = window.UIPreferences
+    state.autoSave, state.autoLoad = window.configuration.autoSave, window.configuration.autoLoad
+    local ok = pcall(function()
+        atomic.write(window._preferencesDir, window._preferencesPath, http:JSONEncode(state))
+    end)
+    window.PreferencesSaved = ok
+    if window.RefreshSaveStatus then window:RefreshSaveStatus() end
+    return ok
+end
+
+function Preferences.storage()
+    if game:GetService("RunService"):IsStudio() then return "Sessão do Studio", false end
+    local env = getfenv()
+    for _, name in ipairs({ "writefile", "readfile", "isfile", "isfolder", "makefolder", "listfiles", "delfile", "delfolder" }) do
+        if type(env[name]) ~= "function" then return "Arquivos indisponíveis", false end
+    end
+    return "Arquivos no dispositivo", true
+end
+
+return Preferences
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Profile</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+local Surface = require(script.Parent.Surface)
+local Preferences = require(script.Parent.Preferences)
+local image = require(script.Parent.Parent.Gen2.utility.image)
+local Profile = {}
+
+function Profile.attach(window, executorInfo, version)
+    window.ExecutorInfo = executorInfo
+    function window:OpenProfile()
+        if self.unloaded then return end
+        local player = game:GetService("Players").LocalPlayer
+        if not player then return end
+        local modal = Surface.new(self, "Seu perfil", "Informações deste cliente", { width = 470, height = 570 })
+        local list = self:Create("ScrollingFrame", {
+            Parent = modal.content, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ZIndex = 4012,
+        }, { ScrollBarImageColor3 = "AccentColor" })
+        self:Create("UIListLayout", { Parent = list, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+        local header = self:Create("Frame", {
+            Parent = list, Size = UDim2.new(1, -6, 0, 88), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 4013,
+        })
+        modal.avatar = self:Create("ImageLabel", {
+            Parent = header, Position = UDim2.fromOffset(2, 2), Size = UDim2.fromOffset(72, 72),
+            BackgroundTransparency = 1, ZIndex = 4014,
+            Image = image.avatar(player.UserId, function(uri)
+                if not modal.closed and modal.avatar then image.assign(modal.avatar, "Image", uri) end
+            end),
+        })
+        Surface.round(self, modal.avatar, 36)
+        modal.playerName = Surface.label(self, header, player.DisplayName, {
+            Position = UDim2.fromOffset(90, 8), Size = UDim2.new(1, -96, 0, 28), TextSize = 20,
+        })
+        Surface.label(self, header, "@" .. player.Name, {
+            Position = UDim2.fromOffset(90, 39), Size = UDim2.new(1, -96, 0, 22), TextTransparency = 0.25,
+        })
+        local storage = Preferences.storage()
+        modal.details = {
+            { "ID do jogador", tostring(player.UserId) },
+            { "Executor", executorInfo.name },
+            { "Versão do executor", executorInfo.version or "Não informada" },
+            { "Ambiente", executorInfo.environment },
+            { "Conexão UI", version },
+            { "Armazenamento", storage },
+        }
+        for index, detail in ipairs(modal.details) do
+            local row = self:Create("Frame", {
+                Parent = list, Size = UDim2.new(1, -6, 0, 48), BackgroundTransparency = 0.94,
+                BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
+            }, { BackgroundColor3 = "AccentColor" })
+            Surface.round(self, row, 10)
+            Surface.label(self, row, detail[1], {
+                Position = UDim2.fromOffset(12, 4), Size = UDim2.new(0.45, -12, 1, -8), TextSize = 12, TextTransparency = 0.3,
+            })
+            Surface.label(self, row, detail[2], {
+                Position = UDim2.new(0.45, 0, 0, 4), Size = UDim2.new(0.55, -12, 1, -8),
+                TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right,
+            })
+        end
+        return modal
+    end
+    if window.profile then
+        window.ProfileButton = window:Create("TextButton", {
+            Name = "OpenProfile", Parent = window.profile, Text = "", AutoButtonColor = false,
+            BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 120,
+        })
+        window:Connect(window.ProfileButton.MouseButton1Click, function() window:OpenProfile() end)
+    end
+end
+
+return Profile
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Settings</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+local Surface = require(script.Parent.Surface)
+local Themes = require(script.Parent.Themes)
+local Preferences = require(script.Parent.Preferences)
+local Settings = {}
+
+-- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
+local function cards(window, parent, owner, entries, z)
+    local results = {}
+    for index, entry in ipairs(entries) do
+        local theme = entry.theme
+        local card = window:Create("Frame", {
+            Parent = parent, Name = entry.id, LayoutOrder = index, BorderSizePixel = 0,
+            BackgroundColor3 = theme.StatBackground, ZIndex = z,
+        })
+        Surface.round(window, card, 12)
+        local stroke = window:Create("UIStroke", { Parent = card, Color = theme.AccentStroke, Transparency = 0.8, Thickness = 1 })
+        local mini = window:Create("Frame", {
+            Parent = card, Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 0, 90),
+            BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = z + 1,
+        })
+        Surface.round(window, mini, 8)
+        window:Create("UIGradient", { Parent = mini, Color = theme.WindowColor, Rotation = 35 })
+        local rail = window:Create("Frame", {
+            Parent = mini, Position = UDim2.fromOffset(7, 7), Size = UDim2.new(0.23, 0, 1, -14),
+            BackgroundColor3 = theme.NeutralButton, BorderSizePixel = 0, ZIndex = z + 2,
+        })
+        Surface.round(window, rail, 5)
+        for line = 1, 3 do
+            local pill = window:Create("Frame", {
+                Parent = rail, Position = UDim2.new(0, 4, 0, 8 + (line - 1) * 17), Size = UDim2.new(1, -8, 0, 9),
+                BackgroundColor3 = line == 1 and theme.AccentColor or theme.ContentColor,
+                BackgroundTransparency = line == 1 and 0 or 0.84, BorderSizePixel = 0, ZIndex = z + 3,
+            })
+            Surface.round(window, pill, 3)
+        end
+        local heading = window:Create("Frame", {
+            Parent = mini, Position = UDim2.new(0.3, 0, 0, 12), Size = UDim2.new(0.4, 0, 0, 5),
+            BackgroundColor3 = theme.ContentColor, BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = z + 2,
+        })
+        Surface.round(window, heading, 2)
+        local track = window:Create("Frame", {
+            Parent = mini, Position = UDim2.new(0.3, 0, 0, 34), Size = UDim2.new(0.59, 0, 0, 7),
+            BackgroundColor3 = theme.SliderBackground, BorderSizePixel = 0, ZIndex = z + 2,
+        })
+        Surface.round(window, track, 4)
+        local progress = window:Create("Frame", {
+            Parent = track, Size = UDim2.new(0.68, 0, 1, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = z + 3,
+        })
+        Surface.round(window, progress, 4)
+        window:Create("UIGradient", { Parent = progress, Color = theme.SliderProgress })
+        local toggle = window:Create("Frame", {
+            Parent = mini, Position = UDim2.new(0.3, 0, 0, 57), Size = UDim2.fromOffset(32, 16),
+            BackgroundColor3 = theme.AccentColor, BorderSizePixel = 0, ZIndex = z + 2,
+        })
+        Surface.round(window, toggle, 8)
+        local knob = window:Create("Frame", {
+            Parent = toggle, Position = UDim2.fromOffset(17, 2), Size = UDim2.fromOffset(12, 12),
+            BackgroundColor3 = theme.ContentColor, BorderSizePixel = 0, ZIndex = z + 3,
+        })
+        Surface.round(window, knob, 6)
+        local title = Surface.label(window, card, entry.name, {
+            Position = UDim2.fromOffset(10, 105), Size = UDim2.new(1, -20, 0, 20), TextSize = 14, ZIndex = z + 2,
+        })
+        -- Labels belong to the preview's theme too, independent of the theme currently applied.
+        window.themeProperties[title].TextColor3 = nil
+        title.TextColor3 = theme.ContentColor
+        local description = Surface.label(window, card, entry.description, {
+            Position = UDim2.fromOffset(10, 127), Size = UDim2.new(1, -20, 0, 18), TextSize = 10, TextTransparency = 0.25, ZIndex = z + 2,
+        })
+        window.themeProperties[description].TextColor3 = nil
+        description.TextColor3 = theme.ContentColor
+        local selected = Surface.label(window, mini, "✓", {
+            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -5, 0, 3), Size = UDim2.fromOffset(22, 22),
+            TextSize = 20, ZIndex = z + 4, TextXAlignment = Enum.TextXAlignment.Center,
+        })
+        local hit = window:Create("TextButton", {
+            Parent = card, Text = "", BackgroundTransparency = 1, AutoButtonColor = false,
+            Size = UDim2.fromScale(1, 1), ZIndex = z + 5,
+        })
+        owner:Connect(hit.MouseButton1Click, function() window:ChangeTheme(entry.id) end)
+        table.insert(results, { id = entry.id, frame = card, stroke = stroke, selected = selected, hit = hit })
+    end
+    return results
+end
+
+local function selection(window, entries)
+    for _, item in ipairs(entries) do
+        local active = item.id == window.ThemeId
+        item.stroke.Transparency, item.stroke.Thickness = active and 0 or 0.75, active and 2 or 1
+        item.selected.Visible = active
+    end
+end
+
+function Settings.openThemes(window)
+    local modal = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.", { width = 570, height = 650 })
+    local scroll = window:Create("ScrollingFrame", {
+        Parent = modal.content, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ZIndex = 4012,
+    }, { ScrollBarImageColor3 = "AccentColor" })
+    local grid = window:Create("UIGridLayout", {
+        Parent = scroll, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.new(0.5, -10, 0, 156), SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+    window:Create("UIPadding", { Parent = scroll, PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 4) })
+    modal.cards = cards(window, scroll, modal, Themes.catalog, 4013)
+    function modal:RefreshTheme() selection(window, self.cards) end
+    modal.onLayout = function(width)
+        local columns = width &lt; 420 and 1 or 2
+        grid.CellSize = UDim2.new(1 / columns, columns == 1 and -12 or -13, 0, 156)
+    end
+    modal:Layout()
+    modal:RefreshTheme()
+    return modal
+end
+
+local function gallery(window, tab)
+    local self = { window = window, tab = tab, name = "Temas com prévia", __type = "ThemeGallery", connections = {} }
+    function self:Connect(signal, callback) return window:ConnectFor(self, signal, callback) end
+    self.main = window:Create("Frame", {
+        Name = "ThemeGallery", Parent = tab.tabPage, Size = UDim2.new(1, -20, 0, 600),
+        BackgroundTransparency = 1, BorderSizePixel = 0,
+    })
+    Surface.label(window, self.main, "TEMAS COM PRÉVIA", { Position = UDim2.fromOffset(4, 0), TextSize = 13, ZIndex = 7 })
+    self.gridFrame = window:Create("Frame", {
+        Parent = self.main, BackgroundTransparency = 1, Position = UDim2.fromOffset(3, 32), Size = UDim2.new(1, -6, 1, -88), ZIndex = 7,
+    })
+    self.grid = window:Create("UIGridLayout", {
+        Parent = self.gridFrame, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.new(0.5, -6, 0, 156), SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+    local featured = {}
+    for i = 1, 6 do featured[i] = Themes.catalog[i] end
+    self.cards = cards(window, self.gridFrame, self, featured, 7)
+    self.more = Surface.button(window, self.main, "Ver todos os temas · 12 prévias", {
+        Position = UDim2.new(0, 3, 1, -44), Size = UDim2.new(1, -6, 0, 40), ZIndex = 12,
+    })
+    self:Connect(self.more.MouseButton1Click, function() Settings.openThemes(window) end)
+    function self:Layout()
+        local width = self.main.AbsoluteSize.X
+        if width &lt;= 0 then width = 500 end
+        local columns = width &lt; 380 and 1 or (width &gt;= 690 and 3 or 2)
+        self.grid.CellSize = UDim2.new(1 / columns, (columns - 1) * -12 / columns, 0, 156)
+        self.main.Size = UDim2.new(1, -20, 0, 88 + math.ceil(#self.cards / columns) * 168 - 12)
+    end
+    self:Connect(self.main:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
+    function self:_refreshTheme() selection(window, self.cards) end
+    function self:_setShown(shown) self.main.Visible = shown end
+    self:Layout()
+    self:_refreshTheme()
+    return tab:_register(self)
+end
+
+function Settings.attach(window)
+    local tab = window.SettingsTab
+    tab.name, tab.tabPage.Name = "Configurações", "Configurações"
+    local first = #tab.elements + 1
+    local mode, persistent = Preferences.storage()
+    local status = tab:CreateText({ name = "Salvamento automático", text = mode })
+    window.SaveStatus = { mode = mode, persistent = persistent, success = nil }
+    function window:RefreshSaveStatus()
+        if self.unloaded then return end
+        local enabled = self.configuration.autoSave and "Ativado" or "Desativado"
+        local result = self.SaveStatus.success == nil and "" or (self.SaveStatus.success and " · Alterações salvas" or " · Falha ao salvar")
+        if self.PreferencesSaved == false then result ..= " · Preferências não salvas" end
+        status:Set(enabled .. " · " .. mode .. result)
+    end
+    local save = window.Save
+    function window:Save(...)
+        local ok, result = pcall(save, self, ...)
+        self.SaveStatus.success = ok and result == true
+        self:RefreshSaveStatus()
+        return self.SaveStatus.success
+    end
+    window.SaveConfig = window.Save
+    window.AutoSaveToggle = tab:CreateToggle({ name = "Salvar escolhas automaticamente", value = window.configuration.autoSave, callback = function(value)
+        window.configuration.autoSave = value
+        Preferences.save(window)
+        if value then window:Save() else window:RefreshSaveStatus() end
+    end })
+    window.AutoLoadToggle = tab:CreateToggle({ name = "Restaurar escolhas ao executar", value = window.configuration.autoLoad, callback = function(value)
+        window.configuration.autoLoad = value
+        Preferences.save(window)
+    end })
+    tab:CreateButton({ name = "Salvar agora", callback = function()
+        window:Toast({ title = window:Save() and "Escolhas salvas" or "Não foi possível salvar" })
+    end })
+    tab:CreateButton({ name = "Ver meu perfil", callback = function() window:OpenProfile() end })
+    window.ThemeGallery = gallery(window, tab)
+    local added = {}
+    for index = first, #tab.elements do table.insert(added, tab.elements[index]) end
+    for index, element in ipairs(added) do tab:_moveElement(element, index) end
+    window:RefreshSaveStatus()
+    function window:OpenThemes() return Settings.openThemes(self) end
+    function window:OpenSettings() if self._conexaoModal then self._conexaoModal:Close() end self.SettingsTab:Select() end
+end
+
+return Settings
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Surface</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Shared, tracked overlay. All geometry is in the same coordinate space as the window.
+local Surface = {}
+Surface.__index = Surface
+local input = game:GetService("UserInputService")
+
+function Surface.round(window, parent, radius)
+    return window:Create("UICorner", { Parent = parent, CornerRadius = UDim.new(0, radius or 12) })
+end
+
+function Surface.label(window, parent, text, props)
+    local p = {
+        Parent = parent, Text = text, BackgroundTransparency = 1, BorderSizePixel = 0,
+        TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
+        Size = UDim2.new(1, 0, 0, 22), ZIndex = 4014,
+    }
+    for key, value in pairs(props or {}) do p[key] = value end
+    return window:Create("TextLabel", p, { TextColor3 = "ContentColor", FontFace = "Font" })
+end
+
+function Surface.button(window, parent, text, props, primary)
+    local p = {
+        Parent = parent, Text = text, BorderSizePixel = 0, AutoButtonColor = false,
+        TextSize = 14, TextWrapped = true, Size = UDim2.new(1, 0, 0, 42), ZIndex = 4015,
+    }
+    for key, value in pairs(props or {}) do p[key] = value end
+    local button = window:Create("TextButton", p, {
+        BackgroundColor3 = primary and "AccentColor" or "NeutralButton",
+        TextColor3 = primary and { "AccentColor", function(color)
+            return (color.R * 0.299 + color.G * 0.587 + color.B * 0.114) &gt; 0.58 and Color3.fromRGB(12, 17, 25) or Color3.new(1, 1, 1)
+        end } or "ContentColor", FontFace = "Font",
+    })
+    Surface.round(window, button, 11)
+    window:Create("UIStroke", { Parent = button, Thickness = 1, Transparency = 0.55 }, {
+        Color = primary and "AccentStroke" or "NeutralButtonStroke",
+    })
+    return button
+end
+
+function Surface.new(window, title, subtitle, options)
+    if window._conexaoModal then window._conexaoModal:Close() end
+    options = options or {}
+    local self = setmetatable({ window = window, connections = {}, closed = false }, Surface)
+    window._conexaoModal = self
+    self.root = window:Create("Frame", {
+        Name = "ConexaoOverlay", Parent = window.screenGui, BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1), ZIndex = 4000,
+    })
+    self.scrim = window:Create("TextButton", {
+        Parent = self.root, Size = UDim2.fromScale(1, 1), Text = "", AutoButtonColor = false,
+        BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4,
+        BorderSizePixel = 0, Active = true, Modal = true, ZIndex = 4001,
+    })
+    self.panel = window:Create("Frame", {
+        Name = "Panel", Parent = self.root, AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Active = true, ZIndex = 4010,
+    })
+    -- A blank area inside the panel must not click through to the outside-dismiss target.
+    self.shield = window:Create("TextButton", {
+        Parent = self.panel, Size = UDim2.fromScale(1, 1), Text = "", BackgroundTransparency = 1,
+        BorderSizePixel = 0, AutoButtonColor = false, Active = true, ZIndex = 4011,
+    })
+    Surface.round(window, self.panel, 18)
+    window:Create("UIGradient", { Parent = self.panel, Rotation = 35 }, { Color = "WindowColor" })
+    window:Create("UIStroke", { Parent = self.panel, Thickness = 1.5, Transparency = 0.2 }, { Color = "AccentStroke" })
+    self.title = Surface.label(window, self.panel, title, {
+        Position = UDim2.fromOffset(20, 18), Size = UDim2.new(1, -82, 0, 25), TextSize = 21,
+    })
+    self.subtitle = Surface.label(window, self.panel, subtitle or "", {
+        Position = UDim2.fromOffset(20, 47), Size = UDim2.new(1, -82, 0, 26), TextSize = 12, TextTransparency = 0.25,
+    })
+    self.closeButton = Surface.button(window, self.panel, "×", {
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.fromOffset(36, 36), TextSize = 24,
+    })
+    self.content = window:Create("Frame", {
+        Parent = self.panel, BackgroundTransparency = 1, Position = UDim2.fromOffset(18, 88),
+        Size = UDim2.new(1, -36, 1, options.footer and -164 or -108), ZIndex = 4011,
+    })
+    if options.footer then
+        self.footer = window:Create("Frame", {
+            Parent = self.panel, BackgroundTransparency = 1, Position = UDim2.new(0, 18, 1, -60),
+            Size = UDim2.new(1, -36, 0, 42), ZIndex = 4011,
+        })
+    end
+    function self:Layout()
+        if self.closed then return end
+        local view = self.root.AbsoluteSize
+        if view.X &lt;= 0 or view.Y &lt;= 0 then
+            local camera = workspace.CurrentCamera
+            view = camera and camera.ViewportSize or Vector2.new(800, 600)
+        end
+        local at, size = window.main.AbsolutePosition, window.main.AbsoluteSize
+        if size.X &lt;= 0 or size.Y &lt;= 0 then size = Vector2.new(700, 520) at = (view - size) / 2 end
+        local width = math.max(1, math.min(options.width or 510, size.X - 24, view.X - 24))
+        local height = math.max(1, math.min(options.height or 570, size.Y - 24, view.Y - 24))
+        local x = at.X + size.X - 12 - width / 2
+        local y = at.Y + size.Y / 2
+        x = math.clamp(x, width / 2 + 12, math.max(width / 2 + 12, view.X - width / 2 - 12))
+        y = math.clamp(y, height / 2 + 12, math.max(height / 2 + 12, view.Y - height / 2 - 12))
+        self.panel.Size = UDim2.fromOffset(width, height)
+        self.panel.Position = UDim2.fromOffset(x, y)
+        if self.onLayout then self.onLayout(width, height) end
+    end
+    self:Connect(self.scrim.MouseButton1Click, function() self:Close() end)
+    self:Connect(self.closeButton.MouseButton1Click, function() self:Close() end)
+    self:Connect(input.InputBegan, function(key)
+        if key.KeyCode == Enum.KeyCode.Escape then self:Close() end
+    end)
+    self:Connect(self.root:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
+    self:Connect(window.main:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
+    self:Connect(window.main:GetPropertyChangedSignal("AbsolutePosition"), function() self:Layout() end)
+    self:Layout()
+    local scale = window:Create("UIScale", { Parent = self.panel, Scale = 0.96 })
+    game:GetService("TweenService"):Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+    return self
+end
+
+function Surface:Connect(signal, callback)
+    return self.window:ConnectFor(self, signal, callback)
+end
+
+function Surface:Close()
+    if self.closed then return end
+    self.closed = true
+    if self.window._conexaoModal == self then self.window._conexaoModal = nil end
+    self.window:DisconnectMany(self, table.clone(self.connections))
+    if self.onClose then self.onClose() end
+    self.window:DestroySubtree(self.root)
+end
+
+return Surface
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Themes</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+local native = script.Parent.Parent.Gen2.themes
+local Themes = {}
+local rgb = Color3.fromRGB
+local presets = {
+    { "conexao", "Conexão", "Violeta elétrico", rgb(155, 72, 255), rgb(71, 112, 255), rgb(17, 13, 29), rgb(38, 23, 61) },
+    { "aurora", "Aurora", "Verde e turquesa", rgb(24, 225, 177), rgb(28, 147, 239), rgb(8, 21, 25), rgb(15, 46, 49) },
+    { "oceano", "Oceano", "Azul e ciano", rgb(35, 158, 255), rgb(39, 225, 244), rgb(10, 17, 32), rgb(18, 37, 65) },
+    { "crepusculo", "Crepúsculo", "Coral e violeta", rgb(255, 130, 83), rgb(192, 73, 244), rgb(26, 14, 27), rgb(55, 27, 45) },
+    { "sakura", "Sakura", "Rosa e lavanda", rgb(248, 100, 179), rgb(177, 118, 255), rgb(28, 14, 28), rgb(56, 26, 49) },
+    { "onyx", "Ônix", "Dourado sobre carvão", rgb(244, 191, 77), rgb(255, 137, 67), rgb(17, 18, 22), rgb(38, 36, 32) },
+}
+Themes.catalog = {}
+local named = {}
+for _, p in ipairs(presets) do
+    local theme = table.clone(require(native["default"]))
+    local accent, secondary, base, raised = p[4], p[5], p[6], p[7]
+    theme.WindowColor = ColorSequence.new(base, raised)
+    theme.ShadowColor = base:Lerp(Color3.new(0, 0, 0), 0.5)
+    theme.ElementGradient = ColorSequence.new(base:Lerp(raised, 0.5), raised)
+    theme.ElementStroke = raised:Lerp(accent, 0.3)
+    theme.ElementStrokeGradient = ColorSequence.new(raised:Lerp(accent, 0.45), raised:Lerp(secondary, 0.25))
+    theme.ElementStrokeHover = accent
+    theme.TabBackground = ColorSequence.new(accent:Lerp(base, 0.35), secondary:Lerp(base, 0.6))
+    theme.TabStroke = ColorSequence.new(accent, secondary)
+    theme.SliderProgress = ColorSequence.new(accent, secondary)
+    theme.SliderBackground = raised:Lerp(accent, 0.1)
+    theme.SliderBackgroundHover = raised:Lerp(accent, 0.25)
+    theme.AccentColor, theme.AccentStroke, theme.DropdownHighlight = accent, accent:Lerp(Color3.new(1, 1, 1), 0.35), accent
+    theme.StatBackground, theme.NeutralButton = raised, raised
+    theme.NeutralButtonHover, theme.NeutralButtonStroke = raised:Lerp(accent, 0.25), accent
+    theme.ContentColor, theme.TitlingColor = rgb(248, 247, 255), rgb(255, 255, 255)
+    theme.ToggleKnobOff, theme.ToggleKnobOffTransparency = rgb(218, 220, 237), 0.12
+    theme.FieldBackground, theme.FieldGlow = accent, accent
+    theme.FieldTransparency, theme.PlaceholderColor = 0.91, rgb(181, 184, 207)
+    theme.SurfaceStroke = accent:Lerp(Color3.new(1, 1, 1), 0.45)
+    local entry = { id = p[1], name = p[2], description = p[3], theme = theme }
+    named[p[1]] = entry
+    table.insert(Themes.catalog, entry)
+end
+for _, id in ipairs({ "default", "amethyst", "cobalt", "ember", "frost", "rose" }) do
+    local theme = table.clone(require(native["default"]))
+    for key, value in pairs(require(native[id])) do theme[key] = value end
+    local entry = { id = id, name = id:sub(1, 1):upper() .. id:sub(2), description = "Gen2 original", theme = theme }
+    named[id] = entry
+    table.insert(Themes.catalog, entry)
+end
+
+function Themes.resolve(id)
+    local entry = type(id) == "string" and named[id:lower()]
+    return entry and table.clone(entry.theme) or nil
+end
+
+function Themes.entry(id) return type(id) == "string" and named[id:lower()] or nil end
+
+return Themes
+</ProtectedString></Properties></Item></Item></Item></roblox>
