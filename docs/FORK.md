@@ -8,4 +8,6 @@ A camada da Conexão adiciona configurações automáticas e limpeza entre reexe
 
 O visual final pode variar se o cliente não conseguir carregar os assets e as fontes utilizados pela base. Não foi produzida uma captura do cliente Roblox neste ambiente.
 
+Em 3.1.1, `Features/Responsive.luau` amplia o ajuste automático: aproveita a altura em celulares na vertical, usa o viewport da interface quando a câmera ainda não está pronta e atualiza o cartão de tamanho nas configurações. A coordenação com janelas ocultas/minimizadas mantém o comportamento de abertura do Gen2.
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

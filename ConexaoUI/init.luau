@@ -7,6 +7,7 @@ local Profile = require(script.Features.Profile)
 local Themes = require(script.Features.Themes)
 local Preferences = require(script.Features.Preferences)
 local Settings = require(script.Features.Settings)
+local Responsive = require(script.Features.Responsive)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
@@ -14,12 +15,13 @@ export type Window = Gen2.Window & {
     OpenThemes: (self: any) -> any,
     SettingsTab: Gen2.Tab,
     ThemeId: string?,
+    RefreshSize: (self: any) -> UDim2,
 }
 export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.1.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.1.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -135,6 +137,7 @@ function Library:CreateWindow(options)
         if self._conexaoModal and self._conexaoModal.RefreshTheme then self._conexaoModal:RefreshTheme() end
     end
     Profile.attach(window, executorInfo, self.Version)
+    Responsive.attach(window)
     Settings.attach(window)
     local hide = window.Hide
     function window:Hide(...)

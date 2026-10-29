@@ -154,6 +154,14 @@ function Settings.attach(window)
     local tab = window.SettingsTab
     tab.name, tab.tabPage.Name = "Configurações", "Configurações"
     local first = #tab.elements + 1
+    local sizeStatus = tab:CreateText({ name = "Tamanho automático", text = "Ajustando à sua tela..." })
+    window.SizeStatus = sizeStatus
+    function window:RefreshSizeStatus()
+        if self.unloaded or not self.SizeInfo then return end
+        local info = self.SizeInfo
+        sizeStatus:Set(string.format("Ativado · Janela %d × %d · Tela %d × %d. Ajusta ao girar o celular ou redimensionar a tela.", info.width, info.height, info.screenWidth, info.screenHeight))
+    end
+    window:RefreshSizeStatus()
     local mode, persistent = Preferences.storage()
     local status = tab:CreateText({ name = "Salvamento automático", text = mode })
     window.SaveStatus = { mode = mode, persistent = persistent, success = nil }

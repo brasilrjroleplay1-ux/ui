@@ -4,13 +4,54 @@ local function check(value, message) assert(value, message) checks += 1 end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.1.0", "new entry point is bundled")
+check(UI.Version == "3.1.1", "new entry point is bundled")
 local w = UI:CreateWindow({ Id = "BundleTest", name = "Conexão", theme = "amethyst" })
 check(w.layout.mode == "sidebar", "profile layout is automatic")
 check(w.configuration.autoSave and w.configuration.autoLoad, "configuration works without additional setup")
 check(w.profileText == "Roblox Studio", "profile subtitle comes from the runtime")
 check(w.settings.usageAnalytics == false, "the fork starts with analytics disabled")
 check(w.SettingsTab == w.rfSettings, "settings are provided by the actual Gen2 implementation")
+check(w.SizeStatus and w.SizeInfo.automatic, "settings and automatic sizing are included with CreateWindow alone")
+local originalCamera = workspace.CurrentCamera
+local camera = Instance.new("Camera")
+camera.ViewportSize = Vector2.new(1024, 768)
+workspace.CurrentCamera = camera
+workspace:GetPropertyChangedSignal("CurrentCamera"):Fire()
+local originalGuiSize = w.screenGui.AbsoluteSize
+local function resize(viewport)
+    w.screenGui.AbsoluteSize = viewport
+    camera.ViewportSize = viewport
+    -- Property events must be fired explicitly by this table-based Roblox shim.
+    camera:GetPropertyChangedSignal("ViewportSize"):Fire()
+end
+resize(Vector2.new(390, 844))
+check(w.size.X.Offset <= 366 and w.size.Y.Offset >= 500 and w.size.Y.Offset <= 772, "portrait phone uses its height while fitting within the screen")
+check(w.main.Size == w.size and w.SizeStatus.text:find("390 × 844", 1, true), "a viewport change resizes the window and refreshes the built-in settings status")
+resize(Vector2.new(844, 390))
+check(w.size.X.Offset <= 820 and w.size.Y.Offset <= 343, "phone rotation fits the new landscape viewport")
+w:Hide()
+local collapsedSize = w.main.Size
+resize(Vector2.new(390, 844))
+check(w.hidden and w.main.Size == collapsedSize, "rotation does not reopen a hidden window")
+w:Show()
+check(w.main.Size == w.size and w.size.Y.Offset >= 500, "reopening uses the most recent screen dimensions")
+local replacementCamera = Instance.new("Camera")
+replacementCamera.ViewportSize = Vector2.new(1024, 768)
+workspace.CurrentCamera = replacementCamera
+workspace:GetPropertyChangedSignal("CurrentCamera"):Fire()
+replacementCamera.ViewportSize = Vector2.new(360, 800)
+replacementCamera:GetPropertyChangedSignal("ViewportSize"):Fire()
+check(w.SizeInfo.screenWidth == 360 and w.size.X.Offset <= 336, "camera replacement keeps automatic resizing connected")
+replacementCamera.ViewportSize = Vector2.new(1, 1)
+w.screenGui.AbsoluteSize = Vector2.new(360, 800)
+w.screenGui:GetPropertyChangedSignal("AbsoluteSize"):Fire()
+check(w.SizeInfo.screenWidth == 360, "an initializing camera falls back to the actual GUI viewport")
+replacementCamera.ViewportSize = Vector2.new(240, 180)
+replacementCamera:GetPropertyChangedSignal("ViewportSize"):Fire()
+check(w.size.X.Offset <= 240 and w.size.Y.Offset <= 180, "even a small split-screen remains inside its viewport")
+workspace.CurrentCamera = originalCamera
+w.screenGui.AbsoluteSize = originalGuiSize
+workspace:GetPropertyChangedSignal("CurrentCamera"):Fire()
 local tab = w:CreateTab({ name = "Main", icon = 93364949241311 })
 local toggle = tab:CreateToggle({ Name = "Enabled", Id = "enabled", Default = true })
 local slider = tab:CreateSlider({ Name = "Amount", Id = "amount", Min = 0, Max = 100, Default = 25 })

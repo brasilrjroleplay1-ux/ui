@@ -1,4 +1,4 @@
-# Conexão UI 3.1 · Rayfield Gen2
+# Conexão UI 3.1.1 · Rayfield Gen2
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta dropdown em painel separado, perfil clicável, configurações automáticas e uma galeria de temas com prévias feitas na própria interface. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -39,9 +39,11 @@ tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "A", "B", "C" }, 
 - Salvamento e carregamento automáticos habilitados por padrão, incluindo toggles, sliders, dropdowns únicos/múltiplos, inputs, teclas e cores. Use `flag` estável e único por controle.
 - Seis novos temas com gradientes e cores mais vivas; os seis temas originais também continuam disponíveis. As prévias usam as mesmas cores aplicadas à janela.
 - Busca, notificações, toasts, popups, grupos, estatísticas, progresso e console da base oficial.
-- Redimensionamento responsivo da base Gen2. `sidebarLayout = false` usa o layout original com abas no topo.
+- Tamanho automático ativado desde `CreateWindow`: acompanha a resolução, o redimensionamento, a rotação do celular e a troca de câmera. No celular em pé, a janela aproveita a altura disponível. `sidebarLayout = false` usa o layout original com abas no topo.
 
 O botão de engrenagem abre as configurações. A tecla `K` mostra ou oculta a janela por padrão; esse atalho pode ser alterado nas configurações. `window.SettingsTab` expõe essa aba. As abas de exemplo pertencem ao script da demo.
+
+O cartão **Tamanho automático** já aparece nas configurações e mostra as medidas atuais da janela e da tela. Não é necessário definir largura/altura nem criar uma página de configurações no seu script. A janela oculta ou minimizada mantém esse estado durante a rotação e usa o tamanho atualizado quando é reaberta.
 
 ## Temas com prévia
 
