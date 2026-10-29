@@ -1,4 +1,4 @@
-# Conexão UI 3.2 · Rayfield Gen2
+# Conexão UI 3.3 · Rayfield Gen2
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -35,7 +35,7 @@ tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "A", "B", "C" }, 
 
 ## O que já vem pronto
 
-- Perfil da sidebar clicável: abre uma página dentro do painel principal, com avatar, nome de exibição, @usuário, ID, executor e versão quando informados pelo ambiente. O perfil mantém a navegação da sidebar e oferece um botão para voltar à aba anterior.
+- Perfil da sidebar clicável: abre uma página dentro do painel principal com banner em gradiente, avatar maior, nome, @usuário e badges do cliente. Os cartões de executor/versão e ID se organizam em duas colunas ou uma no celular. Há ações para copiar o ID, abrir Configurações/Temas e voltar à aba anterior.
 - Página **Configurações** pronta e visível na sidebar: transparência, tamanho manual/automático, salvamento/restauração, temas com prévias, atalhos e as opções nativas do Gen2. A engrenagem continua abrindo essa mesma página.
 - Dropdown dentro da área de conteúdo, mantendo a sidebar acessível: busca, cartões de opções, seleção única/múltipla, Padrão, Limpar e Selecionar todos. Voltar, Escape ou selecionar outra aba encerra o seletor. Em telas estreitas usa uma coluna, e o cabeçalho do controle separa o título do valor.
 - Salvamento e carregamento automáticos habilitados por padrão, incluindo toggles, sliders, dropdowns únicos/múltiplos, inputs, teclas e cores. Use `flag` estável e único por controle.

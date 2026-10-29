@@ -4,7 +4,7 @@ local function check(value, message) assert(value, message) checks += 1 end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.2.0", "new entry point is bundled")
+check(UI.Version == "3.3.0", "new entry point is bundled")
 local w = UI:CreateWindow({ Id = "BundleTest", name = "Conexão", theme = "amethyst" })
 check(w.layout.mode == "sidebar", "profile layout is automatic")
 check(w.configuration.autoSave and w.configuration.autoLoad, "configuration works without additional setup")
@@ -85,6 +85,47 @@ check(profile.details[2][2] == "Roblox Studio" and profile.avatar.Image ~= "", "
 check(#profile.fields == 2 and w.profileAvatar.Size.X.Offset == 40 and w.ProfileCard.BackgroundTransparency < 1 and w.ProfileButton.ZIndex > w.profileName.ZIndex, "the player card is styled, clickable above its labels and shows only account and executor details")
 check(w.selectedTab == w.ProfileTab and profile.content.Parent == w.elements, "the profile opens in the main content panel as a native page")
 check(not w._conexaoPanel and not w.screenGui:FindFirstChild("ConexaoOverlay") and #w.screenGui:GetChildren() == windowChildren, "opening the profile creates no floating window or screen-darkening layer")
+local dashboard = profile.dashboard
+for _, width in ipairs({ 240, 320, 426, 640, 900 }) do
+    dashboard.main.AbsoluteSize = Vector2.new(width, 600)
+    dashboard:Layout()
+    local previousRight, previousBottom = 0, 0
+    for index, field in ipairs(profile.fields) do
+        local at, size = field.main.Position, field.main.Size
+        local left = at.X.Scale * width + at.X.Offset
+        local top = at.Y.Offset
+        local right = left + size.X.Scale * width + size.X.Offset
+        local bottom = top + size.Y.Offset
+        assert(left >= 0 and right <= width and bottom <= dashboard.cards.Size.Y.Offset, "profile cards must fit the available content area")
+        if index > 1 then assert(left >= previousRight or top >= previousBottom, "profile cards must not overlap") end
+        previousRight, previousBottom = right, bottom
+    end
+    assert(dashboard.actions.Position.Y.Offset >= dashboard.cards.Position.Y.Offset + dashboard.cards.Size.Y.Offset, "actions must remain below the account cards")
+    assert(dashboard.main.Size.Y.Offset >= dashboard.actions.Position.Y.Offset + dashboard.actions.Size.Y.Offset, "profile content must remain scrollable through its last action")
+end
+check(true, "profile cards and actions fit phone, tablet and desktop content widths without overlapping")
+dashboard.main.AbsoluteSize = Vector2.new(420, 120)
+dashboard:Layout()
+local oldClipboard = _G.setclipboard
+local copiedId
+_G.setclipboard = function(value) copiedId = value end
+profile.copyButton.MouseButton1Click:Fire()
+check(copiedId == tostring(game:GetService("Players").LocalPlayer.UserId) and dashboard.notice.Visible and not w._conexaoPanel, "copy ID uses the runtime clipboard and reports success inside the profile")
+_G.setclipboard = function() return false end
+profile.copyButton.MouseButton1Click:Fire()
+check(dashboard.notice.Text:find("não está disponível", 1, true) and w.selectedTab == w.ProfileTab, "an unavailable clipboard reports inline and keeps profile navigation working")
+_G.setclipboard = oldClipboard
+profile.settingsButton.MouseButton1Click:Fire()
+check(w.selectedTab == w.SettingsTab, "the profile settings action opens the built-in configuration page")
+w:OpenProfile()
+profile.themesButton.MouseButton1Click:Fire()
+local profileThemes = w._conexaoPanel
+check(profileThemes and #profileThemes.cards == 12 and profileThemes.root.Parent == w.elements, "the profile theme action opens theme previews inside the same panel")
+profileThemes:Close()
+check(w.selectedTab == w.ProfileTab, "returning from theme selection restores the redesigned profile")
+w:CloseProfile()
+tab:Select()
+w:OpenProfile()
 profile.backButton.interact.MouseButton1Click:Fire()
 check(w.selectedTab == tab, "the profile back button restores the previous tab")
 local profileConnections, profileInstances, profileTabs = #w.connections, #w.instances, #w.tabs
@@ -163,7 +204,7 @@ check(w.SettingsTab.name == "Configurações" and w.AutoSaveToggle and w.AutoLoa
 check(#w.ThemeGallery.cards == 6 and #UI.Themes == 12, "six vivid presets and six original themes have palettes and previews")
 w.ThemeGallery.cards[5].hit.MouseButton1Click:Fire()
 check(w.ThemeId == "sakura" and w.ThemeGallery.cards[5].selected.Visible, "a preview applies its real theme and marks the selection")
-check(w.ProfilePage.playerName.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
+check(w.ProfilePage.fields[1].valueLabel.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
 local themes = w:OpenThemes()
 check(#themes.cards == 12, "the complete theme picker renders all twelve previews")
 themes.cards[2].hit.MouseButton1Click:Fire()

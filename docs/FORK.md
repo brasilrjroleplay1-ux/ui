@@ -1,6 +1,6 @@
 # Base oficial Gen2
 
-Conexão UI 3.2 utiliza [SiriusSoftwareLtd/rayfield-gen2](https://github.com/SiriusSoftwareLtd/rayfield-gen2/tree/576c1ff19448285f9506b50bee221977aef3ffbb), versão 1.2.1, commit `576c1ff19448285f9506b50bee221977aef3ffbb`.
+Conexão UI 3.3 utiliza [SiriusSoftwareLtd/rayfield-gen2](https://github.com/SiriusSoftwareLtd/rayfield-gen2/tree/576c1ff19448285f9506b50bee221977aef3ffbb), versão 1.2.1, commit `576c1ff19448285f9506b50bee221977aef3ffbb`.
 
 Os componentes e os seis temas são os arquivos dessa base. A construção visual de `components/window.luau` foi preservada; a alteração nesse arquivo é o valor inicial de analytics. O diretório de arquivos e o nome do arquivo de preferências também foram separados para a Conexão. As alterações estão registradas em [UPSTREAM.json](../vendor/rayfield-gen2/UPSTREAM.json).
 
@@ -13,5 +13,7 @@ Em 3.1.1, `Features/Responsive.luau` amplia o ajuste automático: aproveita a al
 Em 3.1.2, o perfil passa a usar uma página nativa dentro de `window.elements`, com a mesma rolagem e navegação das demais páginas. O clique no avatar reutiliza essa página, e Voltar retorna à aba anterior. Essa mudança é implementada em `Features/Profile.luau`.
 
 Em 3.2, as configurações ficam visíveis no seletor de abas. Transparência e tamanho passam a ter controles próprios e persistência em `.ui.json`. O seletor de dropdown e a galeria de temas usam páginas temporárias na área de conteúdo. O cartão do jogador recebe um alvo de clique acima da imagem/texto, e o perfil mostra apenas os dados de conta e executor. A demo principal abre as configurações; os exemplos completos ficam em `Components.client.luau` e `Example.luau`.
+
+Em 3.3, `Features/ProfileDashboard.luau` fornece a apresentação do perfil: banner com gradiente ligado ao tema, composição de avatar/nome/badges, cartões responsivos e atalhos. O botão Copiar usa a API de clipboard disponível no cliente; se ela não existir, informa isso no próprio perfil. A página é reutilizada entre aberturas e continua pertencendo à navegação nativa do painel.
 
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

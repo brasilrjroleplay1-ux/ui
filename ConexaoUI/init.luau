@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.1 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.3 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local Gen2 = require(script.Gen2)
 local DropdownPanel = require(script.Features.Dropdown)
@@ -23,7 +23,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.2.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.3.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -64,7 +64,9 @@ local function adaptHost(host)
         function host:Select(...)
             local panel = self.window._conexaoPanel
             if panel and panel.tab ~= self then panel:Close(false) end
-            return select(self, ...)
+            local result = select(self, ...)
+            if self.window._refreshProfileCard then self.window:_refreshProfileCard() end
+            return result
         end
     end
     for _, element in ipairs(host.elements or {}) do

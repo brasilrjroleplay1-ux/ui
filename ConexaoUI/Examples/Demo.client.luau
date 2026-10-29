@@ -3,7 +3,7 @@ local UI = require(game:GetService("ReplicatedStorage"):WaitForChild("ConexaoUI"
 local previousDemo = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("ConexaoDemo")
 if previousDemo and previousDemo:IsA("ScreenGui") then previousDemo:Destroy() end
 local window = UI:CreateWindow({
-    Id = "ConexaoDemo3", name = "CONEXÃO UI", subtitle = "3.2.0",
+    Id = "ConexaoDemo3", name = "CONEXÃO UI", subtitle = "3.3.0",
     theme = "conexao", configuration = { fileName = "conexao_demo_gen2_v3" },
 })
 window:OpenSettings()

@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MPL-2.0
 local Surface = require(script.Parent.Surface)
 local Preferences = require(script.Parent.Preferences)
-local image = require(script.Parent.Parent.Gen2.utility.image)
+local Dashboard = require(script.Parent.ProfileDashboard)
 local Profile = {}
 
 local function buildPage(window, player, executorInfo, version)
@@ -10,51 +10,8 @@ local function buildPage(window, player, executorInfo, version)
     local tab = window:CreateTab({ name = "Perfil", neglectSelector = true, forgetState = true })
     local page = { tab = tab, content = tab.tabPage, details = {}, fields = {} }
     window.ProfileTab, window.ProfilePage = tab, page
-    tab:CreateSection({ name = "Seu perfil" })
-
-    local hero = { window = window, name = "Perfil do jogador", __type = "ProfileHeader" }
-    hero.main = window:Create("Frame", {
-        Name = "PlayerProfile", Parent = tab.tabPage, Size = UDim2.new(1, -20, 0, 114),
-        BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1,
-    }, { BackgroundTransparency = "ElementTransparency" })
-    hero.stroke = window:StyleElementBody(hero.main)
-    local plate = window:Create("Frame", {
-        Parent = hero.main, Position = UDim2.fromOffset(12, 18), Size = UDim2.fromOffset(72, 72),
-        BorderSizePixel = 0, BackgroundTransparency = 1, ZIndex = 4,
-    }, { BackgroundColor3 = "AccentColor" })
-    Surface.round(window, plate, 36)
-    local plateStroke = window:Create("UIStroke", { Parent = plate, Thickness = 1, Transparency = 1 }, { Color = "AccentStroke" })
-    page.avatar = window:Create("ImageLabel", {
-        Parent = hero.main, Position = UDim2.fromOffset(16, 22), Size = UDim2.fromOffset(64, 64),
-        BackgroundTransparency = 1, ImageTransparency = 1, ZIndex = 5,
-        Image = image.avatar(player.UserId, function(uri)
-            if not window.unloaded and window.ProfilePage == page and page.avatar and page.avatar.Parent then
-                image.assign(page.avatar, "Image", uri)
-            end
-        end),
-    })
-    Surface.round(window, page.avatar, 32)
-    page.playerName = Surface.label(window, hero.main, player.DisplayName, {
-        Position = UDim2.fromOffset(96, 18), Size = UDim2.new(1, -114, 0, 44),
-        TextSize = 20, TextTransparency = 1, ZIndex = 5,
-    })
-    page.username = Surface.label(window, hero.main, "@" .. player.Name, {
-        Position = UDim2.fromOffset(96, 64), Size = UDim2.new(1, -114, 0, 28),
-        TextSize = 13, TextTransparency = 1, TextWrapped = false,
-        TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
-    })
-    page.playerName.FontFace = window.theme.TitleFont
-    window.themeProperties[page.playerName].FontFace = "TitleFont"
-    hero.title, hero.iconLabel = page.playerName, page.avatar
-    function hero:_setShown(shown, animate)
-        if shown then window:_revealCommon(self, animate) else window:_hideCommon(self, animate) end
-        window:_reveal(page.username, { TextTransparency = shown and 0.3 or 1 }, animate)
-        window:_reveal(plate, { BackgroundTransparency = shown and 0.83 or 1 }, animate)
-        window:_reveal(plateStroke, { Transparency = shown and 0.35 or 1 }, animate)
-    end
-    tab:_register(hero)
-    page.backButton = tab:CreateButton({ name = "Voltar para a aba anterior", callback = function() window:CloseProfile() end })
-    tab:CreateSection({ name = "Conta e executor" })
+    page.dashboard = Dashboard.new(window, tab, page, player, executorInfo)
+    tab:_register(page.dashboard)
 
     function page:Refresh()
         player = game:GetService("Players").LocalPlayer or player
@@ -69,14 +26,12 @@ local function buildPage(window, player, executorInfo, version)
             { "Conexão UI", version },
             { "Armazenamento", storage },
         }
-        local shown = {
-            { "Executor", executorInfo.name .. (executorInfo.version and (" · " .. executorInfo.version) or "") },
-            self.details[1],
-        }
-        for index, detail in ipairs(shown) do
-            if self.fields[index] then self.fields[index]:Set(detail[2])
-            else self.fields[index] = tab:CreateText({ name = detail[1], text = detail[2] }) end
-        end
+        self.executorBadge.Text = executorInfo.name
+        self.fields[1]:Set(executorInfo.name)
+        self.fields[1].subtitle.Text = executorInfo.version and ("Versão " .. executorInfo.version) or "Versão não informada"
+        self.fields[2]:Set(tostring(player.UserId))
+        self.dashboard.notice.Visible = false
+        self.dashboard:Layout()
     end
     function page:Close() window:CloseProfile() end
     -- An application may remove the page through the public Tab API. Rebuild safely next time.
@@ -133,12 +88,18 @@ function Profile.attach(window, executorInfo, version)
             BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 4), Size = UDim2.new(1, -16, 1, -8), ZIndex = 120,
         }, { BackgroundColor3 = "AccentColor" })
         Surface.round(window, window.ProfileCard, 12)
-        window:Create("UIStroke", { Parent = window.ProfileCard, Transparency = 0.7, Thickness = 1 }, { Color = "AccentStroke" })
+        window.ProfileCardStroke = window:Create("UIStroke", { Parent = window.ProfileCard, Transparency = 0.7, Thickness = 1 }, { Color = "AccentStroke" })
         window.ProfileButton = window:Create("TextButton", {
             Name = "OpenProfile", Parent = window.ProfileCard, Text = "", AutoButtonColor = false,
             BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 125,
         })
         window:Connect(window.ProfileButton.MouseButton1Click, function() window:OpenProfile() end)
+        function window:_refreshProfileCard()
+            if self.unloaded then return end
+            local selected = self.ProfileTab ~= nil and self.selectedTab == self.ProfileTab
+            self.ProfileCard.BackgroundTransparency = selected and 0.8 or 0.9
+            self.ProfileCardStroke.Transparency = selected and 0.25 or 0.7
+        end
     end
 end
 
