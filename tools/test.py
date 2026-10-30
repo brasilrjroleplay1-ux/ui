@@ -34,3 +34,6 @@ with tempfile.TemporaryDirectory() as folder:
     shell=Path(folder)/'shell.luau'
     shell.write_text(prefix+(ROOT/'tests/shell_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(shell)],'shell')
+    navigation=Path(folder)/'navigation.luau'
+    navigation.write_text(prefix+(ROOT/'tests/navigation_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(navigation)],'navigation')

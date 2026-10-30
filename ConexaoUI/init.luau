@@ -39,7 +39,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.6.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.6.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -150,10 +150,11 @@ function Library:CreateWindow(options)
     function window:CreateTab(props, icon)
         if type(props) == "string" then props = { name = props, icon = icon } end
         local tab = adaptHost(createTab(self, props))
+        self:_applyRailWidth()
         if not tab.neglectSelector then
             local firstUserTab = true
             for _, other in ipairs(self.tabs) do
-                if other ~= tab and other ~= self.SettingsTab and other ~= self.ProfileTab and not other.neglectSelector then firstUserTab = false break end
+                if other ~= tab and other ~= self.SettingsTab and other ~= self.HomeTab and other ~= self.ProfileTab and not other.neglectSelector then firstUserTab = false break end
             end
             if firstUserTab then tab:Select(true) end
         end
@@ -206,6 +207,7 @@ function Library:CreateWindow(options)
         if windows[id] == self then windows[id] = nil end
         if Library.Windows[id] == self then Library.Windows[id] = nil end
         self.ProfileTab, self.ProfilePage, self._profilePreviousTab = nil, nil, nil
+        self.HomeTab, self.HomePage, self._homePreviousTab = nil, nil, nil
     end
     window.Destroy = window.Unload
     window.SaveConfig = window.Save

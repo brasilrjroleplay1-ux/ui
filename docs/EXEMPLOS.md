@@ -101,14 +101,16 @@ Eles já existem depois de `CreateWindow`. Não é necessário recriar a aba nem
 ```lua
 window:OpenSettings()
 window:OpenHome() -- painel de conta, cliente e sessão
-window:OpenProfile()
+window:OpenProfile() -- página Meu perfil: identidade, executor, versão e ambiente
 window:CloseProfile() -- volta à aba que estava aberta
 window:OpenThemes()
 ```
 
 Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual e ajuste automático. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
-O cabeçalho e a abertura também vêm prontos em `CreateWindow`. `name`, `subtitle` e `icon` continuam personalizando os dados do cabeçalho. Sem `icon`, ele usa a marca vetorial da Conexão; nomes e subtítulos longos permanecem dentro do espaço disponível antes dos botões. As cores da marca, bordas e versão acompanham o tema. Na 3.6, o topo tem 44 px e usa uma linha; a lateral de 52 px mostra ícones. Seções criadas com `window:CreateSection` usam divisores na lateral.
+O cabeçalho e a abertura também vêm prontos em `CreateWindow`. `name`, `subtitle` e `icon` continuam personalizando os dados do cabeçalho. Sem `icon`, ele usa a marca vetorial da Conexão; nomes e subtítulos longos permanecem dentro do espaço disponível antes dos botões. As cores da marca, bordas e versão acompanham o tema. Na 3.6.1, o topo tem 44 px, usa uma linha e contém a busca. A lateral mostra ícones e nomes; abaixo de 480 px de janela, usa o modo compacto. Seções criadas com `window:CreateSection` mantêm seus nomes na lateral expandida.
+
+`OpenHome` e `OpenProfile` abrem páginas distintas. Clicar no cartão do jogador abre Meu perfil; Voltar retorna à aba anterior. Nenhuma dessas ações recria os controles do seu script ou reaplica seus callbacks. As duas páginas acompanham o tema e a rolagem do painel.
 
 No slider de tamanho, a janela fica parada durante o arraste e aplica o valor ao soltar. Nos seus próprios sliders, o callback nativo recebe `(value, dragging)`: `dragging` é `true` durante o movimento e `false` na confirmação.
 

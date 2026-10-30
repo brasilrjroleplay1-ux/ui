@@ -40,7 +40,7 @@ export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: b
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.6.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.6.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -151,10 +151,11 @@ function Library:CreateWindow(options)
     function window:CreateTab(props, icon)
         if type(props) == "string" then props = { name = props, icon = icon } end
         local tab = adaptHost(createTab(self, props))
+        self:_applyRailWidth()
         if not tab.neglectSelector then
             local firstUserTab = true
             for _, other in ipairs(self.tabs) do
-                if other ~= tab and other ~= self.SettingsTab and other ~= self.ProfileTab and not other.neglectSelector then firstUserTab = false break end
+                if other ~= tab and other ~= self.SettingsTab and other ~= self.HomeTab and other ~= self.ProfileTab and not other.neglectSelector then firstUserTab = false break end
             end
             if firstUserTab then tab:Select(true) end
         end
@@ -207,6 +208,7 @@ function Library:CreateWindow(options)
         if windows[id] == self then windows[id] = nil end
         if Library.Windows[id] == self then Library.Windows[id] = nil end
         self.ProfileTab, self.ProfilePage, self._profilePreviousTab = nil, nil, nil
+        self.HomeTab, self.HomePage, self._homePreviousTab = nil, nil, nil
     end
     window.Destroy = window.Unload
     window.SaveConfig = window.Save
@@ -20213,7 +20215,169 @@ function windowSizing.fit(viewport: Vector2?, mode: layouts.Mode?): UDim2
 end
 
 return windowSizing
-</ProtectedString></Properties></Item></Item></Item><Item class="Folder"><Properties><string name="Name">Features</string></Properties><Item class="ModuleScript"><Properties><string name="Name">Appearance</string><ProtectedString name="Source">--!nonstrict
+</ProtectedString></Properties></Item></Item></Item><Item class="Folder"><Properties><string name="Name">Features</string></Properties><Item class="ModuleScript"><Properties><string name="Name">Account</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Account information is a separate native content page, opened from the sidebar player card.
+local Surface = require(script.Parent.Surface)
+local Preferences = require(script.Parent.Preferences)
+local image = require(script.Parent.Parent.Gen2.utility.image)
+local BrandIcon = require(script.Parent.BrandIcon)
+local Account = {}
+
+local function build(window, player, info, version)
+    local tab = window:CreateTab({ name = "Meu perfil", neglectSelector = true, forgetState = true })
+    local page = { tab = tab, content = tab.tabPage, fields = {}, details = {} }
+    window.ProfileTab, window.ProfilePage = tab, page
+    local owner = { window = window, tab = tab, name = "Meu perfil", __type = "AccountPage", connections = {}, targets = {} }
+    page.view = owner
+    local function track(node, property, value) table.insert(owner.targets, { node = node, property = property, value = value }) end
+    local function frame(parent, name, props, themed)
+        local p = { Parent = parent, Name = name, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 3 }
+        for key, value in pairs(props or {}) do p[key] = value end
+        return window:Create("Frame", p, themed)
+    end
+    local function text(parent, value, x, y, width, height, size, bold, dim)
+        local node = window:Create("TextLabel", {
+            Parent = parent, Text = value, Position = UDim2.fromOffset(x, y), Size = UDim2.new(width == -1 and 1 or 0, width == -1 and -24 or width, 0, height),
+            BackgroundTransparency = 1, TextTransparency = 1, TextSize = size, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 6,
+        }, { FontFace = bold and "TitleFont" or "Font", TextColor3 = "ContentColor" })
+        track(node, "TextTransparency", dim or 0)
+        return node
+    end
+    local function card(parent, name)
+        local node = frame(parent, name, { BackgroundColor3 = Color3.new(1, 1, 1) }, { BackgroundTransparency = "ElementTransparency" })
+        Surface.round(window, node, 9)
+        window:Create("UIGradient", { Parent = node, Rotation = 35 }, { Color = "ElementGradient" })
+        local rim = window:Create("UIStroke", { Parent = node, Thickness = 1, Transparency = 1 }, { Color = "SurfaceStroke" })
+        track(node, "BackgroundTransparency", function() return window.theme.ElementTransparency end)
+        track(rim, "Transparency", 0.75)
+        return node
+    end
+    local function brand(parent, name, x, y, size)
+        return BrandIcon.new(window, parent, name, { Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(size, size) }, track)
+    end
+    owner.main = frame(tab.tabPage, "AccountPage", { Size = UDim2.new(1, -24, 0, 350) })
+    owner.title = text(owner.main, "Meu perfil", 0, 0, -1, 28, 20, true)
+    owner.title.Size = UDim2.new(1, -76, 0, 28)
+    page.backButton = Surface.button(window, owner.main, "Voltar", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(64, 28), TextSize = 11, ZIndex = 9, BackgroundTransparency = 1, TextTransparency = 1 })
+    track(page.backButton, "BackgroundTransparency", 0.3)
+    track(page.backButton, "TextTransparency", 0)
+    for _, child in ipairs(page.backButton:GetChildren()) do if child:IsA("UIStroke") then child.Transparency = 1 track(child, "Transparency", 0.75) end end
+    window:ConnectFor(owner, page.backButton.MouseButton1Click, function() if window:_interactive() then window:CloseProfile() end end)
+    owner.identity = card(owner.main, "Identity")
+    owner.identity.Position, owner.identity.Size = UDim2.fromOffset(0, 40), UDim2.new(1, 0, 0, 96)
+    page.avatar = window:Create("ImageLabel", {
+        Parent = owner.identity, Position = UDim2.fromOffset(16, 16), Size = UDim2.fromOffset(64, 64),
+        BackgroundTransparency = 1, ImageTransparency = 1, ScaleType = Enum.ScaleType.Fit, ResampleMode = Enum.ResamplerMode.Default, ZIndex = 6,
+        Image = image.avatar(player.UserId, function(uri) if not window.unloaded and window.ProfilePage == page and page.avatar and page.avatar.Parent then image.assign(page.avatar, "Image", uri) end end),
+    })
+    Surface.round(window, page.avatar, 8)
+    track(page.avatar, "ImageTransparency", 0)
+    page.playerName = text(owner.identity, player.DisplayName, 96, 19, 1, 28, 20, true)
+    page.playerName.Size, page.playerName.TextScaled = UDim2.new(1, -112, 0, 28), true
+    window:Create("UITextSizeConstraint", { Parent = page.playerName, MinTextSize = 12, MaxTextSize = 20 })
+    page.username = text(owner.identity, "@" .. player.Name, 96, 53, 1, 18, 12, false, 0.22)
+    page.username.Size = UDim2.new(1, -112, 0, 18)
+    owner.cards = frame(owner.main, "AccountDetails", { Position = UDim2.fromOffset(0, 148) })
+    owner.account, owner.client = card(owner.cards, "Account"), card(owner.cards, "Client")
+    local accountTitle = text(owner.account, "Conta", 12, 10, -1, 22, 14, true)
+    accountTitle.Size = UDim2.new(1, -80, 0, 22)
+    text(owner.account, "ID do jogador", 12, 48, -1, 14, 10, false, 0.25)
+    page.userId = text(owner.account, tostring(player.UserId), 12, 65, -1, 22, 14, true)
+    text(owner.account, "Nome de usuário", 12, 101, -1, 14, 10, false, 0.25)
+    page.accountName = text(owner.account, "@" .. player.Name, 12, 120, -1, 22, 13, false)
+    page.executorIcon = brand(owner.client, info.name, 12, 12, 22)
+    page.executorName = text(owner.client, info.name, 44, 10, 1, 24, 16, true)
+    page.executorName.Size = UDim2.new(1, -56, 0, 24)
+    text(owner.client, "Versão do executor", 12, 48, -1, 14, 10, false, 0.25)
+    page.executorVersion = text(owner.client, info.version or "Não informada", 12, 67, -1, 20, 12, false)
+    text(owner.client, "Ambiente", 12, 101, -1, 14, 10, false, 0.25)
+    page.platformIcon = brand(owner.client, info.environment, 12, 120, 20)
+    page.environment = text(owner.client, info.environment, 40, 120, 1, 22, 12, false)
+    page.environment.Size = UDim2.new(1, -52, 0, 22)
+    owner.footer = text(owner.main, "", 0, 326, 1, 18, 10, false, 0.3)
+    owner.footer.Size = UDim2.new(1, 0, 0, 18)
+    owner.notice = text(owner.main, "", 0, 350, 1, 28, 11, false, 0.2)
+    owner.notice.Size, owner.notice.Visible, owner.notice.TextWrapped = UDim2.new(1, 0, 0, 28), false, true
+    page.copyButton = window:Create("TextButton", { Parent = owner.account, Text = "Copiar", TextSize = 10, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(44, 24), BackgroundTransparency = 1, TextTransparency = 1, AutoButtonColor = false, ZIndex = 9 }, { FontFace = "Font", TextColor3 = "ContentColor" })
+    track(page.copyButton, "TextTransparency", 0.2)
+    window:ConnectFor(owner, page.copyButton.MouseButton1Click, function()
+        if not window:_interactive() then return end
+        local env = _G
+        if type(getgenv) == "function" then local ok, value = pcall(getgenv) if ok and type(value) == "table" then env = value end end
+        local copy = env.setclipboard or env.toclipboard or getfenv().setclipboard or getfenv().toclipboard
+        local ok, result = false, nil
+        if type(copy) == "function" then ok, result = pcall(copy, tostring(player.UserId)) end
+        owner.notice.Text, owner.notice.Visible = ok and result ~= false and "ID copiado." or "Copiar não está disponível neste cliente.", true
+        owner:Layout()
+        window:_reveal(owner.notice, { TextTransparency = 0.2 }, true)
+    end)
+    function owner:Layout()
+        local width = self.main.AbsoluteSize.X
+        if width &lt;= 0 then width = math.max(180, window.elements.AbsoluteSize.X - 40) end
+        local wide = width &gt;= 400
+        local column = wide and (width - 10) / 2 or width
+        self.account.Size, self.account.Position = UDim2.fromOffset(column, 164), UDim2.fromOffset(0, 0)
+        self.client.Size, self.client.Position = UDim2.fromOffset(column, 164), UDim2.fromOffset(wide and column + 10 or 0, wide and 0 or 174)
+        local body = wide and 164 or 338
+        self.cards.Size = UDim2.new(1, 0, 0, body)
+        self.footer.Position, self.notice.Position = UDim2.fromOffset(0, 160 + body), UDim2.fromOffset(0, 184 + body)
+        self.main.Size = UDim2.new(1, -24, 0, 184 + body + (self.notice.Visible and 32 or 0))
+    end
+    function owner:_setShown(shown, animate)
+        for _, target in ipairs(self.targets) do
+            local value = shown and (type(target.value) == "function" and target.value() or target.value) or 1
+            window:_reveal(target.node, { [target.property] = value }, animate)
+        end
+    end
+    function owner:_refreshTheme() if not window.hidden then self:_setShown(true, false) end end
+    function page:Refresh()
+        local current = game:GetService("Players").LocalPlayer or player
+        self.playerName.Text, self.username.Text = current.DisplayName, "@" .. current.Name
+        self.userId.Text, self.accountName.Text = tostring(current.UserId), "@" .. current.Name
+        self.details = { { "ID do jogador", tostring(current.UserId) }, { "Executor", info.name }, { "Versão do executor", info.version or "Não informada" }, { "Ambiente", info.environment }, { "Conexão UI", version }, { "Armazenamento", Preferences.storage() } }
+        owner.footer.Text, owner.notice.Visible = "Conexão Studio " .. version .. " · " .. Preferences.storage(), false
+        owner:Layout()
+    end
+    function page:Close() window:CloseProfile() end
+    local remove = tab.Remove
+    function tab:Remove()
+        if window.ProfileTab == self then window.ProfileTab, window.ProfilePage = nil, nil end
+        remove(self)
+    end
+    window:ConnectFor(owner, owner.main:GetPropertyChangedSignal("AbsoluteSize"), function() owner:Layout() end)
+    tab:_register(owner)
+    return page
+end
+
+function Account.attach(window, info, version)
+    function window:OpenProfile()
+        if self.unloaded then return end
+        local player = game:GetService("Players").LocalPlayer
+        if not player then return end
+        if self._conexaoPanel then self._conexaoPanel:Close() end
+        if self.selectedTab ~= self.ProfileTab then self._profilePreviousTab = self.selectedTab end
+        local page = self.ProfilePage or build(self, player, info, version)
+        page:Refresh()
+        page.tab:Select()
+        return page
+    end
+    function window:CloseProfile()
+        if self.unloaded then return end
+        if self.selectedTab == self.HomeTab then return self:_closeHome() end
+        if not self.ProfileTab or self.selectedTab ~= self.ProfileTab then return end
+        local previous = self._profilePreviousTab
+        local function valid(tab) return tab and tab ~= self.ProfileTab and tab.tabPage and table.find(self.tabs, tab) end
+        if not valid(previous) then
+            previous = valid(self.HomeTab) and self.HomeTab or (valid(self.SettingsTab) and self.SettingsTab or nil)
+            if not previous then for _, candidate in ipairs(self.tabs) do if valid(candidate) then previous = candidate break end end end
+        end
+        if previous then previous:Select() end
+    end
+end
+return Account
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Appearance</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 local Appearance = {}
 local tweens = game:GetService("TweenService")
@@ -21124,7 +21288,7 @@ function Friends.attach(window)
             if window.unloaded then return end
             state.busy, state.unavailable = false, not (ok and ids)
             if ok and ids then state.ids, state.total, state.online = ids, count, online end
-            if window.ProfilePage and window.selectedTab == window.ProfileTab then window.ProfilePage:RefreshStats() end
+            if window.HomePage and window.selectedTab == window.HomeTab then window.HomePage:RefreshStats() end
         end)
     end
     function window:GetFriendStats()
@@ -21421,7 +21585,7 @@ local function buildPage(window, player, executorInfo, version)
     -- A native content page, like Settings: it is clipped/scrolled by the main panel.
     local tab = window:CreateTab({ name = "Início", icon = 93364949241311, customOrder = -1000, forgetState = true })
     local page = { tab = tab, content = tab.tabPage, details = {}, fields = {} }
-    window.ProfileTab, window.ProfilePage = tab, page
+    window.HomeTab, window.HomePage = tab, page
     page.dashboard = Dashboard.new(window, tab, page, player, executorInfo)
     tab:_register(page.dashboard)
 
@@ -21462,11 +21626,11 @@ local function buildPage(window, player, executorInfo, version)
         self.dashboard:Layout()
         if window.RefreshFriends then window:RefreshFriends() end
     end
-    function page:Close() window:CloseProfile() end
+    function page:Close() window:_closeHome() end
     -- An application may remove the page through the public Tab API. Rebuild safely next time.
     local remove = tab.Remove
     function tab:Remove()
-        if window.ProfileTab == self then window.ProfileTab, window.ProfilePage = nil, nil end
+        if window.HomeTab == self then window.HomeTab, window.HomePage = nil, nil end
         remove(self)
     end
     return page
@@ -21474,31 +21638,31 @@ end
 
 function Profile.attach(window, executorInfo, version)
     window.ExecutorInfo = executorInfo
-    function window:CloseProfile()
-        if self.unloaded or not self.ProfileTab or self.selectedTab ~= self.ProfileTab then return end
-        local previous = self._profilePreviousTab
+    function window:_closeHome()
+        if self.unloaded or not self.HomeTab or self.selectedTab ~= self.HomeTab then return end
+        local previous = self._homePreviousTab
         if not previous or not previous.tabPage or not table.find(self.tabs, previous) then
             previous = self.SettingsTab
             for _, candidate in ipairs(self.tabs) do
-                if candidate ~= self.SettingsTab and candidate ~= self.ProfileTab and not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
+                if candidate ~= self.SettingsTab and candidate ~= self.HomeTab and not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
             end
         end
         if previous then previous:Select() end
     end
-    function window:OpenProfile()
+    function window:OpenHome()
         if self.unloaded then return end
         local player = game:GetService("Players").LocalPlayer
         if not player then return end
         if self._conexaoPanel then self._conexaoPanel:Close() end
-        if self.selectedTab ~= self.ProfileTab then self._profilePreviousTab = self.selectedTab end
-        local page = self.ProfilePage or buildPage(self, player, executorInfo, version)
+        if self.selectedTab ~= self.HomeTab then self._homePreviousTab = self.selectedTab end
+        local page = self.HomePage or buildPage(self, player, executorInfo, version)
         page:Refresh()
         page.tab:Select()
         return page
     end
-    window.OpenHome = window.OpenProfile
+    require(script.Parent.Account).attach(window, executorInfo, version)
     if window.profile then
-        window.profileAvatar.Size = UDim2.fromOffset(32, 32)
+        window.profileAvatar.Size = UDim2.fromOffset(36, 36)
         window.profileAvatar.ZIndex = 123
         window.profileAvatar.ScaleType, window.profileAvatar.ResampleMode = Enum.ScaleType.Fit, Enum.ResamplerMode.Default
         window.profileContainer.ZIndex, window.profileLabels.ZIndex = 121, 121
@@ -21506,17 +21670,17 @@ function Profile.attach(window, executorInfo, version)
         window.profileLabels.Size = UDim2.new(1, -64, 0, 40)
         window.profileName.Size = UDim2.new(1, 0, 0, 20)
         window.profileName.AutomaticSize = Enum.AutomaticSize.None
-        window.profileName.TextSize, window.profileName.ZIndex = 16, 123
+        window.profileName.TextSize, window.profileName.ZIndex = 14, 123
         window.profileName.FontFace = window.theme.TitleFont
         window.themeProperties[window.profileName].FontFace = "TitleFont"
         window.profileName.TextWrapped, window.profileName.TextTruncate = false, Enum.TextTruncate.AtEnd
         window.profileSubtitle.Size = UDim2.new(1, 0, 0, 16)
         window.profileSubtitle.AutomaticSize = Enum.AutomaticSize.None
-        window.profileSubtitle.TextSize, window.profileSubtitle.ZIndex = 12, 123
+        window.profileSubtitle.TextSize, window.profileSubtitle.ZIndex = 11, 123
         window.profileSubtitle.TextWrapped, window.profileSubtitle.TextTruncate = false, Enum.TextTruncate.AtEnd
         window.ProfileCard = window:Create("Frame", {
             Name = "PlayerCard", Parent = window.profile, BorderSizePixel = 0,
-            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 36), ZIndex = 120,
+            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 48), ZIndex = 120,
         }, { BackgroundColor3 = "StatBackground" })
         Surface.round(window, window.ProfileCard, 8)
         window.ProfileCardStroke = window:Create("UIStroke", { Parent = window.ProfileCard, Transparency = 0.7, Thickness = 1 }, { Color = "AccentStroke" })
@@ -21592,7 +21756,7 @@ function Dashboard.new(window, tab, page, player, executorInfo)
         Parent = self.plate, Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4), BackgroundTransparency = 1, ImageTransparency = 1,
         ScaleType = Enum.ScaleType.Fit, ResampleMode = Enum.ResamplerMode.Default, ZIndex = 6,
         Image = image.avatar(player.UserId, function(uri)
-            if not window.unloaded and window.ProfilePage == page and page.avatar.Parent then image.assign(page.avatar, "Image", uri) end
+            if not window.unloaded and window.HomePage == page and page.avatar and page.avatar.Parent then image.assign(page.avatar, "Image", uri) end
         end),
     })
     Surface.round(window, page.avatar, 6)
@@ -21965,8 +22129,8 @@ function Session.attach(window)
         if state.interval &lt; 1 then return end
         state.fps = state.frames &gt; 0 and math.floor(state.frames / state.interval + 0.5) or nil
         state.frames, state.interval = 0, 0
-        local page = window.ProfilePage
-        if page and window.selectedTab == window.ProfileTab and not window.hidden and page.RefreshStats then
+        local page = window.HomePage
+        if page and window.selectedTab == window.HomeTab and not window.hidden and page.RefreshStats then
             page:RefreshStats()
             if window.RefreshFriends then window:RefreshFriends() end
         end
@@ -22315,7 +22479,7 @@ end
 return Settings
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Shell</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
--- Compact window geometry. Each window owns its layout; Gen2's shared presets stay intact.
+-- Compact chrome with a labelled sidebar whenever the window has room for it.
 local sidebar = require(script.Parent.Parent.Gen2.components.sidebar)
 local Shell = {}
 function Shell.attach(window)
@@ -22323,58 +22487,45 @@ function Shell.attach(window)
     window.layout, window.StudioShell = layout, true
     local delta = layout.topbarHeight - 44
     layout.topbarHeight, layout.chromeHeight = 44, layout.chromeHeight - delta
-    layout.fadeSize = UDim2.new(1, 0, 0, 20)
-    layout.fadeTransparency = NumberSequence.new(1)
+    layout.fadeSize, layout.fadeTransparency = UDim2.new(1, 0, 0, 20), NumberSequence.new(1)
     window.topbar.Size = UDim2.new(1, 0, 0, 44)
     window.elements.Size = UDim2.new(1, 0, 1, -layout.chromeHeight)
     if window.elementsCorner then window.elementsCorner.CornerRadius = UDim.new(0, 8) end
     window.windowCorner.CornerRadius, window.theme.CornerRoundness = UDim.new(0, 10), UDim.new(0, 10)
     if window.elementsStroke then window.elementsStroke.Enabled = false end
     if layout.mode == "sidebar" then
-        layout.railWidth, layout.railCollapsedWidth, layout.railCollapseBelow = 60, 52, math.huge
-        layout.rowInset, layout.rowHeight, layout.rowCornerRadius, layout.rowSpacing = 6, 38, 8, 6
-        layout.rowPadding, layout.rowIconSize, layout.footerHeight, layout.railPadding = 0, 20, 48, 8
+        layout.railWidth, layout.railCollapsedWidth, layout.railCollapseBelow = 196, 64, 480
+        layout.rowInset, layout.rowHeight, layout.rowCornerRadius, layout.rowSpacing = 8, 38, 8, 4
+        layout.rowPadding, layout.rowIconSize, layout.footerHeight, layout.railPadding = 10, 20, 60, 10
         layout.cardTransparency = 1
-        window.tabListLayout.Padding = UDim.new(0, 6)
+        window.tabListLayout.Padding = UDim.new(0, 4)
         for _, child in ipairs(window.tabList:GetChildren()) do
-            if child:IsA("UIPadding") then child.PaddingTop, child.PaddingBottom = UDim.new(0, 8), UDim.new(0, 8) end
+            if child:IsA("UIPadding") then child.PaddingTop, child.PaddingBottom = UDim.new(0, 10), UDim.new(0, 10) end
         end
-        if window.profile then window.profile.Size = UDim2.new(1, 0, 0, 48) end
-        sidebar.applyWidth(window, 52)
+        if window.profile then window.profile.Size = UDim2.new(1, 0, 0, 60) end
+        window:_applyRailWidth()
         sidebar.reflowProfile(window)
-        if window.searchAction then
-            local action = window.searchAction.action
-            action.Parent, action.LayoutOrder, action.Size = window.tabList, 900, UDim2.fromOffset(38, 38)
-            action.BackgroundTransparency = 1
-            window:Create("UICorner", { Parent = action, CornerRadius = UDim.new(0, 8) })
-            local fade = window._fadeSurfaces
-            function window:_fadeSurfaces(shown, info)
-                fade(self, shown, info)
-                self:_reveal(self.searchAction.iconLabel, { ImageTransparency = shown and 0.25 or 1 }, info ~= nil, info)
+        window.settingsAction.action.Visible = false -- Settings remains directly available in the sidebar.
+        local applyWidth = window._applyRailWidth
+        function window:_applyRailWidth()
+            applyWidth(self)
+            for _, tab in ipairs(self.tabs) do
+                if tab.topbarItemTitle then
+                    tab.topbarItemTitle.AutomaticSize, tab.topbarItemTitle.TextWrapped = Enum.AutomaticSize.None, false
+                    tab.topbarItemTitle.TextTruncate = Enum.TextTruncate.AtEnd
+                    tab.topbarItemTitle.Size = UDim2.new(1, tab.topbarItemIcon and -26 or 0, 0, 20)
+                end
             end
+            for _, section in ipairs(self.tabSections) do section:_setVisible(not self.hidden and not self.minimised and not self._searching) end
         end
-        window.settingsAction.action.Visible = false -- The settings selector remains in the icon rail.
         local createSection = window.CreateSection
         function window:CreateSection(...)
             local section = createSection(self, ...)
-            if not section.main then return section end
-            section.main.AutomaticSize, section.main.Size = Enum.AutomaticSize.None, UDim2.new(1, -20, 0, 8)
-            section.title.Visible = false
-            if section.iconLabel then section.iconLabel.Visible = false end
-            local storage = self:Create("Frame", { Parent = section.main, Name = "PreservedSectionLayout", Visible = false, Size = UDim2.fromOffset(0, 0), BackgroundTransparency = 1 })
-            for _, child in ipairs(section.main:GetChildren()) do
-                if child:IsA("UIListLayout") then child.Parent = storage
-                elseif child:IsA("UIPadding") then
-                    child.PaddingTop, child.PaddingBottom, child.PaddingLeft, child.PaddingRight = UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0)
-                end
+            local visible = section._setVisible
+            function section:_setVisible(value)
+                visible(self, value and window.sidebar.Size.X.Offset &gt;= window.layout.railWidth)
             end
-            local line = self:Create("Frame", { Parent = section.main, Position = UDim2.fromScale(0, 0.5), Size = UDim2.new(1, 0, 0, 1), BorderSizePixel = 0, BackgroundTransparency = 1 }, { BackgroundColor3 = "SurfaceStroke" })
-            local shown = section._setShown
-            function section:_setShown(value, animate)
-                shown(self, value, animate)
-                self.window:_reveal(line, { BackgroundTransparency = value and 0.75 or 1 }, animate ~= nil and animate ~= false, typeof(animate) == "TweenInfo" and animate or nil)
-            end
-            if not self.hidden and not self.minimised then section:_setShown(true, false) end
+            section:_setVisible(not self.hidden and not self.minimised and not self._searching)
             return section
         end
     else

@@ -37,7 +37,7 @@ function Friends.attach(window)
             if window.unloaded then return end
             state.busy, state.unavailable = false, not (ok and ids)
             if ok and ids then state.ids, state.total, state.online = ids, count, online end
-            if window.ProfilePage and window.selectedTab == window.ProfileTab then window.ProfilePage:RefreshStats() end
+            if window.HomePage and window.selectedTab == window.HomeTab then window.HomePage:RefreshStats() end
         end)
     end
     function window:GetFriendStats()

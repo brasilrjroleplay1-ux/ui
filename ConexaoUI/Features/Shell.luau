@@ -1,6 +1,6 @@
 --!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
--- Compact window geometry. Each window owns its layout; Gen2's shared presets stay intact.
+-- Compact chrome with a labelled sidebar whenever the window has room for it.
 local sidebar = require(script.Parent.Parent.Gen2.components.sidebar)
 local Shell = {}
 function Shell.attach(window)
@@ -8,58 +8,45 @@ function Shell.attach(window)
     window.layout, window.StudioShell = layout, true
     local delta = layout.topbarHeight - 44
     layout.topbarHeight, layout.chromeHeight = 44, layout.chromeHeight - delta
-    layout.fadeSize = UDim2.new(1, 0, 0, 20)
-    layout.fadeTransparency = NumberSequence.new(1)
+    layout.fadeSize, layout.fadeTransparency = UDim2.new(1, 0, 0, 20), NumberSequence.new(1)
     window.topbar.Size = UDim2.new(1, 0, 0, 44)
     window.elements.Size = UDim2.new(1, 0, 1, -layout.chromeHeight)
     if window.elementsCorner then window.elementsCorner.CornerRadius = UDim.new(0, 8) end
     window.windowCorner.CornerRadius, window.theme.CornerRoundness = UDim.new(0, 10), UDim.new(0, 10)
     if window.elementsStroke then window.elementsStroke.Enabled = false end
     if layout.mode == "sidebar" then
-        layout.railWidth, layout.railCollapsedWidth, layout.railCollapseBelow = 60, 52, math.huge
-        layout.rowInset, layout.rowHeight, layout.rowCornerRadius, layout.rowSpacing = 6, 38, 8, 6
-        layout.rowPadding, layout.rowIconSize, layout.footerHeight, layout.railPadding = 0, 20, 48, 8
+        layout.railWidth, layout.railCollapsedWidth, layout.railCollapseBelow = 196, 64, 480
+        layout.rowInset, layout.rowHeight, layout.rowCornerRadius, layout.rowSpacing = 8, 38, 8, 4
+        layout.rowPadding, layout.rowIconSize, layout.footerHeight, layout.railPadding = 10, 20, 60, 10
         layout.cardTransparency = 1
-        window.tabListLayout.Padding = UDim.new(0, 6)
+        window.tabListLayout.Padding = UDim.new(0, 4)
         for _, child in ipairs(window.tabList:GetChildren()) do
-            if child:IsA("UIPadding") then child.PaddingTop, child.PaddingBottom = UDim.new(0, 8), UDim.new(0, 8) end
+            if child:IsA("UIPadding") then child.PaddingTop, child.PaddingBottom = UDim.new(0, 10), UDim.new(0, 10) end
         end
-        if window.profile then window.profile.Size = UDim2.new(1, 0, 0, 48) end
-        sidebar.applyWidth(window, 52)
+        if window.profile then window.profile.Size = UDim2.new(1, 0, 0, 60) end
+        window:_applyRailWidth()
         sidebar.reflowProfile(window)
-        if window.searchAction then
-            local action = window.searchAction.action
-            action.Parent, action.LayoutOrder, action.Size = window.tabList, 900, UDim2.fromOffset(38, 38)
-            action.BackgroundTransparency = 1
-            window:Create("UICorner", { Parent = action, CornerRadius = UDim.new(0, 8) })
-            local fade = window._fadeSurfaces
-            function window:_fadeSurfaces(shown, info)
-                fade(self, shown, info)
-                self:_reveal(self.searchAction.iconLabel, { ImageTransparency = shown and 0.25 or 1 }, info ~= nil, info)
+        window.settingsAction.action.Visible = false -- Settings remains directly available in the sidebar.
+        local applyWidth = window._applyRailWidth
+        function window:_applyRailWidth()
+            applyWidth(self)
+            for _, tab in ipairs(self.tabs) do
+                if tab.topbarItemTitle then
+                    tab.topbarItemTitle.AutomaticSize, tab.topbarItemTitle.TextWrapped = Enum.AutomaticSize.None, false
+                    tab.topbarItemTitle.TextTruncate = Enum.TextTruncate.AtEnd
+                    tab.topbarItemTitle.Size = UDim2.new(1, tab.topbarItemIcon and -26 or 0, 0, 20)
+                end
             end
+            for _, section in ipairs(self.tabSections) do section:_setVisible(not self.hidden and not self.minimised and not self._searching) end
         end
-        window.settingsAction.action.Visible = false -- The settings selector remains in the icon rail.
         local createSection = window.CreateSection
         function window:CreateSection(...)
             local section = createSection(self, ...)
-            if not section.main then return section end
-            section.main.AutomaticSize, section.main.Size = Enum.AutomaticSize.None, UDim2.new(1, -20, 0, 8)
-            section.title.Visible = false
-            if section.iconLabel then section.iconLabel.Visible = false end
-            local storage = self:Create("Frame", { Parent = section.main, Name = "PreservedSectionLayout", Visible = false, Size = UDim2.fromOffset(0, 0), BackgroundTransparency = 1 })
-            for _, child in ipairs(section.main:GetChildren()) do
-                if child:IsA("UIListLayout") then child.Parent = storage
-                elseif child:IsA("UIPadding") then
-                    child.PaddingTop, child.PaddingBottom, child.PaddingLeft, child.PaddingRight = UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0), UDim.new(0, 0)
-                end
+            local visible = section._setVisible
+            function section:_setVisible(value)
+                visible(self, value and window.sidebar.Size.X.Offset >= window.layout.railWidth)
             end
-            local line = self:Create("Frame", { Parent = section.main, Position = UDim2.fromScale(0, 0.5), Size = UDim2.new(1, 0, 0, 1), BorderSizePixel = 0, BackgroundTransparency = 1 }, { BackgroundColor3 = "SurfaceStroke" })
-            local shown = section._setShown
-            function section:_setShown(value, animate)
-                shown(self, value, animate)
-                self.window:_reveal(line, { BackgroundTransparency = value and 0.75 or 1 }, animate ~= nil and animate ~= false, typeof(animate) == "TweenInfo" and animate or nil)
-            end
-            if not self.hidden and not self.minimised then section:_setShown(true, false) end
+            section:_setVisible(not self.hidden and not self.minimised and not self._searching)
             return section
         end
     else

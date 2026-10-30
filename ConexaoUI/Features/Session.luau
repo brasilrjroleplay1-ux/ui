@@ -42,8 +42,8 @@ function Session.attach(window)
         if state.interval < 1 then return end
         state.fps = state.frames > 0 and math.floor(state.frames / state.interval + 0.5) or nil
         state.frames, state.interval = 0, 0
-        local page = window.ProfilePage
-        if page and window.selectedTab == window.ProfileTab and not window.hidden and page.RefreshStats then
+        local page = window.HomePage
+        if page and window.selectedTab == window.HomeTab and not window.hidden and page.RefreshStats then
             page:RefreshStats()
             if window.RefreshFriends then window:RefreshFriends() end
         end

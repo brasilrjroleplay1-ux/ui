@@ -55,7 +55,7 @@ function Dashboard.new(window, tab, page, player, executorInfo)
         Parent = self.plate, Position = UDim2.fromOffset(2, 2), Size = UDim2.new(1, -4, 1, -4), BackgroundTransparency = 1, ImageTransparency = 1,
         ScaleType = Enum.ScaleType.Fit, ResampleMode = Enum.ResamplerMode.Default, ZIndex = 6,
         Image = image.avatar(player.UserId, function(uri)
-            if not window.unloaded and window.ProfilePage == page and page.avatar.Parent then image.assign(page.avatar, "Image", uri) end
+            if not window.unloaded and window.HomePage == page and page.avatar and page.avatar.Parent then image.assign(page.avatar, "Image", uri) end
         end),
     })
     Surface.round(window, page.avatar, 6)

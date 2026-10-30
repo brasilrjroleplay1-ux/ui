@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.6.0", "new entry point is bundled")
+check(UI.Version == "3.6.1", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -55,7 +55,7 @@ check(not w.SettingsTab.neglectSelector and w.SettingsTab.topbarItem and w.selec
 check(w.TransparencySlider and w.WindowSizeSlider and w.AutoSizeToggle, "transparency, window size and automatic sizing controls are built into settings")
 local initiallySelected = w.selectedTab
 w:CloseProfile()
-check(w.selectedTab == initiallySelected and not w.ProfilePage, "closing the profile before it was opened leaves navigation unchanged")
+check(w.selectedTab == initiallySelected and not w.HomePage, "closing the profile before it was opened leaves navigation unchanged")
 check(w.SizeStatus and w.SizeInfo.automatic, "settings and automatic sizing are included with CreateWindow alone")
 check(w.WindowSizeSlider.value == w.SizeInfo.percent and w.AutoSizeToggle.value, "the initial slider readout reflects automatic sizing without switching to manual mode")
 local scrollFrame, scrollLayout = w.SettingsTab.tabPage, w.SettingsTab.tabPageLayout
@@ -139,15 +139,16 @@ w.configuration.autoSave = true
 
 -- Exercise the actual hit targets, not only the native Set API.
 local windowChildren = #w.screenGui:GetChildren()
-w.ProfileButton.MouseButton1Click:Fire()
-local profile = w.ProfilePage
-check(profile and profile.playerName.Text == "Olá, " .. game:GetService("Players").LocalPlayer.DisplayName, "clicking the sidebar opens the actual player's greeting")
+w:OpenHome()
+w.HomeTab.topbarItemInteract.MouseButton1Click:Fire()
+local profile = w.HomePage
+check(profile and profile.playerName.Text == "Olá, " .. game:GetService("Players").LocalPlayer.DisplayName, "Home opens the actual player's greeting")
 check(profile.details[2][2] == "Roblox Studio" and profile.avatar.Image ~= "", "profile includes runtime identification and the player's thumbnail")
 check(profile.avatar.Image:find("w=420&h=420", 1, true) and w.profileAvatar.Image:find("w=420&h=420", 1, true), "both profile and sidebar use a 420px thumbnail instead of upscaling the old 48px headshot")
 check(profile.avatar.ScaleType == Enum.ScaleType.Fit and profile.avatar.ResampleMode == Enum.ResamplerMode.Default, "avatar keeps its aspect ratio and smooth resampling")
 check(profile.platformIcon.kind == "studio" and #profile.platformIcon.parts == 4 and profile.fields[2].icon.kind == "roblox", "platform and account have local Studio and Roblox marks")
-check(#profile.fields == 2 and w.profileAvatar.Size.X.Offset == 32 and w.ProfileCard.BackgroundTransparency < 1 and w.ProfileButton.ZIndex > w.profileName.ZIndex, "the compact avatar card stays clickable above its labels")
-check(w.selectedTab == w.ProfileTab and profile.content.Parent == w.elements, "the profile opens in the main content panel as a native page")
+check(#profile.fields == 2 and w.profileAvatar.Size.X.Offset == 36 and w.ProfileCard.BackgroundTransparency < 1 and w.ProfileButton.ZIndex > w.profileName.ZIndex, "the compact avatar card stays clickable above its labels")
+check(w.selectedTab == w.HomeTab and profile.content.Parent == w.elements, "the profile opens in the main content panel as a native page")
 check(not w._conexaoPanel and not w.screenGui:FindFirstChild("ConexaoOverlay") and #w.screenGui:GetChildren() == windowChildren, "opening the profile creates no floating window or screen-darkening layer")
 local dashboard = profile.dashboard
 check(not dashboard.banner:FindFirstChild("Shading") and not dashboard.banner:FindFirstChild("Orbit"), "the rounded banner contains no rectangular shade or clipped off-canvas circles")
@@ -220,34 +221,34 @@ profile.copyButton.MouseButton1Click:Fire()
 check(copiedId == tostring(game:GetService("Players").LocalPlayer.UserId) and dashboard.notice.Visible and not w._conexaoPanel, "copy ID uses the runtime clipboard and reports success inside the profile")
 _G.setclipboard = function() return false end
 profile.copyButton.MouseButton1Click:Fire()
-check(dashboard.notice.Text:find("não está disponível", 1, true) and w.selectedTab == w.ProfileTab, "an unavailable clipboard reports inline and keeps profile navigation working")
+check(dashboard.notice.Text:find("não está disponível", 1, true) and w.selectedTab == w.HomeTab, "an unavailable clipboard reports inline and keeps profile navigation working")
 _G.setclipboard = oldClipboard
 w:OpenSettings()
 check(w.selectedTab == w.SettingsTab, "built-in settings remain available after removing the duplicate Home shortcut")
-w:OpenProfile()
+w:OpenHome()
 w:OpenThemes()
 local profileThemes = w._conexaoPanel
 check(profileThemes and #profileThemes.cards == 60 and profileThemes.root.Parent == w.elements, "theme previews remain available inside the same panel")
 profileThemes:Close()
-check(w.selectedTab == w.ProfileTab, "returning from theme selection restores the redesigned profile")
+check(w.selectedTab == w.HomeTab, "returning from theme selection restores the redesigned profile")
 w:CloseProfile()
 tab:Select()
-w:OpenProfile()
+w:OpenHome()
 w:CloseProfile()
 check(w.selectedTab == tab, "the profile back button restores the previous tab")
 local profileConnections, profileInstances, profileTabs = #w.connections, #w.instances, #w.tabs
-for i = 1, 6 do w:OpenProfile() w:CloseProfile() end
-check(w.ProfilePage == profile and #w.connections == profileConnections and #w.instances == profileInstances and #w.tabs == profileTabs, "repeated profile navigation reuses one page without accumulating resources")
+for i = 1, 6 do w:OpenHome() w:CloseProfile() end
+check(w.HomePage == profile and #w.connections == profileConnections and #w.instances == profileInstances and #w.tabs == profileTabs, "repeated profile navigation reuses one page without accumulating resources")
 local removedPrevious = w:CreateTab({ name = "Previous" })
 removedPrevious:Select()
-w:OpenProfile()
+w:OpenHome()
 removedPrevious:Remove()
 w:CloseProfile()
 check(w.selectedTab == tab, "back navigation falls back safely when the previous tab was removed")
-w.ProfileTab:Remove()
-check(w.ProfilePage == nil and w.ProfileTab == nil, "removing the internal profile page releases its cached references")
-profile = w:OpenProfile()
-check(w.selectedTab == w.ProfileTab and profile.content.Parent == w.elements, "a removed profile page is rebuilt inside the panel on the next click")
+w.HomeTab:Remove()
+check(w.HomePage == nil and w.HomeTab == nil, "removing the internal profile page releases its cached references")
+profile = w:OpenHome()
+check(w.selectedTab == w.HomeTab and profile.content.Parent == w.elements, "a removed profile page is rebuilt inside the panel on the next click")
 w:CloseProfile()
 multi:Open()
 local panel = multi.selectionPanel
@@ -303,8 +304,8 @@ local connections, instances = #w.connections, #w.instances
 for i = 1, 6 do multi:Open() multi:Close() end
 check(#w.connections == connections and #w.instances == instances, "repeated dropdown use does not accumulate connections or instances")
 multi:Open()
-w:OpenProfile()
-check(not multi._isOpen and not w._conexaoPanel and w.selectedTab == w.ProfileTab, "opening the in-panel profile dismisses an existing dropdown overlay")
+w:OpenHome()
+check(not multi._isOpen and not w._conexaoPanel and w.selectedTab == w.HomeTab, "opening the in-panel profile dismisses an existing dropdown overlay")
 w:CloseProfile()
 
 check(w.SettingsTab.name == "Configurações" and w.AutoSaveToggle and w.AutoLoadToggle and w.ThemeGallery, "settings and theme previews are included without script-side setup")
@@ -336,8 +337,8 @@ gallery:Layout()
 end
 w.ThemeGallery.cards[5].hit.MouseButton1Click:Fire()
 check(w.ThemeId == "porcelana" and w.ThemeGallery.cards[5].selected.Visible, "a preview applies its real theme and marks the selection")
-check(w.ProfilePage.fields[1].valueLabel.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
-check(w.ProfilePage.platformIcon.parts[1].BackgroundColor3 == w.theme.ContentColor, "platform marks follow the text color to stay readable on light cards")
+check(w.HomePage.fields[1].valueLabel.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
+check(w.HomePage.platformIcon.parts[1].BackgroundColor3 == w.theme.ContentColor, "platform marks follow the text color to stay readable on light cards")
 do
     local function luminance(color)
         local function channel(v) return v <= 0.04045 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4 end
@@ -350,8 +351,8 @@ do
     local previous = w.ThemeId
     for _, id in ipairs({ "conexao", "ember", "rose", "porcelana", "matcha", "frost" }) do
         w:ChangeTheme(id)
-        local home = w.ProfilePage.dashboard
-        for _, node in ipairs({ home.session, home.save, home.friends, w.ProfilePage.fields[1].main }) do
+        local home = w.HomePage.dashboard
+        for _, node in ipairs({ home.session, home.save, home.friends, w.HomePage.fields[1].main }) do
             local gradient = childOfClass(node, "UIGradient")
             for _, point in ipairs(gradient.Color.Keypoints) do
                 check(contrast(w.theme.ContentColor, point.Value) >= 4.5, "Home text contrasts with each surface in " .. id)
@@ -359,7 +360,7 @@ do
         end
         home:_setShown(true, false)
         check(home.stats[1].value.TextTransparency <= 0.2 and home.stats[1].main.BackgroundTransparency <= 0.1, "session values and tiles remain visible in " .. id)
-        check(w.ProfilePage.platformIcon.parts[1].BackgroundColor3 == w.theme.ContentColor, "platform logo follows " .. id)
+        check(w.HomePage.platformIcon.parts[1].BackgroundColor3 == w.theme.ContentColor, "platform logo follows " .. id)
     end
     w:ChangeTheme(previous)
 end
@@ -548,21 +549,21 @@ local transient = removed:CreateDropdown({ name = "Temporary", options = { "X" }
 transient:Open()
 removed:Remove()
 check(not w._conexaoPanel and not transient._isOpen, "removing an open dropdown's tab also tears down its overlay")
-w:OpenProfile()
+w:OpenHome()
 w:Hide()
-check(not w._conexaoPanel and w.selectedTab == w.ProfileTab, "hiding preserves the profile as a normal internal page")
+check(not w._conexaoPanel and w.selectedTab == w.HomeTab, "hiding preserves the profile as a normal internal page")
 w:Show()
-check(w.selectedTab == w.ProfileTab and w.ProfilePage.content.Parent == w.elements, "reopening keeps the profile inside the main panel")
+check(w.selectedTab == w.HomeTab and w.HomePage.content.Parent == w.elements, "reopening keeps the profile inside the main panel")
 w:CloseProfile()
 
 local previousIdentify = _G.identifyexecutor
 _G.identifyexecutor = function() return "Test Executor", "1.2.3" end
 local ew = UI:CreateWindow({ Id = "ExecutorTest", name = "ExecutorTest", sidebarLayout = false })
 check(not ew.ProfileButton and ew.ExecutorInfo.name == "Roblox Studio" and ew.ExecutorInfo.support == "studio", "Studio remains available for development with the top-tab layout")
-ew:OpenProfile()
-check(ew.selectedTab == ew.ProfileTab and ew.ProfilePage.content.Parent == ew.elements and not ew._conexaoPanel, "the top-tab layout also presents the profile inside its content panel")
+ew:OpenHome()
+check(ew.selectedTab == ew.HomeTab and ew.HomePage.content.Parent == ew.elements and not ew._conexaoPanel, "the top-tab layout also presents the profile inside its content panel")
 ew:Unload()
-check(not ew.ProfilePage and not ew.ProfileTab and #ew.connections == 0, "unloading with a profile open releases its page references and handlers")
+check(not ew.HomePage and not ew.HomeTab and #ew.connections == 0, "unloading with a profile open releases its page references and handlers")
 _G.identifyexecutor = previousIdentify
 
 local previousAsset, previousStudio = _G.getcustomasset, game:GetService("RunService").IsStudio
@@ -570,7 +571,7 @@ _G.identifyexecutor = function() return "Delta", "1.174.31136" end
 _G.getcustomasset = nil
 game:GetService("RunService").IsStudio = function() return false end
 local deltaWindow = UI:CreateWindow({ Id = "DeltaFallback341" })
-local deltaPage = deltaWindow:OpenProfile()
+local deltaPage = deltaWindow:OpenHome()
 check(deltaPage.executorIcon.kind == "delta" and not deltaPage.executorIcon.artwork and #deltaPage.executorIcon.parts == 3, "Delta has a local geometric fallback when custom assets are unavailable")
 check(deltaPage.platformIcon.kind == "roblox" and deltaPage.platformBadge.Text == "Roblox", "a Roblox client shows the Roblox mark and platform name")
 deltaWindow:Unload()
@@ -594,7 +595,7 @@ _G.getcustomasset = function(path)
     return "rbxasset://local/" .. id .. "-logo.png"
 end
 deltaWindow = UI:CreateWindow({ Id = "DeltaArtwork341" })
-deltaPage = deltaWindow:OpenProfile()
+deltaPage = deltaWindow:OpenHome()
 check(deltaPage.executorIcon.artwork and deltaPage.fields[1].icon.artwork and deltaPage.executorIcon.parts[1].Image == "rbxasset://local/delta-logo.png", "Delta badge and executor card render the embedded logo through the local asset API")
 check(localAssetCalls == 1 and localAssetPath:find("delta-logo-256-v1.png", 1, true), "the bundled logo is cached locally once instead of downloaded for each badge")
 deltaWindow:Hide()
@@ -695,7 +696,7 @@ local DemoUI, demoWindow = (function()
 -- DEMO
 return UI, window
 end)()
-check(demoWindow and #demoWindow.tabs == 2 and demoWindow.selectedTab == demoWindow.ProfileTab and demoWindow.SettingsTab.topbarItem, "the standalone demo opens the built-in dashboard with settings still visible")
+check(demoWindow and #demoWindow.tabs == 2 and demoWindow.selectedTab == demoWindow.HomeTab and demoWindow.SettingsTab.topbarItem, "the standalone demo opens the built-in dashboard with settings still visible")
 DemoUI:Destroy()
 check(demoWindow.unloaded, "standalone demo tears down cleanly")
 

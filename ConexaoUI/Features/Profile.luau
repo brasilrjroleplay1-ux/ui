@@ -9,7 +9,7 @@ local function buildPage(window, player, executorInfo, version)
     -- A native content page, like Settings: it is clipped/scrolled by the main panel.
     local tab = window:CreateTab({ name = "Início", icon = 93364949241311, customOrder = -1000, forgetState = true })
     local page = { tab = tab, content = tab.tabPage, details = {}, fields = {} }
-    window.ProfileTab, window.ProfilePage = tab, page
+    window.HomeTab, window.HomePage = tab, page
     page.dashboard = Dashboard.new(window, tab, page, player, executorInfo)
     tab:_register(page.dashboard)
 
@@ -50,11 +50,11 @@ local function buildPage(window, player, executorInfo, version)
         self.dashboard:Layout()
         if window.RefreshFriends then window:RefreshFriends() end
     end
-    function page:Close() window:CloseProfile() end
+    function page:Close() window:_closeHome() end
     -- An application may remove the page through the public Tab API. Rebuild safely next time.
     local remove = tab.Remove
     function tab:Remove()
-        if window.ProfileTab == self then window.ProfileTab, window.ProfilePage = nil, nil end
+        if window.HomeTab == self then window.HomeTab, window.HomePage = nil, nil end
         remove(self)
     end
     return page
@@ -62,31 +62,31 @@ end
 
 function Profile.attach(window, executorInfo, version)
     window.ExecutorInfo = executorInfo
-    function window:CloseProfile()
-        if self.unloaded or not self.ProfileTab or self.selectedTab ~= self.ProfileTab then return end
-        local previous = self._profilePreviousTab
+    function window:_closeHome()
+        if self.unloaded or not self.HomeTab or self.selectedTab ~= self.HomeTab then return end
+        local previous = self._homePreviousTab
         if not previous or not previous.tabPage or not table.find(self.tabs, previous) then
             previous = self.SettingsTab
             for _, candidate in ipairs(self.tabs) do
-                if candidate ~= self.SettingsTab and candidate ~= self.ProfileTab and not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
+                if candidate ~= self.SettingsTab and candidate ~= self.HomeTab and not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
             end
         end
         if previous then previous:Select() end
     end
-    function window:OpenProfile()
+    function window:OpenHome()
         if self.unloaded then return end
         local player = game:GetService("Players").LocalPlayer
         if not player then return end
         if self._conexaoPanel then self._conexaoPanel:Close() end
-        if self.selectedTab ~= self.ProfileTab then self._profilePreviousTab = self.selectedTab end
-        local page = self.ProfilePage or buildPage(self, player, executorInfo, version)
+        if self.selectedTab ~= self.HomeTab then self._homePreviousTab = self.selectedTab end
+        local page = self.HomePage or buildPage(self, player, executorInfo, version)
         page:Refresh()
         page.tab:Select()
         return page
     end
-    window.OpenHome = window.OpenProfile
+    require(script.Parent.Account).attach(window, executorInfo, version)
     if window.profile then
-        window.profileAvatar.Size = UDim2.fromOffset(32, 32)
+        window.profileAvatar.Size = UDim2.fromOffset(36, 36)
         window.profileAvatar.ZIndex = 123
         window.profileAvatar.ScaleType, window.profileAvatar.ResampleMode = Enum.ScaleType.Fit, Enum.ResamplerMode.Default
         window.profileContainer.ZIndex, window.profileLabels.ZIndex = 121, 121
@@ -94,17 +94,17 @@ function Profile.attach(window, executorInfo, version)
         window.profileLabels.Size = UDim2.new(1, -64, 0, 40)
         window.profileName.Size = UDim2.new(1, 0, 0, 20)
         window.profileName.AutomaticSize = Enum.AutomaticSize.None
-        window.profileName.TextSize, window.profileName.ZIndex = 16, 123
+        window.profileName.TextSize, window.profileName.ZIndex = 14, 123
         window.profileName.FontFace = window.theme.TitleFont
         window.themeProperties[window.profileName].FontFace = "TitleFont"
         window.profileName.TextWrapped, window.profileName.TextTruncate = false, Enum.TextTruncate.AtEnd
         window.profileSubtitle.Size = UDim2.new(1, 0, 0, 16)
         window.profileSubtitle.AutomaticSize = Enum.AutomaticSize.None
-        window.profileSubtitle.TextSize, window.profileSubtitle.ZIndex = 12, 123
+        window.profileSubtitle.TextSize, window.profileSubtitle.ZIndex = 11, 123
         window.profileSubtitle.TextWrapped, window.profileSubtitle.TextTruncate = false, Enum.TextTruncate.AtEnd
         window.ProfileCard = window:Create("Frame", {
             Name = "PlayerCard", Parent = window.profile, BorderSizePixel = 0,
-            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 36), ZIndex = 120,
+            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 48), ZIndex = 120,
         }, { BackgroundColor3 = "StatBackground" })
         Surface.round(window, window.ProfileCard, 8)
         window.ProfileCardStroke = window:Create("UIStroke", { Parent = window.ProfileCard, Transparency = 0.7, Thickness = 1 }, { Color = "AccentStroke" })

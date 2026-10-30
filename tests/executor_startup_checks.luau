@@ -28,7 +28,7 @@ check(not pcall(createLibrary), "the initial loader rejects failed identificatio
 for _, name in ipairs({ "Delta", "Wave", "Xeno", "Solara", "  DELTA  " }) do
     _G.identifyexecutor = function() return name, "1.0" end
     local ok, library = pcall(createLibrary)
-    check(ok and library.Version == "3.6.0" and #library.SupportedExecutors == 4, "the loader admits an explicitly permitted name: " .. name)
+    check(ok and library.Version == "3.6.1" and #library.SupportedExecutors == 4, "the loader admits an explicitly permitted name: " .. name)
 end
 _G.identifyexecutor = nil
 _G.getexecutorname = function() return "Wave", "2.0" end
