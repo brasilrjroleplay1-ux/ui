@@ -706,7 +706,149 @@ local ComponentsUI, componentsWindow = (function()
 -- COMPONENTS
 return UI, window
 end)()
-check(componentsWindow and #componentsWindow.tabs >= 5 and componentsWindow.selectedTab.name == "Início", "the separate component example retains all API demonstrations")
+check(componentsWindow and #componentsWindow.tabs >= 7 and componentsWindow.selectedTab.name == "Testes", "the interactive component example opens its test controls")
+local function exerciseComponents(window)
+    local function find(name, list)
+        for _, element in ipairs(list or {}) do
+            if element.name == name then return element end
+            if element.elements then local found = find(name, element.elements) if found then return found end end
+        end
+    end
+    local function control(name)
+        for _, tab in ipairs(window.tabs) do local found = find(name, tab.elements) if found then return found end end
+        error("Missing example control: " .. name)
+    end
+    local function click(name)
+        local item = control(name)
+        local tab = item.tab
+        while tab and tab.__type == "Group" do tab = tab.tab end
+        if tab and tab.Select then tab:Select() end
+        item.interact.MouseButton1Click:Fire()
+        return item
+    end
+    local function last() return window.Feedback.messages[#window.Feedback.messages] end
+    local counter, log = control("Interações nesta execução"), control("Eventos dos callbacks")
+    local lastAction, paragraph = control("Última ação"), control("Texto dinâmico")
+    local kinds = {}
+    local function collect(elements)
+        for _, element in ipairs(elements) do
+            kinds[element.__type] = true
+            if element.elements then collect(element.elements) end
+        end
+    end
+    for _, tab in ipairs(window.tabs) do collect(tab.elements) end
+    for _, kind in ipairs({ "Button", "Toggle", "Slider", "Dropdown", "Input", "Keybind", "ColorPicker", "Text", "Progress", "Console", "Statistic", "Divider", "Section", "Group" }) do
+        check(kinds[kind], "the example includes the public component: " .. kind)
+    end
+    check(control("Testar botão").tab.elements[3] == control("Testar botão"), "the main button stays ahead of tall readouts in the first tab")
+    check(counter.value == 0, "restoring demo values does not manufacture interactions")
+    click("Testar botão")
+    check(counter.value == 1 and last().title == "Botão clicado" and last().flavor == "success", "the example button actually notifies and counts its callback")
+    local toggle = control("Toggle com notificação")
+    toggle.interact.MouseButton1Click:Fire()
+    check(toggle.value and last().content == "Você ativou o toggle.", "turning the example toggle on produces the matching notification")
+    toggle.interact.MouseButton1Click:Fire()
+    check(not toggle.value and last().content == "Você desativou o toggle.", "turning the toggle off produces different feedback")
+    click("Bloquear o botão de teste")
+    local blocked = counter.value
+    click("Testar botão")
+    check(control("Testar botão").locked and counter.value == blocked, "the lock example prevents the protected button callback")
+    click("Bloquear o botão de teste");click("Testar botão")
+    check(not control("Testar botão").locked and last().title == "Botão clicado", "unlock makes the example button usable again")
+    local slider = control("Porcentagem editável")
+    slider.tab:Select()
+    local before = counter.value
+    slider.callback(25, true)
+    check(counter.value == before and control("Progresso da porcentagem"):Get() == 25, "drag feedback updates the example progress without notification spam")
+    slider._valueInput.button.MouseButton1Click:Fire()
+    slider.valueInput.Text = "73,5%"
+    slider.valueInput:ReleaseFocus()
+    check(slider.value == 73.5 and last().title == "Porcentagem confirmada" and control("Valor escolhido no slider").value == 73.5, "typing in the example slider updates its notification and linked statistic")
+    control("Número com precisão"):Set(-3.25)
+    check(last().content == "Valor: -3.25", "the precise-number callback reports its committed value")
+    control("Número inteiro"):Set(7)
+    check(last().content == "7", "integer sliders have a working callback")
+    local single = control("Escolha única")
+    single:Open();single.selectionPanel.items[2].hit.MouseButton1Click:Fire()
+    check(single:GetValue() == "Opção 2" and last().content == "Opção 2", "single-choice panel actions call the example's callback")
+    local multi = control("Escolha múltipla")
+    multi:Open();multi.selectionPanel.actions[3].MouseButton1Click:Fire()
+    check(#multi.value == 5 and last().content:find("Opção 5", 1, true), "Select all reports all five example options")
+    multi.selectionPanel.actions[2].MouseButton1Click:Fire()
+    check(#multi.value == 0 and last().content == "Nenhuma opção selecionada", "clearing a multiple dropdown reports its empty selection")
+    multi:Close()
+    click("Selecionar as cinco por código");check(#multi.value == 5, "the programmatic selection example works")
+    click("Limpar seleção por código");check(#multi.value == 0, "the programmatic clear example works")
+    click("Atualizar opções do dropdown");check(#multi.options == 6 and last().title == "Lista atualizada", "the example can refresh dropdown options at runtime")
+    local input = control("Texto de exemplo")
+    input.input.Text = "Teste de callback";input.input.FocusLost:Fire()
+    check(input.value == "Teste de callback" and last().content == "Teste de callback", "committing the example textbox sends its actual text")
+    local numeric = control("Campo numérico")
+    numeric.input.Text = "25";numeric.input.FocusLost:Fire()
+    check(numeric.value == "25" and last().content == "25", "numeric input also has visible callback feedback")
+    local color = control("Seletor de cor")
+    color:Set(Color3.fromRGB(10, 20, 30));color:SetAlpha(0.5)
+    click("Notificar a cor escolhida")
+    check(last().content:find("#0A141E", 1, true) and last().content:find("50%", 1, true), "the color example reports real RGB and alpha values")
+    click("Executar ação do atalho")
+    check(last().title == "Atalho acionado", "mobile users can run the same action as the keyboard shortcut")
+    local bind = control("Atalho de exemplo")
+    bind:Set(Enum.KeyCode.F8)
+    check(last().title == "Atalho alterado" and last().content == "F8", "rebinding the demo shortcut produces feedback")
+    local inputService = game:GetService("UserInputService")
+    inputService.InputBegan:Fire({ UserInputType = Enum.UserInputType.Keyboard, KeyCode = Enum.KeyCode.F8 }, false)
+    check(last().title == "Atalho acionado", "a real keyboard event invokes the demo shortcut")
+    inputService.InputBegan:Fire({ UserInputType = Enum.UserInputType.Keyboard, KeyCode = Enum.KeyCode.F7 }, false)
+    check(last().content == "A tecla está pressionada.", "the hold example reports the press edge")
+    inputService.InputEnded:Fire({ UserInputType = Enum.UserInputType.Keyboard, KeyCode = Enum.KeyCode.F7 })
+    check(last().content == "A tecla foi solta.", "the hold example reports the release edge")
+    for _, item in ipairs({ { "Notificação padrão", "info" }, { "Aviso de sucesso", "success" }, { "Aviso de atenção", "warning" }, { "Aviso de erro", "error" } }) do
+        click(item[1]);check(last().flavor == item[2], "every notification-style example is wired to its intended type")
+    end
+    local message = last();click("Fechar o último aviso")
+    check(message._dismissed, "the close-last example actually dismisses its notification")
+    click("Toast no topo");check(last().main.Parent == window._toastsTop, "the top-toast example uses the top stack")
+    click("Toast embaixo");check(last().main.Parent == window._toastsBottom, "the bottom-toast example uses the bottom stack")
+    local textService = game:GetService("TextService")
+    local measure = textService.GetTextBoundsAsync
+    textService.GetTextBoundsAsync = function(_, params)
+        local length, size = utf8.len(tostring(params.Text)) or #tostring(params.Text), params.Size
+        local extent = length * size * 0.55
+        return Vector2.new(math.min(extent, params.Width), math.max(size, math.ceil(extent / math.max(1, params.Width)) * size * 1.2))
+    end
+    click("Notificação com texto longo")
+    textService.GetTextBoundsAsync = measure
+    check(last().scrollable and utf8.len(lastAction.text) <= 161, "the long-copy example scrolls internally while its action summary remains compact")
+    click("Popup com confirmação")
+    local confirmation
+    for _, node in ipairs(window.instances) do
+        if node:IsA("TextLabel") and node.Text == "Confirmar" then
+            for _, child in ipairs(node.Parent:GetChildren()) do if child:IsA("TextButton") then confirmation = child break end end
+        end
+    end
+    check(confirmation ~= nil, "the popup example exposes its confirmation action")
+    confirmation.MouseButton1Click:Fire()
+    check(last().title == "Popup" and last().content == "Você escolheu confirmar.", "popup choices execute their own example callbacks")
+    click("Avançar progresso em etapas")
+    check(control("Progresso em etapas"):Get() == 20 and paragraph.name == "Texto atualizado" and paragraph.text:find("20%", 1, true), "button callbacks update both a progress widget and a paragraph")
+    click("Escrever no console");check(log:Get():find("Uma nova linha", 1, true), "the console example appends actual callback output")
+    click("Limpar console");check(log:Get() == "", "the clear-console example removes its output")
+    click("Botão esquerdo");check(last().title == "Grupo esquerdo", "nested left-column buttons have working callbacks")
+    click("Toggle direito");check(last().title == "Grupo direito", "nested right-column toggles have working callbacks")
+    click("Atualizar selo do topo");check(window.tags[1].text:find("AÇÕES", 1, true), "the header-tag example updates its displayed text")
+    local autosave = window.configuration.autoSave
+    window.configuration.autoSave = false
+    click("Salvar escolhas agora")
+    local saved = slider.value
+    slider:Set(15)
+    local interactions = counter.value
+    click("Carregar escolhas salvas")
+    check(slider.value == saved and counter.value == interactions + 1 and last().title == "Restauração", "manual restore reapplies demo values without flooding callbacks with notifications")
+    window.configuration.autoSave = autosave
+    click("Zerar contador de interações");check(counter.value == 0, "the reset-counter example resets its readout")
+end
+exerciseComponents(componentsWindow)
 ComponentsUI:Destroy()
+check(componentsWindow.unloaded and #componentsWindow.connections == 0, "the interactive example releases its handlers when unloaded")
 
 print("PASS: " .. checks .. " public-bundle / integration assertions (Roblox services simulated)")

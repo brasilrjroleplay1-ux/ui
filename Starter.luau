@@ -2,4 +2,6 @@ local ConexaoUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/bra
 local window = ConexaoUI:CreateWindow({ name = "Meu Hub", subtitle = "Meu projeto", sidebarLayout = true })
 local tab = window:CreateTab({ name = "Principal", icon = 93364949241311 })
 tab:CreateButton({ name = "Meu botão", callback = function() window:Toast({ title = "Clicado" }) end })
-tab:CreateToggle({ name = "Meu recurso", flag = "recurso", callback = function(value) print(value) end })
+tab:CreateToggle({ name = "Meu recurso", flag = "recurso", callback = function(ativo)
+    window:Notify({ title = "Meu recurso", content = ativo and "Ativado!" or "Desativado!" })
+end })

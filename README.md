@@ -12,6 +12,14 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/
 
 A demo abre em **Início**, com saudação, servidor, executor e amigos, usando o tema neutro `default`. **Configurações** continua pronta na lateral, com transparência, tamanho, salvamento e temas. O cartão inferior mostra avatar, nome e executor e abre **Meu perfil**, uma página separada. A demo 3.6 salva suas preferências em `conexao_demo_studio36`.
 
+Para testar os componentes e seus callbacks, execute o **exemplo interativo completo**:
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/Components.luau"))()
+```
+
+Ele abre na aba **Testes**, com botão e toggle que disparam notificações. As abas Sliders, Dropdowns, Campos, Avisos e Dados e grupos incluem os demais componentes, entrada precisa, seleções únicas/múltiplas, cores, atalhos, popup com ações, texto dinâmico, estatística, progresso e console de eventos. Os sliders notificam na confirmação; o seletor de cor atualiza a leitura e tem um botão de notificação. No celular, um botão executa a mesma ação do atalho. As escolhas usam o perfil por conta da library. O script fica em [Example.luau](Example.luau); os controles e as ações são definidos nele.
+
 A **3.6.1** mantém o cabeçalho de **44 px** e restaura a busca no topo. A lateral de **196 px** mostra ícones e nomes das abas, com avatar, nome do jogador e executor no rodapé. Abaixo de 480 px de largura de janela, ela se recolhe para 64 px para preservar a área dos controles. O topo usa marca, título e subtítulo na mesma linha. Nome, subtítulo e ícone continuam personalizáveis em `CreateWindow`.
 
 Na **3.6.2**, o título Conexão Studio usa **CONEXÃO** maior e em negrito, com degradê discreto ligado ao tema, linha de assinatura e selo **STUDIO**. A versão mantém o contraste ao reabrir a janela. A marca se ajusta antes de tocar nos botões do topo; janelas com outros nomes continuam exibindo o título definido pelo script.

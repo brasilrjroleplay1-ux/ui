@@ -2,6 +2,8 @@
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
+O exemplo completo abre a aba Testes e permite clicar nos controles para observar seus callbacks em notificações, na última ação e no console. Há abas para sliders, dropdowns, campos, avisos e dados/grupos. Para executá-lo diretamente, use `dist/Components.luau`. Configurações, perfil e salvamento continuam sendo fornecidos pela library; os controles de demonstração estão no script.
+
 ```lua
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/ConexaoUI.luau"))()
 local window = UI:CreateWindow({ name = "Meu Hub", subtitle = "Conexão UI", sidebarLayout = true, theme = "conexao" })
@@ -19,7 +21,12 @@ end })
 ## Toggle e Slider
 
 ```lua
-local toggle = tab:CreateToggle({ name = "Ativar", flag = "ativo", value = false, callback = function(value) print(value) end })
+local toggle = tab:CreateToggle({
+    name = "Ativar", flag = "ativo", value = false,
+    callback = function(ativo)
+        window:Notify({ title = "Recurso", content = ativo and "Você ativou!" or "Você desativou!" })
+    end,
+})
 toggle:Set(true)
 local slider = tab:CreateSlider({ name = "Volume", flag = "volume", range = { 0, 100 }, increment = 0.25, value = 50, format = "percent", callback = function(value, dragging) print(value, dragging) end })
 slider:Set(75)
@@ -31,6 +38,8 @@ Clique ou toque no valor para editar. Enter ou tocar fora confirma; Escape cance
 O formato `percent` mostra o valor seguido de `%`; os limites, o callback e o arquivo salvo usam o número da `range`. Por exemplo, `75` representa `75 %` quando a faixa é `{ 0, 100 }`. `suffix` continua disponível para unidades próprias, como `ms`, quando `format` não é informado. `editable = false` desativa a digitação. Sliders `minimal = true` mantêm apenas o trilho.
 
 A confirmação chama o callback uma vez, com `dragging = false`, e usa o salvamento nativo. Durante a digitação, o texto é um rascunho; digitar o mesmo valor novamente não repete o callback. A edição também funciona em grupos e nos sliders incluídos em Configurações.
+
+O callback é definido pelo script: ele pode chamar `window:Notify`, atualizar um cartão com `:Set()` ou executar sua própria lógica. Para notificar em um slider, coloque a chamada dentro de `if not dragging then ... end`; assim o arraste não cria um aviso a cada movimento. O exemplo interativo também suprime avisos de demonstração durante a restauração de valores salvos.
 
 ## Dropdown único e múltiplo
 
