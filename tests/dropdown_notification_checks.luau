@@ -1,4 +1,4 @@
--- Actual public bundle: anchored selection, checkboxes, optional messages and saved state.
+-- Actual public bundle: split content, checkboxes, optional messages and saved state.
 local UI = (function()
 -- BUNDLE
 end)()
@@ -10,23 +10,48 @@ local testCamera = Instance.new("Camera")
 workspace.CurrentCamera = testCamera
 testCamera.ViewportSize = Vector2.new(1280, 768)
 gui.GetGuiInset = function() return Vector2.new(0, 24), Vector2.new(0, 0) end
-local w = UI:CreateWindow({ Id = "Dropdown390", name = "Dropdown test", configuration = { fileName = "dropdown390", autoSave = false, autoLoad = false } })
+local w = UI:CreateWindow({ Id = "Dropdown392", name = "Dropdown test", configuration = { fileName = "dropdown390", autoSave = false, autoLoad = false } })
+w.size, w.main.AbsoluteSize, w.main.AbsolutePosition = UDim2.fromOffset(800, 600), Vector2.new(800, 600), Vector2.new(100, 60)
+w:_applyRailWidth()
+local originalWidth = w._applyRailWidth
+local originalElementsSize, originalElementsPosition = w.elements.Size, w.elements.Position
+local originalFadeSize, originalFadePosition = w.bottomFade.Size, w.bottomFade.Position
 local tab = w:CreateTab({ name = "Options" })
 tab:Select()
-tab.tabPage.AbsolutePosition, tab.tabPage.AbsoluteSize = Vector2.new(100, 60), Vector2.new(600, 600)
+tab.tabPage.AbsolutePosition, tab.tabPage.AbsoluteSize = Vector2.new(296, 104), Vector2.new(604, 556)
 local options = { "Um", "Dois", "Três", "Quatro", "Cinco" }
 local callbackCount = 0
 local multi = tab:CreateDropdown({ name = "Marque opções", flag = "multi", multiSelect = true, options = options, value = { "Um" }, callback = function() callbackCount += 1 end })
-multi.main.AbsolutePosition, multi.main.AbsoluteSize = Vector2.new(300, 150), Vector2.new(300, 41)
+multi.main.AbsolutePosition, multi.main.AbsoluteSize = Vector2.new(316, 220), Vector2.new(300, 41)
 local function heartbeat() run.Heartbeat:Fire(0.016) end
-local function rect(p) return p.main.Position.X.Offset, p.main.Position.Y.Offset, p.main.Size.X.Offset, p.main.Size.Y.Offset end
+local function rect(node)
+    local parent = w.main.AbsoluteSize
+    local width, height = parent.X * node.Size.X.Scale + node.Size.X.Offset, parent.Y * node.Size.Y.Scale + node.Size.Y.Offset
+    local x = parent.X * node.Position.X.Scale + node.Position.X.Offset - node.AnchorPoint.X * width
+    local y = parent.Y * node.Position.Y.Scale + node.Position.Y.Offset - node.AnchorPoint.Y * height
+    return { x = x, y = y, width = width, height = height }
+end
+local function insideContent(picker)
+    local p, b = rect(picker.main), picker.bounds
+    check(p.x >= b.x and p.y >= b.y and p.x + p.width <= b.x + b.width and p.y + p.height <= b.y + b.height, "options stay inside the window's content bounds")
+    local controls = rect(w.elements)
+    check(controls.width > 0 and controls.height > 0, "the original controls retain visible space")
+    if picker.mode == "right" then
+        check(controls.x + controls.width <= p.x and controls.height == b.height, "the controls and options occupy separate left/right columns")
+    else
+        check(controls.y + controls.height <= p.y and controls.width == b.width, "narrow windows divide controls above and options below without overlap")
+    end
+end
 local tabCount = #w.tabs
+local pageChildren = #w.elements:GetChildren()
 multi.interact.MouseButton1Click:Fire()
 local p = multi.selectionPanel
-local x, y, width, height = rect(p)
-check(p.side == "right" and x == 608 and y == 150 and width == 300 and height <= 388, "the compact list anchors immediately to the right of its dropdown")
-check(#w.tabs == tabCount and w.selectedTab == tab and p.main.Parent == w.screenGui and not p.scrim, "opening creates no tab, fullscreen blocker or dimming")
-check(multi.panel.Visible == false and multi.main.Size.Y.Offset <= 70, "opening does not expand the header or shift other controls")
+check(p.mode == "right" and rect(p.main).width <= 300, "a regular window reserves a bounded options column on the inside right")
+check(#w.tabs == tabCount and w.selectedTab == tab and p.main.Parent == w.main and not p.scrim, "the options are a child of the main panel, with no replacement tab or fullscreen blocker")
+check(#w.elements:GetChildren() == pageChildren, "the options never become a child page of the native UIPageLayout")
+insideContent(p)
+check(w.elements.Size ~= originalElementsSize and w.elements.Position ~= originalElementsPosition and w.size == UDim2.fromOffset(800, 600), "opening divides content without resizing the actual window")
+check(multi.panel.Visible == false and multi.main.Size.Y.Offset <= 70, "the dropdown's own row stays collapsed")
 check(p.grid:IsA("UIListLayout") and #p.items == 5 and p.items[1].checkbox.Size.X.Offset == 20, "each vertical option row has an explicit checkbox")
 check(p.items[1].marker.Text == "✓" and p.items[2].marker.Text == "", "initial choices have checked and unchecked boxes")
 local before = callbackCount
@@ -56,53 +81,74 @@ check(p.list.CanvasPosition.Y == 46, "a resized list keeps its last row reachabl
 p.search.Text = "nada";p.search:GetPropertyChangedSignal("Text"):Fire()
 check(p.empty.Visible, "unmatched search shows an empty state")
 p.search.Text = "";p.search:GetPropertyChangedSignal("Text"):Fire()
-multi.main.AbsolutePosition = Vector2.new(400, 180);heartbeat()
-check(p.main.Position.X.Offset == 708 and p.main.Position.Y.Offset == 180, "moving the anchor repositions the open list")
-multi.main.AbsolutePosition = Vector2.new(900, 180);heartbeat()
-check(p.side == "left" and p.main.Position.X.Offset == 592, "insufficient right space flips the list left")
+local position = p.main.Position
+w.main.AbsolutePosition = Vector2.new(180, 90);heartbeat()
+check(p.main.Parent == w.main and p.main.Position == position, "the options move with the parent window without screen-relative positioning")
 local accent = p.items[1].checkbox.BackgroundColor3
 w:ChangeTheme("porcelana")
 check(p.items[1].checkbox.BackgroundColor3 ~= accent and p.items[1].label.TextColor3 == w.theme.ContentColor, "open checkboxes follow light/dark theme changes")
-for _, view in ipairs({ Vector2.new(320, 568), Vector2.new(568, 320), Vector2.new(240, 320), Vector2.new(768, 1024) }) do
-    testCamera.ViewportSize = view
-    tab.tabPage.AbsolutePosition, tab.tabPage.AbsoluteSize = Vector2.new(0, 24), Vector2.new(view.X, view.Y - 24)
-    multi.main.AbsolutePosition, multi.main.AbsoluteSize = Vector2.new(12, 100), Vector2.new(math.min(260, view.X - 24), 70)
-    heartbeat();x, y, width, height = rect(p)
-    check(x >= 8 and y >= 32 and x + width <= view.X - 8 and y + height <= view.Y - 8, "portrait/landscape list stays inside safe screen edges")
-    check(width <= 300 and height <= 388 and height - 166 > 0, "small screens retain a bounded scrollable option viewport")
+for _, size in ipairs({ Vector2.new(685, 450), Vector2.new(1024, 720), Vector2.new(480, 320), Vector2.new(320, 480), Vector2.new(240, 320), Vector2.new(320, 260) }) do
+    w.size, w.main.AbsoluteSize = UDim2.fromOffset(size.X, size.Y), size
+    w:_applyRailWidth();heartbeat()
+    insideContent(p)
+    check(not p.closed and p.main.Parent == w.main, "resizing never detaches or closes the internal pane")
+    local split = w.elements.Size
+    for _ = 1, 5 do w:_applyRailWidth() end
+    check(w.elements.Size == split, "repeated native rail layout cannot progressively shrink the controls")
+    if p.viewport.ScrollingEnabled then
+        check(p.body.Size.Y.Offset >= 212 and p.viewport.CanvasSize.Y.Offset > rect(p.main).height, "short windows make the entire options body scrollable so search and actions remain reachable")
+    end
 end
-gui.GetGuiInset = function() return Vector2.new(32, 24), Vector2.new(12, 8) end
-heartbeat();x, y, width, height = rect(p)
-check(x >= 40 and x + width <= testCamera.ViewportSize.X - 20 and y + height <= testCamera.ViewportSize.Y - 16, "asymmetric notches and bottom insets are respected")
-testCamera.ViewportSize = Vector2.new(1280, 768)
-gui.GetGuiInset = function() return Vector2.new(0, 24), Vector2.new(0, 0) end
-tab.tabPage.AbsolutePosition, tab.tabPage.AbsoluteSize = Vector2.new(100, 60), Vector2.new(600, 600)
-multi.main.AbsolutePosition, multi.main.AbsoluteSize = Vector2.new(300, 150), Vector2.new(300, 41)
-heartbeat()
-p.main.AbsolutePosition, p.main.AbsoluteSize = Vector2.new(p.main.Position.X.Offset, p.main.Position.Y.Offset), Vector2.new(p.main.Size.X.Offset, p.main.Size.Y.Offset)
-input.InputBegan:Fire({ UserInputType = Enum.UserInputType.Touch, Position = p.main.AbsolutePosition + Vector2.new(20, 20) })
-check(not p.closed, "inside touch keeps the list open")
+p:Close()
+check(w.elements.Size.X.Offset == -w.sidebar.Size.X.Offset and w.elements.Size.Y.Offset == -w.layout.chromeHeight, "closing after a narrow resize restores the current rail and full content height")
+multi:Open();p = multi.selectionPanel
+w.size, w.main.AbsoluteSize = UDim2.fromOffset(800, 600), Vector2.new(800, 600)
+w:_applyRailWidth();heartbeat()
+input.InputBegan:Fire({ UserInputType = Enum.UserInputType.Touch, Position = w.main.AbsolutePosition + Vector2.new(30, 100) })
+check(not p.closed, "touching the controls side does not dismiss the options while scrolling or testing controls")
+multi.main.AbsolutePosition = Vector2.new(316, 900);heartbeat()
+check(not p.closed, "scrolling the controls keeps the separate options pane open")
+multi.main.AbsolutePosition = Vector2.new(316, 220)
 input.InputBegan:Fire({ UserInputType = Enum.UserInputType.Touch, Position = Vector2.new(10, 700) })
-check(p.closed and not multi._isOpen and w.selectedTab == tab, "outside touch dismisses only the list")
+check(p.closed and not multi._isOpen and w.selectedTab == tab, "touching outside the window closes the options pane")
+check(w.elements.Size == originalElementsSize and w.elements.Position == originalElementsPosition and w.bottomFade.Size == originalFadeSize and w.bottomFade.Position == originalFadePosition, "closing restores the full content and fade geometry")
+check(w._applyRailWidth == originalWidth, "closing restores the native rail method")
 multi:Open();p = multi.selectionPanel
 input.InputBegan:Fire({ UserInputType = Enum.UserInputType.Keyboard, KeyCode = Enum.KeyCode.Escape })
-check(p.closed and not multi._isOpen, "Escape dismisses the anchored list")
+check(p.closed and not multi._isOpen and w.elements.Size == originalElementsSize, "Escape closes the pane and restores content space")
 multi:Open();p = multi.selectionPanel;multi:Lock()
-check(p.closed and not multi._isOpen, "locking an open dropdown dismisses its list")
+check(p.closed and not multi._isOpen, "locking an open dropdown dismisses its pane")
 multi:Open();check(not multi._isOpen, "a locked dropdown cannot reopen")
-multi:Unlock();multi:Open();p = multi.selectionPanel
-multi.main.AbsolutePosition = Vector2.new(300, 700);heartbeat()
-check(p.closed, "scrolling the anchor outside its page dismisses the list")
-multi.main.AbsolutePosition = Vector2.new(300, 150)
-multi:Open();p = multi.selectionPanel;w:ToggleMinimise()
-check(p.closed and not w._conexaoPanel, "minimising the window dismisses the list")
+multi:Unlock();multi:Open();p = multi.selectionPanel;w:ToggleMinimise()
+check(p.closed and not w._conexaoPanel and w.elements.Size == originalElementsSize, "minimising restores the full content geometry")
 w:ToggleMinimise()
 local single = tab:CreateDropdown({ name = "Uma", options = options, value = "Um", multiSelect = false })
 single:Open();p = single.selectionPanel;p.items[4].hit.MouseButton1Click:Fire()
-check(single:GetValue() == "Quatro" and p.closed and w.selectedTab == tab, "single choice commits one value and closes without navigation")
+check(single:GetValue() == "Quatro" and p.closed and w.selectedTab == tab and w.elements.Size == originalElementsSize, "single choice commits and restores full width without tab navigation")
 local connections, instances = #w.connections, #w.instances
 for _ = 1, 10 do multi:Open();multi:Close() end
-check(#w.connections == connections and #w.instances == instances, "reopening leaks no rows, frames or listeners")
+check(#w.connections == connections and #w.instances == instances and w._applyRailWidth == originalWidth, "reopening leaks no rows, frames, listeners or layout wrappers")
+local groupWithDropdown = tab:CreateGroup({ direction = "column" })
+local nestedDropdown = groupWithDropdown:CreateDropdown({ name = "Nested dropdown", options = options, value = "Um" })
+nestedDropdown:Open()
+check(nestedDropdown.selectionPanel.tab == tab and nestedDropdown.selectionPanel.main.Parent == w.main, "a dropdown in a nested group splits the owning window rather than the group")
+local previousPane = nestedDropdown.selectionPanel
+multi:Open()
+check(previousPane.closed and multi.selectionPanel and w.selectedTab == tab, "opening a different dropdown replaces the options and preserves the selected tab")
+multi:Close()
+
+local topWindow = UI:CreateWindow({ Id = "TopSplit392", name = "Top layout", sidebarLayout = false, configuration = { autoSave = false, autoLoad = false } })
+topWindow.size, topWindow.main.AbsoluteSize = UDim2.fromOffset(800, 500), Vector2.new(800, 500)
+local topTab = topWindow:CreateTab({ name = "Top options" })
+local topControl = topTab:CreateDropdown({ name = "Top dropdown", options = options })
+local topSize, topPosition = topWindow.elements.Size, topWindow.elements.Position
+topControl:Open()
+local topPane = topControl.selectionPanel
+check(topPane.mode == "right" and topPane.main.Parent == topWindow.main and topWindow.selectedTab == topTab, "the top-tab layout also reserves an internal right-hand options column")
+check(topWindow.elements.Size.X.Offset == topSize.X.Offset - topPane.main.Size.X.Offset - 18 and topPane.main.Position.Y.Offset >= topWindow.layout.chromeHeight, "top layout controls shrink beside a pane below the tab strip")
+topPane:Close()
+check(topWindow.elements.Size == topSize and topWindow.elements.Position == topPosition, "closing a top-layout pane restores its original content geometry")
+topWindow:Unload()
 
 -- Optional messages never replace or require the user's callback.
 local sent, calls, observed = {}, 0, nil
@@ -200,4 +246,4 @@ restoredTab:Remove()
 check(p.closed and not restored._conexaoPanel, "removing the owner tab destroys the picker immediately")
 restored:Unload()
 workspace.CurrentCamera, gui.GetGuiInset = camera, getInset
-print("PASS: " .. checks .. " anchored dropdown and optional control-notification checks")
+print("PASS: " .. checks .. " internal split dropdown and optional control-notification checks")

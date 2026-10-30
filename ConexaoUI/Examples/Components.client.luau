@@ -130,7 +130,7 @@ sliders:CreateSlider({ minimal = true, flag = "demo/compacto", range = { 0, 100 
 
 -- DROPDOWNS: false permite uma escolha; true permite várias, inclusive todas.
 local opcoes = { "Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5" }
-dropdowns:CreateText({ name = "Uma ou várias escolhas", text = "A lista abre ao lado do campo, sem trocar de aba. Marque ou desmarque os checkboxes; teste a busca, Padrão, Limpar e Selecionar todos." })
+dropdowns:CreateText({ name = "Uma ou várias escolhas", text = "As opções dividem o painel por dentro: controles à esquerda, checkboxes à direita. Em janelas estreitas, ficam abaixo. Fechar devolve o espaço à aba." })
 dropdowns:CreateDropdown({
     name = "Escolha única", flag = "demo/unica", options = opcoes, value = "Opção 1", multiSelect = false,
     notification = true, notificationTitle = "Escolha única", notificationMessage = textoDaSelecao,

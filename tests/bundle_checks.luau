@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.9.1", "new entry point is bundled")
+check(UI.Version == "3.9.2", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -253,7 +253,7 @@ w:CloseProfile()
 multi:Open()
 local panel = multi.selectionPanel
 check(panel and panel.search and #panel.items == 3 and #panel.actions == 3, "multi dropdown opens a separate searchable panel with bulk actions")
-check(panel.root.Parent == w.screenGui and w.selectedTab == tab and not panel.scrim, "dropdown stays anchored over the same tab without replacing its content")
+check(panel.root.Parent == w.main and w.selectedTab == tab and not panel.scrim, "dropdown splits the content inside the main window without changing tabs")
 check(multi.main.Size.Y.Offset == 41 and multi.panel.Visible == false, "dropdown does not expand or push the underlying page")
 panel.search.Text = "b"
 -- The upstream table shim does not emit property events on existing raw keys.
@@ -289,7 +289,7 @@ local oldSize, oldPosition, oldElementsSize = w.main.AbsoluteSize, w.main.Absolu
 w.main.AbsoluteSize, w.main.AbsolutePosition = Vector2.new(320, 480), Vector2.new(0, 0)
 w.elements.AbsoluteSize = Vector2.new(256, 416)
 smallPanel:Layout()
-check(smallPanel.grid:IsA("UIListLayout") and smallPanel.main.Size.X.Offset <= 300 and smallPanel.root.Parent == w.screenGui, "a narrow window retains a bounded one-column floating list")
+check(smallPanel.grid:IsA("UIListLayout") and smallPanel.main.Size.X.Offset <= 300 and smallPanel.root.Parent == w.main, "a narrow window keeps the options in an internal one-column pane")
 w.main.AbsoluteSize, w.main.AbsolutePosition, w.elements.AbsoluteSize = oldSize, oldPosition, oldElementsSize
 multi:Close()
 multi.main.AbsoluteSize = Vector2.new(240, 70)

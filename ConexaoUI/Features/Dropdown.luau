@@ -2,7 +2,7 @@
 -- SPDX-License-Identifier: MPL-2.0
 -- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
 local Surface = require(script.Parent.Surface)
-local Popover = require(script.Parent.DropdownPopover)
+local Pane = require(script.Parent.DropdownPane)
 local Scrolling = require(script.Parent.Scrolling)
 local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local Dropdown = {}
@@ -59,7 +59,7 @@ function Dropdown.attach(control, props)
     function control:_open()
         if self._isOpen or self.locked or self.window.unloaded then return end
         local w = self.window
-        local picker = Popover.new(w, self)
+        local picker = Pane.new(w, self)
         self.selectionPanel, self._isOpen = picker, true
         self.chevron.Rotation = 0
         picker.onClose = function()

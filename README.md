@@ -1,6 +1,8 @@
-# Conexão UI 3.9.1 · Conexão Studio
+# Conexão UI 3.9.2 · Conexão Studio
 
-Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns ancorados ao campo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.9.2**, o dropdown reserva uma coluna à direita **dentro da janela**. Os controles continuam à esquerda e recuperam a largura ao fechar. Janelas estreitas usam controles acima e opções abaixo, sempre dentro do painel. Busca, checkboxes e ações em lote continuam disponíveis com rolagem própria.
 
 Na **3.9.1**, notificações exigem um título preenchido (`notificationTitle` nos controles ou `title` em `Notify`). A mensagem é opcional: vazia ou omitida, o aviso mostra apenas o título. Com `notification = false`, nenhum dos dois é necessário.
 
@@ -71,7 +73,7 @@ tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "A", "B", "C" }, 
 
 - **Início** mostra saudação, servidor, executor, amigos e salvamento. **Meu perfil**, aberto pelo cartão do jogador, mostra foto, nome, @usuário, ID, executor, versão e ambiente. São páginas independentes dentro do painel. A sessão mostra jogadores, capacidade, FPS, ping e tempo no painel. As contagens de amigos vêm das APIs do Roblox, com cache de um minuto enquanto a Home está aberta. Métricas indisponíveis aparecem como `—`.
 - Página **Configurações** pronta e visível na sidebar: transparência, tamanho manual/automático, salvamento/restauração, temas com prévias, atalhos e opções nativas com nomes e descrições em português. A engrenagem continua abrindo essa mesma página.
-- Dropdown ancorado ao lado direito do campo, com checkboxes, busca, rolagem, Padrão, Limpar e Selecionar todos. A seleção múltipla permanece aberta; a única fecha ao escolher. X, Escape, toque fora ou outra aba encerram a lista. Ela se reposiciona para caber na tela.
+- Dropdown divide a área interna: controles à esquerda e opções à direita, com checkboxes, busca, rolagem, Padrão, Limpar e Selecionar todos. Em janelas estreitas, a divisão é vertical. Seleção múltipla permanece aberta; escolha única, X, Escape, toque fora da janela ou outra aba encerram as opções e restauram o espaço dos controles.
 - Notificações opcionais por controle: `notification = true`, `notificationTitle = "Seu título"` e `notificationMessage` opcional (texto ou função). Desligadas por padrão; callbacks e salvamento continuam funcionando.
 - Salvamento e carregamento automáticos habilitados por padrão, incluindo toggles, sliders, dropdowns únicos/múltiplos, inputs, teclas e cores. Use `flag` estável e único por controle.
 - **60 temas com paletas distintas:** 54 da Conexão e seis clássicos da base. A galeria inclui busca e filtros por família, com temas claros, escuros e neon. As prévias usam as mesmas cores aplicadas à janela.

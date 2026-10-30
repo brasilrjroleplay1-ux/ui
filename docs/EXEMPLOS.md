@@ -51,9 +51,11 @@ local multi = tab:CreateDropdown({ name = "Painéis", flag = "paineis", multiSel
 multi:Set({ "Perfil", "Dados" })
 ```
 
-Ao clicar, uma lista compacta abre ao lado direito do campo, sem trocar de aba nem expandir os outros controles. Cada opção tem um checkbox: no modo múltiplo, clicar marca e clicar novamente desmarca, mantendo a lista aberta. O modo único permite uma escolha e fecha ao selecionar. A busca filtra a lista; Padrão restaura o `value` inicial, Limpar desmarca tudo e Selecionar todos (múltiplo) inclui todas as opções, mesmo com filtro. Listas longas rolam internamente. Os valores continuam salvos automaticamente.
+Ao clicar, o dropdown divide a área de conteúdo **dentro da janela**: os controles ficam à esquerda e uma coluna de opções aparece à direita. A aba continua selecionada e nenhum painel é colocado do lado de fora. Fechar as opções devolve o espaço aos controles.
 
-A lista acompanha o campo quando a janela se move. Se faltar espaço à direita, ela abre à esquerda ou junto ao campo, limitada à área segura da tela. X, Escape, tocar fora, trocar de aba, ocultar/minimizar a janela ou remover o controle fecha a lista.
+Cada opção tem um checkbox. No modo múltiplo, clicar marca e clicar novamente desmarca, mantendo as opções abertas. O modo único permite uma escolha e fecha ao selecionar. A busca filtra a lista; Padrão restaura o `value` inicial, Limpar desmarca tudo e Selecionar todos (múltiplo) inclui todas as opções, mesmo com filtro. Listas longas rolam internamente. Os valores continuam salvos automaticamente.
+
+Em janelas estreitas, os controles ficam acima e as opções abaixo, com rolagens separadas. Em janelas muito baixas, a área de opções também permite rolar o cabeçalho e as ações para mantê-los acessíveis. A divisão acompanha o redimensionamento; ao fechar, o tamanho dos controles é restaurado conforme a janela atual. X, Escape, tocar fora da janela, trocar de aba, ocultar/minimizar a janela ou remover o controle fecha as opções. É possível rolar e usar a área dos controles sem fechar a seleção múltipla.
 
 ```lua
 multi:Open()  -- opcional; clicar no controle faz o mesmo
