@@ -41,7 +41,7 @@ export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 export type SliderProps = Gen2.SliderProps & { format: ("number" | "percent")?, editable: boolean? }
 
-local Library = { Version = "3.7.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.7.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
