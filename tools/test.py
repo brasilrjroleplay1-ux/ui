@@ -15,9 +15,13 @@ def run(args,label):
     print('\n'.join(x for x in lines if 'tests passed' in x or 'coverage:' in x or x.startswith('PASS:')))
 
 run(['run','scripts/run-tests.luau','--','--coverage-threshold','85.34'],'upstream')
+run(['run',str(ROOT/'tests/executor_policy_checks.luau')],'executor-policy')
 runner=(VENDOR/'scripts/run-tests.luau').read_text()
 prefix=runner[:runner.index('local results = {')]
 checks=(ROOT/'tests/bundle_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()).replace('-- DEMO',(ROOT/'dist/Demo.luau').read_text()).replace('-- COMPONENTS',(ROOT/'dist/Components.luau').read_text())
 with tempfile.TemporaryDirectory() as folder:
     test=Path(folder)/'public-bundle.luau';test.write_text(prefix+checks)
     run(['run',str(test)],'bundle')
+    startup=Path(folder)/'executor-startup.luau'
+    startup.write_text(prefix+(ROOT/'tests/executor_startup_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(startup)],'executor-startup')

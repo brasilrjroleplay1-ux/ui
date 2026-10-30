@@ -26,4 +26,6 @@ Em 3.4.1, os helpers `utility/image.luau` e `utility/imageCache.luau` passam a s
 
 Em 3.5, a composição do painel inicial segue as referências de Home fornecidas, incluindo a organização visual da Luna Interface Suite, com implementação própria. `Features/Session.luau` amostra métricas disponíveis com listeners vinculados ao ciclo de vida da janela. `ExecutorCatalog` reconhece 29 nomes e `BrandAssets` incorpora 21 imagens; o script pode registrar logos adicionais. A área de destaques limita a altura e rola internamente. O seletor completo usa uma página ajustada ao viewport com cabeçalho separado da lista. Essas mudanças preservam os arquivos do vendor.
 
+Em 3.5.1, `ExecutorPolicy` e `ExecutorAccess` restringem o suporte a Delta, Wave, Xeno e Solara, com uma exceção explícita para o Studio. O acesso é verificado antes de importar Gen2 e antes de cada `CreateWindow`; nomes desconhecidos e correspondências apenas por prefixo são recusados. O catálogo e as imagens foram reduzidos aos quatro produtos selecionados. O cadastro de logos não altera as permissões. A política restringe suporte por nome informado, sem auditar binários nem garantir sua autenticidade ou segurança.
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

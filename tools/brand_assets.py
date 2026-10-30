@@ -68,20 +68,18 @@ return Assets
     (ROOT/'ConexaoUI/Features/BrandAssets.luau').write_text(source)
     catalog='''--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
--- Runtime identification catalogue; names are not compatibility guarantees.
+-- Curated support list. Reported names do not establish binary integrity or safety.
 local Catalog = {}
 Catalog.entries = {
 ROWS
 }
 function Catalog.key(name) return string.lower(tostring(name or "")):gsub("[^%w]", "") end
 function Catalog.find(name)
-    local key, best = Catalog.key(name), nil
+    local key = Catalog.key(name)
     for _, entry in ipairs(Catalog.entries) do
-        if key == entry.id or string.sub(key, 1, #entry.id) == entry.id then
-            if not best or #entry.id > #best.id then best = entry end
-        end
+        if key == entry.id then return entry end
     end
-    return best
+    return nil
 end
 return Catalog
 '''.replace('ROWS','\n'.join(rows))

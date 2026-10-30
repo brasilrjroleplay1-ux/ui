@@ -112,7 +112,7 @@ No slider de tamanho, a janela fica parada durante o arraste e aplica o valor ao
 
 O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. Ele abre como página interna, com banner no gradiente do tema, avatar, nome, usuário e cartões de executor/versão e ID. Os botões permitem copiar o ID, abrir Configurações/Temas e voltar. Copiar depende da API do cliente. A galeria também usa uma página interna, com [60 temas](TEMAS.md), busca e filtros por família. As miniaturas são GuiObjects com as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
 
-A partir da 3.5, esse painel inclui cartões de sessão atualizados, atalhos com ícones e identificação automática por [catálogo de logos](../assets/README.md). `window:GetSessionStats()` retorna valores numéricos quando disponíveis e textos formatados usados nos cartões. `UI:RegisterExecutorIcon(nome, assetIdOuUriLocal, aliases)` acrescenta imagens para outros clientes antes de `CreateWindow`.
+A partir da 3.5, esse painel inclui cartões de sessão atualizados, atalhos com ícones e identificação automática por [catálogo de logos](../assets/README.md). `window:GetSessionStats()` retorna valores numéricos quando disponíveis e textos formatados usados nos cartões. Na 3.5.1, o suporte é restrito a Delta, Wave, Xeno e Solara, além do Studio para desenvolvimento. `UI:RegisterExecutorIcon(nome, assetIdOuUriLocal, aliases)` personaliza imagens; não altera a lista de permitidos.
 
 Os destaques de temas têm altura limitada e rolagem própria. A lista completa mantém busca/filtros fora da área rolável; não estica a janela para mostrar as 60 opções de uma vez.
 

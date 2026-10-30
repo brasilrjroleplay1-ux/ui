@@ -1,77 +1,10 @@
 [
   {
-    "id": "potassium",
-    "name": "Potassium",
-    "website": "https://www.potassium.pro/",
-    "file": "potassium.png",
-    "source": "https://www.potassium.pro/favicon.ico"
-  },
-  {
-    "id": "matcha",
-    "name": "Matcha",
-    "website": "https://matcha-latte.win/",
-    "fallback": true
-  },
-  {
-    "id": "xeno",
-    "name": "Xeno",
-    "website": "https://www.xeno.now/",
-    "file": "xeno.png",
-    "source": "https://www.xeno.now/images/xeno.png"
-  },
-  {
-    "id": "photon",
-    "name": "Photon",
-    "website": "https://photons.solutions/",
-    "file": "photon.png",
-    "source": "https://photons.solutions/logo.png"
-  },
-  {
-    "id": "dx9warev2",
-    "name": "DX9WARE V2",
-    "website": "https://cultofintellect.com/",
-    "file": "dx9warev2.png",
-    "source": "https://cultofintellect.com/favicon.png"
-  },
-  {
-    "id": "sirhurt",
-    "name": "SirHurt",
-    "website": "https://sirhurt.net",
-    "fallback": true
-  },
-  {
-    "id": "seliware",
-    "name": "Seliware",
-    "website": "https://seliware.com",
-    "file": "seliware.png",
-    "source": "https://seliware.com/apple-touch-icon.png"
-  },
-  {
-    "id": "volt",
-    "name": "Volt",
-    "website": "https://voltbz.net/",
-    "fallback": true
-  },
-  {
-    "id": "velocity",
-    "name": "Velocity",
-    "website": "https://realvelocity.xyz/",
-    "file": "velocity.png",
-    "source": "https://realvelocity.xyz/favicon.ico"
-  },
-  {
-    "id": "solara",
-    "name": "Solara",
-    "website": "https://getsolara.dev",
-    "file": "solara.png",
-    "source": "https://getsolara.dev/assets/img/icon-192.png"
-  },
-  {
-    "id": "matrixhub",
-    "name": "Matrix Hub",
-    "website": "https://matrixhubs.shop/",
-    "file": "matrixhub.png",
-    "source": "https://matrixhubs.shop/image/logo.png"
+    "id": "delta",
+    "name": "Delta",
+    "website": "https://deltaexploits.gg/",
+    "file": "../delta.png",
+    "source": "https://deltaexploits.gg/assets/favicon.ico"
   },
   {
     "id": "wave",
@@ -81,117 +14,17 @@
     "source": "https://getwave.gg/wave/Logo5.png"
   },
   {
-    "id": "delta",
-    "name": "Delta",
-    "website": "https://deltaexploits.gg/",
-    "file": "../delta.png",
-    "source": "https://deltaexploits.gg/assets/favicon.ico"
+    "id": "xeno",
+    "name": "Xeno",
+    "website": "https://www.xeno.now/",
+    "file": "xeno.png",
+    "source": "https://www.xeno.now/images/xeno.png"
   },
   {
-    "id": "volcano",
-    "name": "Volcano",
-    "website": "https://volcano.wtf",
-    "fallback": true
-  },
-  {
-    "id": "serotonin",
-    "name": "Serotonin",
-    "website": "https://www.serotonin.win/",
-    "file": "serotonin.png",
-    "source": "https://www.serotonin.win/favicon.ico?favicon.6af32af9.ico"
-  },
-  {
-    "id": "melatonin",
-    "name": "Melatonin",
-    "website": "https://melatonin.win/",
-    "fallback": true
-  },
-  {
-    "id": "synapsez",
-    "name": "Synapse Z",
-    "website": "https://z.synapse.do",
-    "file": "synapsez.png",
-    "source": "https://z.synapse.do/favicon.ico"
-  },
-  {
-    "id": "macsploit",
-    "name": "MacSploit",
-    "website": "https://www.raptor.fun/",
-    "file": "macsploit.png",
-    "source": "https://www.raptor.fun/favicon.ico"
-  },
-  {
-    "id": "vegax",
-    "name": "Vega X",
-    "website": "https://www.vegax.gg",
-    "fallback": true
-  },
-  {
-    "id": "opiumware",
-    "name": "Opiumware",
-    "website": "https://use.opiumware.today/",
-    "fallback": true
-  },
-  {
-    "id": "lynx",
-    "name": "Lynx",
-    "website": "https://getlynx.gg",
-    "file": "lynx.png",
-    "source": "https://getlynx.gg/apple-icon.png?apple-icon.2yw97huui0ivu.png"
-  },
-  {
-    "id": "madium",
-    "name": "Madium",
-    "website": "https://getmadium.net/",
-    "file": "madium.png",
-    "source": "https://getmadium.net/favicon.png"
-  },
-  {
-    "id": "lumen",
-    "name": "Lumen",
-    "website": "https://getlumen.net/",
-    "fallback": true
-  },
-  {
-    "id": "real",
-    "name": "Real",
-    "website": "https://realest.gg",
-    "file": "real.png",
-    "source": "https://realest.gg/apple-touch-icon.png"
-  },
-  {
-    "id": "axis",
-    "name": "Axis",
-    "website": "https://useaxis.cc/",
-    "file": "axis.png",
-    "source": "https://useaxis.cc/public/axisico.ico"
-  },
-  {
-    "id": "isaeva",
-    "name": "Isaeva",
-    "website": "https://isaeva.xyz/",
-    "file": "isaeva.png",
-    "source": "https://isaeva.xyz/isaeva-logo-white.png"
-  },
-  {
-    "id": "madius",
-    "name": "Madius",
-    "website": "https://madius.dev/",
-    "file": "madius.png",
-    "source": "https://madius.dev/assets/madius-logo.png"
-  },
-  {
-    "id": "lucid",
-    "name": "Lucid",
-    "website": "https://getlucid.gg/",
-    "file": "lucid.png",
-    "source": "https://getlucid.gg/assets/images/brand/favicon.png"
-  },
-  {
-    "id": "codex",
-    "name": "Codex",
-    "website": "https://codex.lol/",
-    "file": "codex.png",
-    "source": "https://codex.lol/apple-touch-icon.png"
+    "id": "solara",
+    "name": "Solara",
+    "website": "https://getsolara.dev",
+    "file": "solara.png",
+    "source": "https://getsolara.dev/assets/img/icon-192.png"
   }
 ]

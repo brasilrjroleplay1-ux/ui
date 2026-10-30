@@ -1,6 +1,8 @@
 --!nonstrict
 -- Conexão UI 3.5 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
+local ExecutorAccess = require(script.Features.ExecutorAccess)
+ExecutorAccess.requireSupported()
 local Gen2 = require(script.Gen2)
 local DropdownPanel = require(script.Features.Dropdown)
 local Profile = require(script.Features.Profile)
@@ -30,7 +32,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.5.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.5.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -38,20 +40,6 @@ if type(getgenv) == "function" then
 end
 if type(env.__CONEXAO_UI_V3_WINDOWS) ~= "table" then env.__CONEXAO_UI_V3_WINDOWS = {} end
 local windows = env.__CONEXAO_UI_V3_WINDOWS
-
-local function executor()
-    local environment = game:GetService("RunService"):IsStudio() and "Roblox Studio" or "Roblox"
-    for _, name in ipairs({ "identifyexecutor", "getexecutorname" }) do
-        local fn = env[name] or getfenv()[name]
-        if type(fn) == "function" then
-            local ok, value, version = pcall(fn)
-            if ok and type(value) == "string" and value ~= "" then
-                return { name = value, version = type(version) == "string" and version or nil, environment = environment }
-            end
-        end
-    end
-    return { name = environment == "Roblox Studio" and environment or "Não identificado", environment = environment }
-end
 
 local function properties(value)
     local p = type(value) == "table" and table.clone(value) or {}
@@ -110,12 +98,12 @@ local function adaptHost(host)
 end
 
 function Library:CreateWindow(options)
+    local executorInfo = ExecutorAccess.requireSupported()
     local p = type(options) == "table" and table.clone(options) or {}
     Localization.configure(p)
     p.name = p.name or p.Name or p.Title or "Conexão UI"
     p.showName = p.showName or p.ShowName or p.name
     if p.sidebarLayout == nil and p.SidebarLayout == nil then p.sidebarLayout = true end
-    local executorInfo = executor()
     p.profile = p.profile or p.Profile or executorInfo.name
     local cfg = table.clone(p.configuration or p.Configuration or {})
     local old = p.Config or {}

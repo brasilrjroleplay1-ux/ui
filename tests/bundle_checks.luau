@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.5.0", "new entry point is bundled")
+check(UI.Version == "3.5.1", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -515,7 +515,7 @@ w:CloseProfile()
 local previousIdentify = _G.identifyexecutor
 _G.identifyexecutor = function() return "Test Executor", "1.2.3" end
 local ew = UI:CreateWindow({ Id = "ExecutorTest", name = "ExecutorTest", sidebarLayout = false })
-check(not ew.ProfileButton and ew.ExecutorInfo.name == "Test Executor" and ew.ExecutorInfo.version == "1.2.3", "executor identity and version are detected while the top-tab layout stays supported")
+check(not ew.ProfileButton and ew.ExecutorInfo.name == "Roblox Studio" and ew.ExecutorInfo.support == "studio", "Studio remains available for development with the top-tab layout")
 ew:OpenProfile()
 check(ew.selectedTab == ew.ProfileTab and ew.ProfilePage.content.Parent == ew.elements and not ew._conexaoPanel, "the top-tab layout also presents the profile inside its content panel")
 ew:Unload()
@@ -561,18 +561,35 @@ check(deltaPage.executorIcon.parts[1].ImageTransparency == 0 and deltaPage.platf
 deltaWindow:Unload()
 local catalog = serde.decode("json", fs.readFile(root .. "/../../assets/executors/catalog.json"))
 for _, entry in ipairs(catalog) do
-    _G.identifyexecutor = function() return entry.name .. " Runtime", "1.0" end
+    _G.identifyexecutor = function() return entry.name, "1.0" end
     local client = UI:CreateWindow({ Id = "Brand35_" .. entry.id })
     local page = client:OpenHome()
-    check(page.executorIcon.kind == entry.id and page.fields[1].icon.kind == entry.id, "runtime names and version suffixes select the matching brand: " .. entry.name)
+    check(page.executorIcon.kind == entry.id and page.fields[1].icon.kind == entry.id and client.ExecutorInfo.version == "1.0", "permitted runtime names keep their logo and separate version: " .. entry.name)
     check((page.executorIcon.artwork == true) == (entry.file ~= nil), "known images and initials fallbacks match the catalogue: " .. entry.name)
     client:Unload()
 end
-UI:RegisterExecutorIcon("Meu Executor", 987654321, { "Cliente Pessoal" })
+UI:RegisterExecutorIcon("Wave", 987654321, { "Cliente Pessoal" })
 _G.identifyexecutor = function() return "Cliente Pessoal", "2" end
+check(not pcall(UI.CreateWindow, UI, { Id = "UnapprovedIconAlias" }), "a registered logo alias does not grant executor access")
+_G.identifyexecutor = function() return "Wave", "2" end
 local branded = UI:CreateWindow({ Id = "CustomBrand35" })
-check(branded:OpenHome().executorIcon.parts[1].Image == "rbxassetid://987654321", "scripts can register logos and aliases for additional clients")
+check(branded:OpenHome().executorIcon.parts[1].Image == "rbxassetid://987654321", "scripts can customize the image of a permitted client")
 branded:Unload()
+do
+    local beforeInstances, beforeWindows = #w.instances, #w.screenGui:GetChildren()
+    for _, name in ipairs({ "Novo Cliente", "Delta Clone", "Delta Runtime", "DeltaX", "Codex", "Velocity", "Dеlta" }) do
+        _G.identifyexecutor = function() return name, "1" end
+        local accepted, message = pcall(UI.CreateWindow, UI, { Id = "BundleTest", name = "Blocked" })
+        check(not accepted and tostring(message):find("executor não suportado", 1, true), "unlisted or misleading names cannot create a window: " .. name)
+        check(not w.unloaded and #w.instances == beforeInstances and #w.screenGui:GetChildren() == beforeWindows, "rejected execution preserves existing windows and creates no UI")
+    end
+    UI.SupportedExecutors[5] = "Codex"
+    _G.identifyexecutor = function() return "Codex" end
+    check(not pcall(UI.CreateWindow, UI, { Id = "MutatedPublicList" }), "editing the public list cannot change the compiled support policy")
+    UI.SupportedExecutors[5] = nil
+    _G.identifyexecutor = nil
+    check(not pcall(UI.CreateWindow, UI, { Id = "UnidentifiedClient" }), "an unidentified client cannot create a window")
+end
 _G.getcustomasset, _G.identifyexecutor = previousAsset, previousIdentify
 game:GetService("RunService").IsStudio = previousStudio
 

@@ -1,4 +1,4 @@
-# Conexão UI 3.5.0 · Conexão Studio
+# Conexão UI 3.5.1 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -12,9 +12,11 @@ A demo abre em **Visão geral**, com perfil, cliente, atalhos e cartões da sess
 
 A abertura mostra **Conexão Studio**, com marca em vetores e texto local. Os créditos da base permanecem no código e no repositório. O nome da sua janela continua personalizável em `CreateWindow`.
 
-Na **3.5.0**, a composição combina boas-vindas compactas, cartão do cliente, atalhos com ícones e uma grade de estatísticas, inspirada nas referências visuais fornecidas e na Home da [Luna Interface Suite](https://github.com/Nebula-Softworks/Luna-Interface-Suite). A implementação é da Conexão sobre a base Gen2; não carrega código da Luna. O avatar continua em **420 × 420 px**. A página usa a rolagem do painel e reorganiza os cartões em telas menores.
+Na **3.5.1**, a composição combina boas-vindas compactas, cartão do cliente, atalhos com ícones e uma grade de estatísticas, inspirada nas referências visuais fornecidas e na Home da [Luna Interface Suite](https://github.com/Nebula-Softworks/Luna-Interface-Suite). A implementação é da Conexão sobre a base Gen2; não carrega código da Luna. O avatar continua em **420 × 420 px**. A página usa a rolagem do painel e reorganiza os cartões em telas menores.
 
-O catálogo reconhece **29 nomes de executores e inclui 21 imagens de logo**, além dos identificadores vetoriais Roblox/Studio. Imagens do catálogo carregam localmente com `getcustomasset`/`getsynasset`, sem baixar logos durante a execução. Clientes sem imagem disponível usam iniciais ou um símbolo; nomes desconhecidos mantêm sua identificação, sem receber a logo de outro produto. [Catálogo e origem das imagens](assets/README.md).
+O suporte está limitado a **Delta, Wave, Xeno e Solara**, com as quatro logos incluídas. Os demais nomes e clientes sem identificação são recusados antes da inicialização da UI. O **Roblox Studio** tem uma exceção explícita para desenvolvimento. [Política de suporte](docs/EXECUTORES.md) · [Origem das imagens](assets/README.md).
+
+Esta seleção usa nomes conhecidos como critério de suporte. Não foram verificados números de usuários nem auditados os programas instalados. O nome é informado pelo próprio cliente e pode ser falsificado; a checagem não comprova segurança, autenticidade ou integridade do executável.
 
 Os exemplos de botões, campos, avisos e grupos estão separados em [dist/Components.luau](dist/Components.luau) e no [script completo](Example.luau). A library cria as configurações; as abas do seu projeto são criadas pelo seu script.
 
@@ -131,11 +133,11 @@ local stats = window:GetSessionStats()
 print(stats.players, stats.maximum, stats.fps, stats.ping, stats.elapsed)
 ```
 
-Para uma logo fora do catálogo, registre um asset Roblox ou URI local **antes de criar a janela**:
+Para personalizar a logo de um executor permitido, registre um asset Roblox ou URI local **antes de criar a janela**. Cadastrar uma imagem ou alias visual não libera outros executores:
 
 ```lua
 -- Substitua o número pelo ID público da sua imagem.
-UI:RegisterExecutorIcon("Meu Cliente", 1234567890, { "Meu Cliente Mobile" })
+UI:RegisterExecutorIcon("Delta", 1234567890)
 ```
 
 ## Instalar no Studio
@@ -143,6 +145,8 @@ UI:RegisterExecutorIcon("Meu Cliente", 1234567890, { "Meu Cliente Mobile" })
 1. Importe [dist/ConexaoUI.rbxmx](dist/ConexaoUI.rbxmx) em `ReplicatedStorage`.
 2. Em um LocalScript de `StarterPlayerScripts`, use [ConexaoUI/Examples/Demo.client.luau](ConexaoUI/Examples/Demo.client.luau).
 3. Execute Play. O modelo já inclui os módulos Gen2 dentro do módulo ConexaoUI.
+
+Fora do Studio, esta versão exige a identificação de um dos quatro executores permitidos por `identifyexecutor` ou `getexecutorname`. Nomes são comparados por igualdade, ignorando maiúsculas e espaços extras; sufixos como “Clone” ou “Runtime” não são aceitos automaticamente.
 
 O [default.project.json](default.project.json) também mapeia o projeto para Rojo. Fontes e imagens usam os mesmos assets Roblox da base original e dependem da disponibilidade deles no cliente.
 
