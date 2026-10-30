@@ -81,13 +81,17 @@ Grupos em linha recebem os componentes compactos compatíveis; grupos em coluna 
 ## Notificação, toast e popup
 
 ```lua
-window:Notify({ title = "Salvo", content = "Configuração atualizada.", duration = 5 })
-window:Toast({ title = "Conectado", subtitle = "Meu projeto", duration = 4 })
+local aviso = window:Notify({ title = "Salvo", content = "Configuração atualizada.", type = "success", duration = 5 })
+window:Toast({ title = "Conectado", subtitle = "Meu projeto", type = "info", duration = 4 })
 window:Popup({ title = "Continuar?", content = "Escolha uma ação.", options = {
     { text = "Cancelar" },
     { text = "Continuar", style = "primary", callback = function() print("Confirmado") end },
 } })
 ```
+
+`Notify` aparece no canto inferior direito; `Toast` é um aviso compacto centralizado, com `position = "Top"` ou `"Bottom"`. Os dois incluem ícone, botão de fechar e barra de tempo restante. `type` aceita `info` (padrão e cor do tema), `success`, `warning` e `error`. `icon` continua aceitando um ID numérico ou URI para usar seu próprio ícone. O toast também aceita `avatar`, `minWidth` e `subtitleAbove`.
+
+`duration` usa segundos; quando omitido, o tempo é calculado pelo tamanho do texto, entre 3 e 9 segundos. Passar o mouse pausa o contador. É possível fechar pelo X, tocar em um aviso curto ou usar `aviso:Close()`. Textos que excedem a altura disponível usam rolagem interna e são fechados pelo X. Cada pilha mantém até seis avisos e retira os mais antigos quando falta espaço na tela. Avisos ativos mudam de cor com o tema e são liberados ao descarregar a janela.
 
 ## Atualizar tema, navegar e encerrar
 
@@ -125,7 +129,7 @@ No slider de tamanho, a janela fica parada durante o arraste e aplica o valor ao
 
 Os controles em largura total ajustam título, valor e campo à largura real. Textos longos de toggles e botões quebram em linhas; sliders, inputs e teclas podem empilhar seu conteúdo. Sliders `minimal = true` continuam sem título/valor e com altura compacta. Os callbacks e os valores continuam sendo gerenciados pela base Gen2.
 
-O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. Ele abre como página interna, com banner no gradiente do tema, avatar, nome, usuário e cartões de executor/versão e ID. Os botões permitem copiar o ID, abrir Configurações/Temas e voltar. Copiar depende da API do cliente. A galeria também usa uma página interna, com [60 temas](TEMAS.md), busca e filtros por família. As miniaturas são GuiObjects com as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
+O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. Ele abre como página interna, com banner no gradiente do tema, avatar, nome, usuário e cartões de executor/versão e ID. Os botões permitem copiar o ID e voltar à aba anterior. Copiar depende da API do cliente. A galeria também usa uma página interna, com [60 temas](TEMAS.md), busca e filtros por família. As miniaturas são GuiObjects com as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
 
 A Home 3.6 usa avatar e saudação separados, servidor/salvamento à esquerda e executor/amigos à direita; em conteúdo abaixo de 400 px, os cartões ficam em uma coluna. Configurações, Temas e Copiar servidor não aparecem como atalhos no perfil. `window:GetSessionStats()` retorna valores numéricos e textos formatados da sessão. `window:GetFriendStats()` retorna `inServerText`, `offlineText`, `onlineText` e `allText`; eles mostram `—` enquanto não há dados disponíveis. A consulta não bloqueia a janela e usa cache de um minuto. `window:RefreshFriends(true)` solicita uma atualização imediata.
 

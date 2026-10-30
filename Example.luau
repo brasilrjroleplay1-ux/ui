@@ -4,7 +4,7 @@ local previousDemo = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstC
 if previousDemo and previousDemo:IsA("ScreenGui") then previousDemo:Destroy() end
 local window = UI:CreateWindow({
     Id = "ConexaoComponents",
-    name = "CONEXÃO STUDIO", subtitle = "3.7.1", sidebarLayout = true,
+    name = "CONEXÃO STUDIO", subtitle = "3.7.2", sidebarLayout = true,
     theme = "conexao",
     configuration = { fileName = "conexao_componentes_v3" },
 })
@@ -20,7 +20,7 @@ home:CreateDropdown({ name = "Modo", flag = "demo/modo", options = { "Padrão", 
 home:CreateDropdown({ name = "Painéis", flag = "demo/paineis", multiSelect = true, options = { "Perfil", "Atalhos", "Estatísticas", "Novidades" }, value = { "Perfil", "Atalhos" } })
 home:CreateDropdown({ name = "Locais", flag = "demo/locais", multiSelect = true, options = { "Floresta", "Templo", "Cosmos", "Oceano", "Neve", "Deserto", "Jardim", "Montanha", "Vulcão", "Selva", "Lago", "Praia" }, value = { "Floresta", "Oceano" } })
 home:CreateButton({ name = "Mostrar notificação", icon = 125823673784681, callback = function()
-    window:Notify({ title = "Conectado", content = "Notificação nativa do Gen2.", icon = 125823673784681 })
+    window:Notify({ title = "Conexão Studio", content = "Esta notificação acompanha as cores do seu tema.", duration = 6 })
 end })
 
 local fields = window:CreateTab({ name = "Campos", icon = 100604009889706 })
@@ -33,7 +33,10 @@ fields:CreateSection({ name = "Temas com prévia" })
 fields:CreateButton({ name = "Escolher tema", callback = function() window:OpenThemes() end })
 
 local feedback = window:CreateTab({ name = "Avisos", icon = 125823673784681 })
-feedback:CreateButton({ name = "Toast", callback = function() window:Toast({ title = "Tudo pronto", subtitle = "Conexão UI", duration = 4 }) end })
+feedback:CreateButton({ name = "Toast", callback = function() window:Toast({ title = "Tudo pronto", subtitle = "Conexão Studio", type = "success", duration = 4 }) end })
+feedback:CreateButton({ name = "Aviso de sucesso", callback = function() window:Notify({ title = "Tudo pronto", content = "Suas escolhas foram salvas. Você pode continuar de onde parou.", type = "success", duration = 6 }) end })
+feedback:CreateButton({ name = "Aviso de atenção", callback = function() window:Notify({ title = "Confira suas escolhas", content = "Este é um exemplo do estilo de aviso.", type = "warning" }) end })
+feedback:CreateButton({ name = "Aviso de erro", callback = function() window:Notify({ title = "Não foi possível concluir", content = "Este é um exemplo visual. Tente novamente quando quiser.", type = "error" }) end })
 feedback:CreateButton({ name = "Popup", callback = function()
     window:Popup({ title = "Escolha uma ação", content = "Popup nativo do Gen2.", options = {
         { text = "Cancelar" },

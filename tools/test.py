@@ -40,3 +40,6 @@ with tempfile.TemporaryDirectory() as folder:
     slider_input=Path(folder)/'slider-input.luau'
     slider_input.write_text(prefix+(ROOT/'tests/slider_input_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(slider_input)],'slider-input')
+    feedback=Path(folder)/'feedback.luau'
+    feedback.write_text(prefix+(ROOT/'tests/feedback_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(feedback)],'feedback')

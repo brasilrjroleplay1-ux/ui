@@ -1,4 +1,4 @@
-# Conexão UI 3.7.1 · Conexão Studio
+# Conexão UI 3.7.2 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -17,6 +17,8 @@ Na **3.6.2**, o título Conexão Studio usa **CONEXÃO** maior e em negrito, com
 Na **3.7.0**, o valor do slider é editável: clique ou toque no número para digitar, confirme com Enter ou toque fora, ou use Escape para cancelar. `format = "percent"` mostra porcentagem; `format = "number"` mostra números. A entrada aceita ponto ou vírgula decimal, respeita `range` e `increment`, move a barra e passa pelo salvamento automático existente. Texto inválido preserva o valor anterior. Use `editable = false` para manter apenas o arraste. Os sliders de Configurações também recebem essa edição. A [demonstração de componentes](dist/Components.luau) inclui os dois formatos.
 
 Na **3.7.1**, clicar no jogador da lateral abre um perfil redesenhado: capa em degradê com as cores do tema, avatar de 420 px com moldura, nome em destaque e selos com as logos do executor e do Roblox. Conta e cliente usam cartões com separadores, ID copiável e versão do executor. Em janelas estreitas, a identidade e os cartões passam para uma coluna com rolagem. O perfil continua separado do Início e o botão Voltar retorna à aba anterior. Para abrir pelo script, use `window:OpenProfile()`.
+
+Na **3.7.2**, `Notify` e `Toast` usam cartões com superfície em degradê discreto, ícone em bloco próprio, título em negrito, botão de fechar e barra de tempo restante. As chamadas existentes continuam funcionando. `type = "info"`, `"success"`, `"warning"` ou `"error"` seleciona o indicador e a cor; sem `type`, o aviso usa a cor de destaque do tema. Passar o mouse pausa o tempo. A entrada combina deslocamento, escala e transparência; a saída recolhe o espaço do cartão. A largura e a pilha respeitam a tela, textos extensos têm rolagem interna e os avisos acompanham temas claros e escuros. A aba Avisos do [exemplo de componentes](dist/Components.luau) demonstra os estilos.
 
 A abertura de **Conexão Studio** monta os elos da marca, faz uma passagem de luz pelo cartão e avança o indicador pelas etapas de construção da interface. O cartão sai antes da entrada da janela, que expande, revela o cabeçalho e depois o conteúdo. A entrada da janela termina em cerca de 0,76 s; ao reabrir, continua usando a restauração nativa. O cartão se ajusta à largura e à altura da tela. Fechar ou descarregar durante a sequência cancela a abertura e remove suas conexões. Os créditos da base permanecem no código e no repositório.
 

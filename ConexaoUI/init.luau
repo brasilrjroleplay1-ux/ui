@@ -22,6 +22,7 @@ local Entrance = require(script.Features.Entrance)
 local Shell = require(script.Features.Shell)
 local Friends = require(script.Features.Friends)
 local SliderInput = require(script.Features.SliderInput)
+local Feedback = require(script.Features.Feedback)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
@@ -40,8 +41,10 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 export type SliderProps = Gen2.SliderProps & { format: ("number" | "percent")?, editable: boolean? }
+export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
+export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.7.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.7.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -140,6 +143,7 @@ function Library:CreateWindow(options)
     local id = tostring(p.Id or p.name)
     if windows[id] and not windows[id].unloaded then windows[id]:Unload() end
     local window = Gen2:CreateWindow(p)
+    Feedback.attach(window)
     windows[id] = window
     self.Windows[id] = window
     window.SettingsTab = window.rfSettings
@@ -178,6 +182,7 @@ function Library:CreateWindow(options)
             Preferences.save(self)
         end
         if self.ThemeGallery then self.ThemeGallery:_refreshTheme() end
+        if self.Feedback then self.Feedback:RefreshTheme() end
         if self._conexaoPanel and self._conexaoPanel.RefreshTheme then self._conexaoPanel:RefreshTheme() end
     end
     Profile.attach(window, executorInfo, self.Version)
