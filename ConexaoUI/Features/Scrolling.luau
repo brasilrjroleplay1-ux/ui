@@ -81,6 +81,7 @@ function Scrolling.attachWindow(window)
     local function refresh(owner)
         if type(owner.Layout) == "function" then owner:Layout() end
         if owner.__type == "Slider" and not owner.dragging then owner:_applyLayout() end
+        if owner._layoutConexaoControl then owner:_layoutConexaoControl() end
         if owner._layoutConexaoHeader then owner:_layoutConexaoHeader() end
         if owner._scrollers then for _, scroll in ipairs(owner._scrollers) do scroll:Queue() end end
         for _, element in ipairs(owner.elements or {}) do refresh(element) end

@@ -28,4 +28,6 @@ Em 3.5, a composição do painel inicial segue as referências de Home fornecida
 
 Em 3.5.1, `ExecutorPolicy` e `ExecutorAccess` restringem o suporte a Delta, Wave, Xeno e Solara, com uma exceção explícita para o Studio. O acesso é verificado antes de importar Gen2 e antes de cada `CreateWindow`; nomes desconhecidos e correspondências apenas por prefixo são recusados. O catálogo e as imagens foram reduzidos aos quatro produtos selecionados. O cadastro de logos não altera as permissões. A política restringe suporte por nome informado, sem auditar binários nem garantir sua autenticidade ou segurança.
 
+Em 3.5.2, `Features/ControlLayout.luau` dimensiona os controles em largura total a partir da largura atual e dos limites do texto. O adaptador reserva a área do interruptor, empilha sliders/campos quando necessário, protege a altura das linhas durante cliques e ajusta as descrições. Layouts antigos ficam preservados em contêineres ocultos pertencentes ao controle, para manter a limpeza ao remover uma aba. Os cabeçalhos de dropdown também medem o título antes de escolher sua disposição. As alterações ficam na camada Conexão, sem novos ajustes no vendor.
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

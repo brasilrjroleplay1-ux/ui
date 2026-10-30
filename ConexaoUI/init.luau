@@ -16,6 +16,7 @@ local Startup = require(script.Features.Startup)
 local Localization = require(script.Features.Localization)
 local Session = require(script.Features.Session)
 local BrandIcon = require(script.Features.BrandIcon)
+local Controls = require(script.Features.ControlLayout)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
@@ -32,7 +33,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.5.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.5.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -66,6 +67,7 @@ local function adaptHost(host)
         end
     end
     for _, element in ipairs(host.elements or {}) do
+        Controls.attach(element)
         if element.__type == "Dropdown" then DropdownPanel.attach(element)
         elseif element.__type == "Group" then adaptHost(element) end
     end
@@ -77,6 +79,7 @@ local function adaptHost(host)
                 if kind == "ColorPicker" and mapped.color == nil and mapped.Color == nil then mapped.color = mapped.value or mapped.Value end
                 local control = method(self, mapped)
                 if control then
+                    Controls.attach(control)
                     if kind == "Group" then adaptHost(control) end
                     if kind == "Dropdown" then DropdownPanel.attach(control, mapped) end
                     if control.Set then

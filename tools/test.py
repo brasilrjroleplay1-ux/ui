@@ -25,3 +25,6 @@ with tempfile.TemporaryDirectory() as folder:
     startup=Path(folder)/'executor-startup.luau'
     startup.write_text(prefix+(ROOT/'tests/executor_startup_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(startup)],'executor-startup')
+    layout=Path(folder)/'control-layout.luau'
+    layout.write_text(prefix+(ROOT/'tests/control_layout_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(layout)],'control-layout')

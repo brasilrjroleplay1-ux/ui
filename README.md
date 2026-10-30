@@ -1,4 +1,4 @@
-# Conexão UI 3.5.1 · Conexão Studio
+# Conexão UI 3.5.2 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -12,7 +12,7 @@ A demo abre em **Visão geral**, com perfil, cliente, atalhos e cartões da sess
 
 A abertura mostra **Conexão Studio**, com marca em vetores e texto local. Os créditos da base permanecem no código e no repositório. O nome da sua janela continua personalizável em `CreateWindow`.
 
-Na **3.5.1**, a composição combina boas-vindas compactas, cartão do cliente, atalhos com ícones e uma grade de estatísticas, inspirada nas referências visuais fornecidas e na Home da [Luna Interface Suite](https://github.com/Nebula-Softworks/Luna-Interface-Suite). A implementação é da Conexão sobre a base Gen2; não carrega código da Luna. O avatar continua em **420 × 420 px**. A página usa a rolagem do painel e reorganiza os cartões em telas menores.
+Na **3.5.2**, a composição combina boas-vindas compactas, cartão do cliente, atalhos com ícones e uma grade de estatísticas, inspirada nas referências visuais fornecidas e na Home da [Luna Interface Suite](https://github.com/Nebula-Softworks/Luna-Interface-Suite). A implementação é da Conexão sobre a base Gen2; não carrega código da Luna. O avatar continua em **420 × 420 px**. A página usa a rolagem do painel e reorganiza os cartões em telas menores.
 
 O suporte está limitado a **Delta, Wave, Xeno e Solara**, com as quatro logos incluídas. Os demais nomes e clientes sem identificação são recusados antes da inicialização da UI. O **Roblox Studio** tem uma exceção explícita para desenvolvimento. [Política de suporte](docs/EXECUTORES.md) · [Origem das imagens](assets/README.md).
 
@@ -63,6 +63,10 @@ Não é necessário criar a página de configurações no seu script. A janela o
 - **Tamanho da janela, 0–100%:** o arraste mostra uma prévia do valor e mantém a janela parada. Ao soltar, aplica o tamanho, ativa o modo manual e salva a escolha. 0 mantém um tamanho compacto acessível; 100 usa o espaço disponível, preservando margens para os controles do Roblox. Mesmo no modo manual, a proporção é recalculada ao mudar de tela.
 
 Essas escolhas são lembradas por janela. Você pode ativar o ajuste automático novamente a qualquer momento.
+
+Na **3.5.2**, os controles em largura total recalculam sua disposição pelo espaço disponível e pelo texto exibido. Toggles reservam espaço para o interruptor e quebram nomes longos em linhas. Sliders colocam o trilho abaixo do título quando necessário; em janelas pequenas, o percentual também ganha sua própria linha. Campos de texto e teclas podem ficar abaixo do título. As descrições usam toda a largura disponível, e os dropdowns separam título e seleção antes de colidirem.
+
+O puxador do slider mantém margem nas duas extremidades, com uma área maior para toque. A janela continua aplicando o tamanho manual ao soltar, e uma medição de fonte interrompida por outra mudança de largura é descartada. A altura dos controles acompanha o texto mesmo durante a animação de clique.
 
 As páginas e os seletores recalculam a área rolável a partir do conteúdo e das margens. A barra aparece quando há mais conteúdo; após redimensionar, a posição permanece dentro do intervalo válido. Ao reabrir a janela, os layouts são conferidos depois da animação.
 

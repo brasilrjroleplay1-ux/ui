@@ -3,6 +3,7 @@
 -- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
 local Surface = require(script.Parent.Surface)
 local Scrolling = require(script.Parent.Scrolling)
+local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local Dropdown = {}
 
 function Dropdown.attach(control, props)
@@ -22,15 +23,20 @@ function Dropdown.attach(control, props)
     end
     control._updateSelectedLabel()
     local function layoutHeader()
-        local narrow = control.main.AbsoluteSize.X > 0 and control.main.AbsoluteSize.X < 360
+        local width = control.main.AbsoluteSize.X
+        if width <= 0 then return end
+        local leftWidth = math.max(1, width - 241)
+        local textWidth = metrics.textWidth(control.title.FontFace, control.title.TextSize, control.title.Text)
+        if control.window.unloaded or not control.main.Parent or control.main.AbsoluteSize.X ~= width then return end
+        local narrow = width < 400 or textWidth + (control.icon and 24 or 0) > leftWidth
         local height = narrow and 70 or 41
         control.main.Size = UDim2.new(1, -20, 0, height)
         control.top.Size, control.interact.Size = UDim2.new(1, 0, 0, height), UDim2.new(1, 0, 0, height)
         control.container.AnchorPoint = Vector2.new(0, narrow and 0 or 0.5)
         control.container.Position = narrow and UDim2.fromOffset(20, 10) or UDim2.new(0, 20, 0.5, 0)
-        control.container.Size = narrow and UDim2.new(1, -60, 0, 20) or UDim2.fromOffset(170, 16)
-        control.title.AutomaticSize = narrow and Enum.AutomaticSize.None or Enum.AutomaticSize.X
-        control.title.Size = narrow and UDim2.new(1, control.icon and -24 or 0, 0, 20) or UDim2.fromOffset(150, 16)
+        control.container.Size = narrow and UDim2.new(1, -60, 0, 20) or UDim2.fromOffset(leftWidth, 20)
+        control.title.AutomaticSize = Enum.AutomaticSize.None
+        control.title.Size = UDim2.new(1, control.icon and -24 or 0, 0, 20)
         control.title.TextWrapped, control.title.TextTruncate = false, Enum.TextTruncate.AtEnd
         control.selectedLabel.AnchorPoint = narrow and Vector2.new(0, 0) or Vector2.new(1, 0.5)
         control.selectedLabel.Position = narrow and UDim2.fromOffset(20, 38) or UDim2.new(1, -41, 0.5, 0)
@@ -39,6 +45,8 @@ function Dropdown.attach(control, props)
         control.selectedLabel.TextWrapped, control.selectedLabel.TextTruncate = false, Enum.TextTruncate.AtEnd
     end
     control.window:ConnectFor(control, control.main:GetPropertyChangedSignal("AbsoluteSize"), layoutHeader)
+    control.window:ConnectFor(control, control.title:GetPropertyChangedSignal("Text"), layoutHeader)
+    control.window:ConnectFor(control, control.title:GetPropertyChangedSignal("FontFace"), layoutHeader)
     control._layoutConexaoHeader = layoutHeader
     layoutHeader()
 
