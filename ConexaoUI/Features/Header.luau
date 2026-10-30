@@ -62,10 +62,10 @@ function Header.attach(window, version)
     })
     create("UIGradient", {
         Parent = self.separator, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.18, 0.1), NumberSequenceKeypoint.new(0.8, 0.3), NumberSequenceKeypoint.new(1, 1) }),
-    }, { Color = "SliderProgress" })
-    track(self.separator, "BackgroundTransparency", 0.55)
+    }, { Color = { "SurfaceStroke", function(color) return ColorSequence.new(color) end } })
+    track(self.separator, "BackgroundTransparency", 0.82)
     for _, node in ipairs(window.actionContainer:GetChildren()) do
-        if node:IsA("Frame") and node:FindFirstChild("ImageLabel") then
+        if node.Parent == window.actionContainer and node:IsA("Frame") and node.Visible ~= false and node:FindFirstChild("ImageLabel") then
             window.themeProperties[node] = window.themeProperties[node] or {}
             window.themeProperties[node].BackgroundColor3 = "StatBackground"
             node.BackgroundColor3 = window.theme.StatBackground
@@ -88,7 +88,7 @@ function Header.attach(window, version)
         local width = window.main.AbsoluteSize.X
         if width <= 0 or window.animating or window._revealing then width = window.size.X.Offset end
         local compact, tiny = width < 540, width < 380
-        local slot, padding, gap = compact and 26 or 30, tiny and 12 or 18, tiny and 10 or 16
+        local slot, padding, gap = compact and 26 or 28, 12, 12
         local actionGap = 5
         if width < 240 then slot, padding, gap, actionGap = 22, 8, 8, 4 end
         window.actionsListLayout.Padding = UDim.new(0, actionGap)
@@ -96,25 +96,30 @@ function Header.attach(window, version)
         local available = math.max(1, width - padding * 2 - gap - actionsWidth)
         window.actionContainer.Position, window.actionContainer.Size = UDim2.new(1, -padding, 0.5, 0), UDim2.fromOffset(actionsWidth, slot)
         for _, node in ipairs(self.actions) do node.Size = UDim2.fromOffset(slot, slot) end
-        self.root.Position, self.root.Size = UDim2.new(0, padding, 0.5, 0), UDim2.fromOffset(available, 46)
-        local iconSize = tiny and 30 or 40
+        self.root.Position, self.root.Size = UDim2.new(0, padding, 0.5, 0), UDim2.fromOffset(available, 32)
+        local iconSize = tiny and 28 or 32
         local icon = self.mark and self.mark.root or window.topbarIcon
         icon.Visible = available >= 76
         icon.AnchorPoint, icon.Position, icon.Size = Vector2.new(0, 0.5), UDim2.fromScale(0, 0.5), UDim2.fromOffset(iconSize, iconSize)
-        local textLeft = icon.Visible and iconSize + (tiny and 8 or 12) or 0
+        local textLeft = icon.Visible and iconSize + 10 or 0
         local textWidth = math.max(1, available - textLeft)
-        window.titleContainer.Position, window.titleContainer.Size = UDim2.fromOffset(textLeft, 0), UDim2.fromOffset(textWidth, 46)
-        if window.title then window.title.TextSize = tiny and 15 or (compact and 18 or 21) end
+        window.titleContainer.Position, window.titleContainer.Size = UDim2.fromOffset(textLeft, 0), UDim2.fromOffset(textWidth, 32)
+        local titleSize = tiny and 14 or 16
+        if window.title then window.title.TextSize = titleSize end
         -- A bounded capsule needs no yielding font request during a resize. Longer subtitles truncate.
         local pillWidth = math.min(textWidth, math.clamp((utf8.len(self.version.Text) or #self.version.Text) * 6 + 14, 38, 130))
-        self.pill.Visible = textWidth >= 38
+        self.pill.Visible = textWidth >= 170
+        local titleText = window.title and window.title.Text or ""
+        local titleWidth = math.max(1, math.min(textWidth - (self.pill.Visible and pillWidth + 8 or 0), (utf8.len(titleText) or #titleText) * titleSize * 0.64 + 4))
+        if window.title then window.title.Position, window.title.Size = UDim2.fromOffset(0, 5), UDim2.fromOffset(titleWidth, 22) end
+        self.pill.Position = UDim2.fromOffset(titleWidth + 8, 7)
         self.pill.Size = UDim2.fromOffset(pillWidth, 18)
         local hasTags = false
         for _, child in ipairs(window.tagContainer:GetChildren()) do if child:IsA("Frame") and child.Name == "Tag" then hasTags = true break end end
-        self.tagSlot.Visible = hasTags and textWidth - pillWidth >= 48
-        self.tagSlot.Position, self.tagSlot.Size = UDim2.fromOffset(pillWidth + 10, 28), UDim2.fromOffset(math.max(1, textWidth - pillWidth - 10), 18)
-        self.caption.Visible = not hasTags and textWidth - pillWidth >= 88
-        self.caption.Position, self.caption.Size = UDim2.fromOffset(pillWidth + 10, 28), UDim2.fromOffset(math.max(1, textWidth - pillWidth - 10), 18)
+        local tagLeft = titleWidth + (self.pill.Visible and pillWidth + 18 or 10)
+        self.tagSlot.Visible = hasTags and textWidth - tagLeft >= 48
+        self.tagSlot.Position, self.tagSlot.Size = UDim2.fromOffset(tagLeft, 7), UDim2.fromOffset(math.max(1, textWidth - tagLeft), 18)
+        self.caption.Visible = false
     end
     function self:SetShown(shown, info, assemble)
         for _, target in ipairs(self.targets) do

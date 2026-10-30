@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.5.4", "new entry point is bundled")
+check(UI.Version == "3.6.0", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -141,12 +141,12 @@ w.configuration.autoSave = true
 local windowChildren = #w.screenGui:GetChildren()
 w.ProfileButton.MouseButton1Click:Fire()
 local profile = w.ProfilePage
-check(profile and profile.playerName.Text == game:GetService("Players").LocalPlayer.DisplayName, "clicking the sidebar opens the actual player's profile")
+check(profile and profile.playerName.Text == "Olá, " .. game:GetService("Players").LocalPlayer.DisplayName, "clicking the sidebar opens the actual player's greeting")
 check(profile.details[2][2] == "Roblox Studio" and profile.avatar.Image ~= "", "profile includes runtime identification and the player's thumbnail")
 check(profile.avatar.Image:find("w=420&h=420", 1, true) and w.profileAvatar.Image:find("w=420&h=420", 1, true), "both profile and sidebar use a 420px thumbnail instead of upscaling the old 48px headshot")
 check(profile.avatar.ScaleType == Enum.ScaleType.Fit and profile.avatar.ResampleMode == Enum.ResamplerMode.Default, "avatar keeps its aspect ratio and smooth resampling")
 check(profile.platformIcon.kind == "studio" and #profile.platformIcon.parts == 4 and profile.fields[2].icon.kind == "roblox", "platform and account have local Studio and Roblox marks")
-check(#profile.fields == 2 and w.profileAvatar.Size.X.Offset == 40 and w.ProfileCard.BackgroundTransparency < 1 and w.ProfileButton.ZIndex > w.profileName.ZIndex, "the player card is styled, clickable above its labels and shows only account and executor details")
+check(#profile.fields == 2 and w.profileAvatar.Size.X.Offset == 32 and w.ProfileCard.BackgroundTransparency < 1 and w.ProfileButton.ZIndex > w.profileName.ZIndex, "the compact avatar card stays clickable above its labels")
 check(w.selectedTab == w.ProfileTab and profile.content.Parent == w.elements, "the profile opens in the main content panel as a native page")
 check(not w._conexaoPanel and not w.screenGui:FindFirstChild("ConexaoOverlay") and #w.screenGui:GetChildren() == windowChildren, "opening the profile creates no floating window or screen-darkening layer")
 local dashboard = profile.dashboard
@@ -170,22 +170,32 @@ for _, width in ipairs({ 180, 219, 240, 320, 399, 419, 420, 426, 440, 550, 559, 
     dashboard:Layout()
     local _, _, bannerWidth, bannerHeight = rect(dashboard.banner, width, dashboard.hero.Size.Y.Offset)
     inside(dashboard.banner, width, dashboard.hero.Size.Y.Offset, "welcome banner")
-    assert(bannerHeight <= 84, "greeting must remain a compact strip instead of a large banner")
+    assert(bannerHeight == 60, "greeting keeps the reference's compact outlined strip")
     assert(dashboard.cards.Position.Y.Offset >= dashboard.hero.Position.Y.Offset + dashboard.hero.Size.Y.Offset + 12, "cards must remain below the greeting")
     assert(dashboard.main.Size.Y.Offset >= dashboard.cards.Position.Y.Offset + dashboard.cards.Size.Y.Offset, "all session details must remain scrollable")
-    for _, node in ipairs({ dashboard.plate, dashboard.connected, profile.playerName, profile.username }) do inside(node, bannerWidth, bannerHeight, node.Name) end
+    inside(dashboard.plate, width, dashboard.hero.Size.Y.Offset, "separate avatar")
+    for _, node in ipairs({ profile.playerName, profile.username }) do inside(node, bannerWidth, bannerHeight, node.Name) end
+    local bx = rect(dashboard.banner, width, dashboard.hero.Size.Y.Offset)
+    assert(bx >= dashboard.plate.Size.X.Offset + 12, "avatar and greeting are separate surfaces with an even gutter")
     inside(profile.avatar, dashboard.plate.Size.X.Offset, dashboard.plate.Size.Y.Offset, "avatar")
     inside(dashboard.session, width, dashboard.cards.Size.Y.Offset, "session panel")
     inside(profile.fields[1].main, width, dashboard.cards.Size.Y.Offset, "client card")
-    inside(profile.fields[2].main, width, dashboard.cards.Size.Y.Offset, "account card")
+    inside(profile.fields[2].main, width, dashboard.main.Size.Y.Offset, "account footer")
+    inside(dashboard.save, width, dashboard.cards.Size.Y.Offset, "save note")
+    inside(dashboard.friends, width, dashboard.cards.Size.Y.Offset, "friends panel")
     local sx, sy, sw, sh = rect(dashboard.session, width, dashboard.cards.Size.Y.Offset)
     local cx, cy, cw, ch = rect(profile.fields[1].main, width, dashboard.cards.Size.Y.Offset)
-    local ax, ay, aw = rect(profile.fields[2].main, width, dashboard.cards.Size.Y.Offset)
-    if width >= 420 then
-        assert(cx >= sx + sw + 12 and ax == cx and cy == sy and ay >= cy + ch + 12, "tablet Home keeps session on the left and client/account stacked on the right")
-        assert(dashboard.main.Size.Y.Offset <= 384, "the screenshot-sized layout exposes all metrics without the old banner/shortcut height")
+    local ax, ay, aw = rect(profile.fields[2].main, width, dashboard.main.Size.Y.Offset)
+    local fx, fy, fw, fh = rect(dashboard.friends, width, dashboard.cards.Size.Y.Offset)
+    if width >= 400 then
+        assert(cx >= sx + sw + 10 and fx == cx and cy == sy and fy >= cy + ch + 10, "reference composition keeps server/save left and client/friends right")
+        assert(dashboard.main.Size.Y.Offset <= 400, "all primary Home cards fit a compact page at screenshot widths")
     else
-        assert(cx == 0 and sy >= cy + ch + 12 and ay >= sy + sh + 12, "phone cards stack without hiding client information")
+        assert(cx == 0 and cy >= sy + sh + 80 and fy >= cy + ch + 10, "phone cards stack without hiding client information")
+    end
+    for _, stat in ipairs(dashboard.friendStats) do
+        inside(stat.main, fw, fh, "friend stat")
+        inside(stat.value, stat.main.Size.X.Offset, stat.main.Size.Y.Offset, "friend value")
     end
     for _, stat in ipairs(dashboard.stats) do
         inside(stat.main, sw, sh, "session stat")
@@ -194,12 +204,11 @@ for _, width in ipairs({ 180, 219, 240, 320, 399, 419, 420, 426, 440, 550, 559, 
     end
     for _, field in ipairs(profile.fields) do
         local fieldWidth = field.main.Size.X.Offset
-        for _, node in ipairs({ field.heading, field.valueLabel, field.subtitle, field.icon.root }) do inside(node, fieldWidth, field.main.Size.Y.Offset, "account card content") end
+        for _, node in ipairs({ field.heading, field.valueLabel, field.subtitle, field.icon.root }) do if node.Visible ~= false then inside(node, fieldWidth, field.main.Size.Y.Offset, "card content") end end
     end
     inside(dashboard.platformPill, cw, ch, "platform badge")
     inside(dashboard.clientNote, cw, ch, "client status")
     inside(profile.copyButton, aw, profile.fields[2].main.Size.Y.Offset, "copy account ID")
-    inside(dashboard.accountSave, aw, profile.fields[2].main.Size.Y.Offset, "save status")
 end
 check(true, "compact Home cards fit phone, tablet and desktop content widths without overlapping")
 dashboard.main.AbsoluteSize = Vector2.new(420, 120)
@@ -224,7 +233,7 @@ check(w.selectedTab == w.ProfileTab, "returning from theme selection restores th
 w:CloseProfile()
 tab:Select()
 w:OpenProfile()
-profile.backButton.interact.MouseButton1Click:Fire()
+w:CloseProfile()
 check(w.selectedTab == tab, "the profile back button restores the previous tab")
 local profileConnections, profileInstances, profileTabs = #w.connections, #w.instances, #w.tabs
 for i = 1, 6 do w:OpenProfile() w:CloseProfile() end
@@ -342,14 +351,14 @@ do
     for _, id in ipairs({ "conexao", "ember", "rose", "porcelana", "matcha", "frost" }) do
         w:ChangeTheme(id)
         local home = w.ProfilePage.dashboard
-        for _, node in ipairs({ home.banner, home.session, w.ProfilePage.fields[1].main, w.ProfilePage.fields[2].main }) do
+        for _, node in ipairs({ home.session, home.save, home.friends, w.ProfilePage.fields[1].main }) do
             local gradient = childOfClass(node, "UIGradient")
             for _, point in ipairs(gradient.Color.Keypoints) do
                 check(contrast(w.theme.ContentColor, point.Value) >= 4.5, "Home text contrasts with each surface in " .. id)
             end
         end
         home:_setShown(true, false)
-        check(home.stats[1].value.TextTransparency == 0 and home.stats[1].main.BackgroundTransparency == 0, "session values and tiles remain visible in " .. id)
+        check(home.stats[1].value.TextTransparency <= 0.2 and home.stats[1].main.BackgroundTransparency <= 0.1, "session values and tiles remain visible in " .. id)
         check(w.ProfilePage.platformIcon.parts[1].BackgroundColor3 == w.theme.ContentColor, "platform logo follows " .. id)
     end
     w:ChangeTheme(previous)
@@ -639,7 +648,7 @@ for i = 1, 120 do runService.RenderStepped:Fire(1 / 60) runService.Heartbeat:Fir
 statsPage:RefreshStats()
 local stats = statsWindow:GetSessionStats()
 check(stats.players == 3 and stats.maximum == 12 and stats.fps == 60 and stats.ping == 87, "dashboard samples real player, FPS and latency providers")
-check(statsPage.dashboard.stats[1].value.Text == "3 / 12" and statsPage.dashboard.stats[2].value.Text == "87 ms", "live samples update the visible session cards")
+check(statsPage.dashboard.stats[1].value.Text == "3" and statsPage.dashboard.stats[2].value.Text == "12" and statsPage.dashboard.stats[3].value.Text == "87 ms", "live samples update the server metrics in the reference grid")
 check(stats.elapsed > 1.99 and stats.elapsed < 2.01, "session duration accumulates elapsed time rather than counting update loops")
 statsWindow.configuration.autoSave = false
 statsPage:RefreshStats()

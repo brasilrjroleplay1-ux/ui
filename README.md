@@ -1,4 +1,4 @@
-# Conexão UI 3.5.4 · Conexão Studio
+# Conexão UI 3.6.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -8,13 +8,13 @@ Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conex�
 loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/Demo.luau"))()
 ```
 
-A demo abre em **Início**, com perfil, cliente, conta e cartões da sessão. Usa o tema `conexao`. **Configurações** continua pronta na sidebar, com transparência, tamanho, salvamento e temas. O cartão com avatar/nome no rodapé também abre o painel inicial.
+A demo abre em **Início**, com saudação, servidor, executor e amigos, usando o tema neutro `default`. **Configurações** continua pronta na lateral de ícones, com transparência, tamanho, salvamento e temas. O avatar no rodapé também abre o painel inicial. A demo 3.6 salva suas preferências em `conexao_demo_studio36`.
 
-A **3.5.4** traz uma marca vetorial compartilhada entre a abertura e o topo da janela, título com a fonte de destaque do tema, selo de versão e botões com bordas e fundos próprios. O nome, subtítulo e ícone da sua janela continuam personalizáveis em `CreateWindow`.
+A **3.6.0** reorganiza a janela pelas proporções da referência Luna: lateral de **52 px**, cabeçalho de **44 px**, avatar separado da saudação e cartões alinhados com intervalos de 10–12 px. O topo usa marca, título e subtítulo na mesma linha. Na lateral ficam Início, as abas do script, busca e Configurações; no topo ficam as ações da janela. Nome, subtítulo e ícone continuam personalizáveis em `CreateWindow`.
 
 A abertura de **Conexão Studio** monta os elos da marca, faz uma passagem de luz pelo cartão e avança o indicador pelas etapas de construção da interface. O cartão sai antes da entrada da janela, que expande, revela o cabeçalho e depois o conteúdo. A entrada da janela termina em cerca de 0,76 s; ao reabrir, continua usando a restauração nativa. O cartão se ajusta à largura e à altura da tela. Fechar ou descarregar durante a sequência cancela a abertura e remove suas conexões. Os créditos da base permanecem no código e no repositório.
 
-Na **3.5.3**, a Home segue a organização da referência da [Luna Interface Suite](https://github.com/Nebula-Softworks/Luna-Interface-Suite): uma faixa de boas-vindas com avatar e nome, sessão à esquerda e cartões de cliente e conta à direita. Os atalhos duplicados de Configurações, Temas e Copiar servidor foram removidos. Os cartões usam fundos discretos ligados ao tema, com valores destacados e logos que acompanham os temas claros e escuros. A implementação é da Conexão sobre a base Gen2; não carrega código da Luna. O avatar continua em **420 × 420 px**. Abaixo de 420 px de largura de conteúdo, os cartões passam para uma coluna e usam a rolagem do próprio painel.
+Na Home, servidor e salvamento ficam à esquerda; executor e amigos ficam à direita. Os cartões usam superfícies escuras e cor concentrada nos cantos, seguindo a [captura e o source da Luna](https://github.com/Nebula-Softworks/Luna-Interface-Suite). O ID da conta fica no rodapé da página. As logos acompanham os temas claros e escuros, e o avatar usa a imagem de **420 × 420 px**. Abaixo de 400 px de conteúdo, os cartões passam para uma coluna com rolagem nativa. A implementação continua sobre a base Gen2, sem carregar a Luna em tempo de execução. [Referências e licença](docs/REFERENCIAS.md).
 
 O suporte está limitado a **Delta, Wave, Xeno e Solara**, com as quatro logos incluídas. Os demais nomes e clientes sem identificação são recusados antes da inicialização da UI. O **Roblox Studio** tem uma exceção explícita para desenvolvimento. [Política de suporte](docs/EXECUTORES.md) · [Origem das imagens](assets/README.md).
 
@@ -45,7 +45,7 @@ tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "A", "B", "C" }, 
 
 ## O que já vem pronto
 
-- Painel inicial e perfil clicável: faixa compacta com avatar, nome e @usuário; cartões de cliente e conta com logos de cliente/plataforma. A sessão mostra jogadores/limite, FPS, ping, tempo no painel, Place ID e estado do salvamento. Métricas indisponíveis aparecem como `—`. Configurações e temas ficam acessíveis pela página de configuração; não há atalhos duplicados na Home.
+- Painel inicial e perfil clicável: avatar separado, saudação e @usuário; servidor, executor, amigos e estado do salvamento. A sessão mostra jogadores, capacidade, FPS, ping e tempo no painel. As contagens de amigos vêm das APIs do Roblox, com cache de um minuto enquanto a Home está aberta. Métricas indisponíveis aparecem como `—`. Configurações e temas ficam na página de configuração, sem atalhos duplicados na Home.
 - Página **Configurações** pronta e visível na sidebar: transparência, tamanho manual/automático, salvamento/restauração, temas com prévias, atalhos e opções nativas com nomes e descrições em português. A engrenagem continua abrindo essa mesma página.
 - Dropdown dentro da área de conteúdo, mantendo a sidebar acessível: busca, cartões de opções, seleção única/múltipla, Padrão, Limpar e Selecionar todos. Voltar, Escape ou selecionar outra aba encerra o seletor. Em telas estreitas usa uma coluna, e o cabeçalho do controle separa o título do valor.
 - Salvamento e carregamento automáticos habilitados por padrão, incluindo toggles, sliders, dropdowns únicos/múltiplos, inputs, teclas e cores. Use `flag` estável e único por controle.

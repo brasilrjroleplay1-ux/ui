@@ -49,7 +49,7 @@ function Startup.new(theme, version)
     track(edge, "Transparency", 0.4)
     self.scale = create("UIScale", { Parent = self.panel, Scale = 0.92 })
     text("Eyebrow", "CONEXÃO / INTERFACE", 28, 14, 280, 9, true)
-    self.version = text("Version", "v" .. tostring(version or "3.5"), 334, 14, 58, 10, false)
+    self.version = text("Version", "v" .. tostring(version or "3.6"), 334, 14, 58, 10, false)
     self.version.TextXAlignment = Enum.TextXAlignment.Right
     self.mark = Brand.new(create, self.panel, 64, theme)
     self.mark.root.Position = UDim2.fromOffset(28, 52)

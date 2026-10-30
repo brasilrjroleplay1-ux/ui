@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.5 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.6 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -19,12 +19,16 @@ local BrandIcon = require(script.Features.BrandIcon)
 local Controls = require(script.Features.ControlLayout)
 local Header = require(script.Features.Header)
 local Entrance = require(script.Features.Entrance)
+local Shell = require(script.Features.Shell)
+local Friends = require(script.Features.Friends)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
     OpenProfile: (self: any) -> any,
     OpenHome: (self: any) -> any,
     GetSessionStats: (self: any) -> any,
+    GetFriendStats: (self: any) -> any,
+    RefreshFriends: (self: any, force: boolean?) -> (),
     CloseProfile: (self: any) -> (),
     OpenThemes: (self: any) -> any,
     SettingsTab: Gen2.Tab,
@@ -35,7 +39,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.5.4", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.6.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -139,6 +143,7 @@ function Library:CreateWindow(options)
     window.ThemeId = themeId
     window.screenGui.Name = "ConexaoUI3_" .. id
     -- Install the first-open hooks before adapters that may yield while measuring fonts.
+    Shell.attach(window)
     Header.attach(window, self.Version)
     Entrance.attach(window)
     local createTab = window.CreateTab
@@ -148,7 +153,7 @@ function Library:CreateWindow(options)
         if not tab.neglectSelector then
             local firstUserTab = true
             for _, other in ipairs(self.tabs) do
-                if other ~= tab and other ~= self.SettingsTab and not other.neglectSelector then firstUserTab = false break end
+                if other ~= tab and other ~= self.SettingsTab and other ~= self.ProfileTab and not other.neglectSelector then firstUserTab = false break end
             end
             if firstUserTab then tab:Select(true) end
         end
@@ -162,6 +167,7 @@ function Library:CreateWindow(options)
         changeTheme(self, resolved or theme)
         self.ThemeId = type(theme) == "string" and theme:lower() or nil
         if self.ApplyTransparency then self:ApplyTransparency() end
+        if self.RefreshShellTheme then self:RefreshShellTheme() end
         if p.rememberTheme ~= false then
             self.UIPreferences.theme = self.ThemeId
             Preferences.save(self)
@@ -174,6 +180,7 @@ function Library:CreateWindow(options)
     Appearance.attach(window)
     Settings.attach(window)
     Session.attach(window)
+    Friends.attach(window)
     Scrolling.attachWindow(window)
     window.Introduction = introduction
     if introduction then introduction:Ready() end

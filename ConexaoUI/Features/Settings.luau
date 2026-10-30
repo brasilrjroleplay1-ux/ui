@@ -26,7 +26,7 @@ local function cards(window, parent, owner, entries, z)
         Surface.round(window, mini, 8)
         window:Create("UIGradient", { Parent = mini, Color = theme.WindowColor, Rotation = 35 })
         local rail = window:Create("Frame", {
-            Parent = mini, Position = UDim2.fromOffset(7, 7), Size = UDim2.new(0.23, 0, 1, -14),
+            Parent = mini, Position = UDim2.fromOffset(7, 7), Size = UDim2.new(0.09, 0, 1, -14),
             BackgroundColor3 = theme.NeutralButton, BorderSizePixel = 0, ZIndex = z + 2,
         })
         Surface.round(window, rail, 5)
@@ -39,12 +39,12 @@ local function cards(window, parent, owner, entries, z)
             Surface.round(window, pill, 3)
         end
         local heading = window:Create("Frame", {
-            Parent = mini, Position = UDim2.new(0.3, 0, 0, 12), Size = UDim2.new(0.4, 0, 0, 5),
+            Parent = mini, Position = UDim2.new(0.18, 0, 0, 12), Size = UDim2.new(0.5, 0, 0, 5),
             BackgroundColor3 = theme.ContentColor, BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = z + 2,
         })
         Surface.round(window, heading, 2)
         local track = window:Create("Frame", {
-            Parent = mini, Position = UDim2.new(0.3, 0, 0, 34), Size = UDim2.new(0.59, 0, 0, 7),
+            Parent = mini, Position = UDim2.new(0.18, 0, 0, 34), Size = UDim2.new(0.73, 0, 0, 7),
             BackgroundColor3 = theme.SliderBackground, BorderSizePixel = 0, ZIndex = z + 2,
         })
         Surface.round(window, track, 4)
@@ -54,7 +54,7 @@ local function cards(window, parent, owner, entries, z)
         Surface.round(window, progress, 4)
         window:Create("UIGradient", { Parent = progress, Color = theme.SliderProgress })
         local toggle = window:Create("Frame", {
-            Parent = mini, Position = UDim2.new(0.3, 0, 0, 57), Size = UDim2.fromOffset(32, 16),
+            Parent = mini, Position = UDim2.new(0.18, 0, 0, 57), Size = UDim2.fromOffset(32, 16),
             BackgroundColor3 = theme.AccentColor, BorderSizePixel = 0, ZIndex = z + 2,
         })
         Surface.round(window, toggle, 8)

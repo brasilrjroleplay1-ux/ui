@@ -31,3 +31,6 @@ with tempfile.TemporaryDirectory() as folder:
     chrome=Path(folder)/'chrome.luau'
     chrome.write_text(prefix+(ROOT/'tests/chrome_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(chrome)],'chrome')
+    shell=Path(folder)/'shell.luau'
+    shell.write_text(prefix+(ROOT/'tests/shell_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(shell)],'shell')

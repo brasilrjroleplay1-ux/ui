@@ -108,7 +108,7 @@ window:OpenThemes()
 
 Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual e ajuste automático. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
-O cabeçalho e a abertura também vêm prontos em `CreateWindow`. `name`, `subtitle` e `icon` continuam personalizando os dados do cabeçalho. Sem `icon`, ele usa a marca vetorial da Conexão; nomes e subtítulos longos permanecem dentro do espaço disponível antes dos botões. As cores da marca, bordas e versão acompanham o tema.
+O cabeçalho e a abertura também vêm prontos em `CreateWindow`. `name`, `subtitle` e `icon` continuam personalizando os dados do cabeçalho. Sem `icon`, ele usa a marca vetorial da Conexão; nomes e subtítulos longos permanecem dentro do espaço disponível antes dos botões. As cores da marca, bordas e versão acompanham o tema. Na 3.6, o topo tem 44 px e usa uma linha; a lateral de 52 px mostra ícones. Seções criadas com `window:CreateSection` usam divisores na lateral.
 
 No slider de tamanho, a janela fica parada durante o arraste e aplica o valor ao soltar. Nos seus próprios sliders, o callback nativo recebe `(value, dragging)`: `dragging` é `true` durante o movimento e `false` na confirmação.
 
@@ -116,7 +116,9 @@ Os controles em largura total ajustam título, valor e campo à largura real. Te
 
 O perfil usa os dados reais de `LocalPlayer` e a identificação disponível do executor. Ele abre como página interna, com banner no gradiente do tema, avatar, nome, usuário e cartões de executor/versão e ID. Os botões permitem copiar o ID, abrir Configurações/Temas e voltar. Copiar depende da API do cliente. A galeria também usa uma página interna, com [60 temas](TEMAS.md), busca e filtros por família. As miniaturas são GuiObjects com as cores de cada tema. A escolha fica salva por janela. `rememberTheme = false` em `CreateWindow` mantém o tema definido pelo script a cada execução.
 
-A partir da 3.5, esse painel inclui cartões de sessão atualizados e identificação automática por [catálogo de logos](../assets/README.md). Na 3.5.3, a Home usa boas-vindas compactas, sessão à esquerda e cliente/conta à direita; em conteúdo abaixo de 420 px, os cartões ficam em uma coluna. Configurações, Temas e Copiar servidor não aparecem mais como atalhos no perfil. `window:GetSessionStats()` retorna valores numéricos quando disponíveis e textos formatados usados nos cartões. Na 3.5.1, o suporte é restrito a Delta, Wave, Xeno e Solara, além do Studio para desenvolvimento. `UI:RegisterExecutorIcon(nome, assetIdOuUriLocal, aliases)` personaliza imagens; não altera a lista de permitidos.
+A Home 3.6 usa avatar e saudação separados, servidor/salvamento à esquerda e executor/amigos à direita; em conteúdo abaixo de 400 px, os cartões ficam em uma coluna. Configurações, Temas e Copiar servidor não aparecem como atalhos no perfil. `window:GetSessionStats()` retorna valores numéricos e textos formatados da sessão. `window:GetFriendStats()` retorna `inServerText`, `offlineText`, `onlineText` e `allText`; eles mostram `—` enquanto não há dados disponíveis. A consulta não bloqueia a janela e usa cache de um minuto. `window:RefreshFriends(true)` solicita uma atualização imediata.
+
+A identificação usa o [catálogo de logos](../assets/README.md). O suporte continua restrito a Delta, Wave, Xeno e Solara, além do Studio para desenvolvimento. `UI:RegisterExecutorIcon(nome, assetIdOuUriLocal, aliases)` personaliza imagens; não altera a lista de permitidos.
 
 Os destaques de temas têm altura limitada e rolagem própria. A lista completa mantém busca/filtros fora da área rolável; não estica a janela para mostrar as 60 opções de uma vez.
 

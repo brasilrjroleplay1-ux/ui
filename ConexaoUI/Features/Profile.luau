@@ -7,7 +7,7 @@ local Profile = {}
 
 local function buildPage(window, player, executorInfo, version)
     -- A native content page, like Settings: it is clipped/scrolled by the main panel.
-    local tab = window:CreateTab({ name = "Perfil", neglectSelector = true, forgetState = true })
+    local tab = window:CreateTab({ name = "Início", icon = 93364949241311, customOrder = -1000, forgetState = true })
     local page = { tab = tab, content = tab.tabPage, details = {}, fields = {} }
     window.ProfileTab, window.ProfilePage = tab, page
     page.dashboard = Dashboard.new(window, tab, page, player, executorInfo)
@@ -18,12 +18,19 @@ local function buildPage(window, player, executorInfo, version)
         local snapshot = window:GetSessionStats()
         for _, item in ipairs(self.dashboard.stats) do item.value.Text = snapshot[item.key] or "—" end
         self.dashboard.accountSave.Text = "Salvamento: " .. snapshot.saveText
+        self.dashboard.saveTitle.Text = snapshot.saveText == "Ativado" and "Salvamento automático" or "Salvamento desativado"
+        self.dashboard.saveSubtitle.Text = snapshot.saveText == "Ativado" and "Suas escolhas são lembradas neste dispositivo" or "Ative o salvamento na página de configurações"
+        if window.GetFriendStats then
+            local friends = window:GetFriendStats()
+            for _, item in ipairs(self.dashboard.friendStats) do item.value.Text = friends[item.key] or "—" end
+            self.dashboard.friendSubtitle.Text = friends.unavailable and "Dados indisponíveis neste cliente" or "Seus amigos no Roblox"
+        end
     end
 
     function page:Refresh()
         player = game:GetService("Players").LocalPlayer or player
-        self.playerName.Text = player.DisplayName
-        self.username.Text = "@" .. player.Name
+        self.playerName.Text = "Olá, " .. player.DisplayName
+        self.username.Text = "@" .. player.Name .. " · " .. window.name
         local storage = Preferences.storage()
         self.details = {
             { "ID do jogador", tostring(player.UserId) },
@@ -41,6 +48,7 @@ local function buildPage(window, player, executorInfo, version)
         self:RefreshStats()
         self.dashboard.notice.Visible = false
         self.dashboard:Layout()
+        if window.RefreshFriends then window:RefreshFriends() end
     end
     function page:Close() window:CloseProfile() end
     -- An application may remove the page through the public Tab API. Rebuild safely next time.
@@ -60,7 +68,7 @@ function Profile.attach(window, executorInfo, version)
         if not previous or not previous.tabPage or not table.find(self.tabs, previous) then
             previous = self.SettingsTab
             for _, candidate in ipairs(self.tabs) do
-                if candidate ~= self.SettingsTab and not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
+                if candidate ~= self.SettingsTab and candidate ~= self.ProfileTab and not candidate.neglectSelector and candidate.tabPage then previous = candidate break end
             end
         end
         if previous then previous:Select() end
@@ -78,7 +86,7 @@ function Profile.attach(window, executorInfo, version)
     end
     window.OpenHome = window.OpenProfile
     if window.profile then
-        window.profileAvatar.Size = UDim2.fromOffset(40, 40)
+        window.profileAvatar.Size = UDim2.fromOffset(32, 32)
         window.profileAvatar.ZIndex = 123
         window.profileAvatar.ScaleType, window.profileAvatar.ResampleMode = Enum.ScaleType.Fit, Enum.ResamplerMode.Default
         window.profileContainer.ZIndex, window.profileLabels.ZIndex = 121, 121
@@ -96,9 +104,9 @@ function Profile.attach(window, executorInfo, version)
         window.profileSubtitle.TextWrapped, window.profileSubtitle.TextTruncate = false, Enum.TextTruncate.AtEnd
         window.ProfileCard = window:Create("Frame", {
             Name = "PlayerCard", Parent = window.profile, BorderSizePixel = 0,
-            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 4), Size = UDim2.new(1, -16, 1, -8), ZIndex = 120,
-        }, { BackgroundColor3 = "AccentColor" })
-        Surface.round(window, window.ProfileCard, 12)
+            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 36), ZIndex = 120,
+        }, { BackgroundColor3 = "StatBackground" })
+        Surface.round(window, window.ProfileCard, 8)
         window.ProfileCardStroke = window:Create("UIStroke", { Parent = window.ProfileCard, Transparency = 0.7, Thickness = 1 }, { Color = "AccentStroke" })
         window.ProfileButton = window:Create("TextButton", {
             Name = "OpenProfile", Parent = window.ProfileCard, Text = "", AutoButtonColor = false,

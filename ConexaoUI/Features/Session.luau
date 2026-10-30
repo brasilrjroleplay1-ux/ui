@@ -26,6 +26,7 @@ function Session.attach(window)
         return {
             players = count, maximum = maximum, fps = state.fps, ping = ping, elapsed = state.elapsed,
             playerText = count and (maximum and string.format("%d / %d", count, maximum) or tostring(count)) or "—",
+            countText = count and tostring(count) or "—", maximumText = maximum and tostring(maximum) or "—",
             fpsText = state.fps and tostring(state.fps) or "—",
             pingText = ping and string.format("%d ms", math.floor(ping + 0.5)) or "—",
             timeText = duration(state.elapsed),
@@ -42,7 +43,10 @@ function Session.attach(window)
         state.fps = state.frames > 0 and math.floor(state.frames / state.interval + 0.5) or nil
         state.frames, state.interval = 0, 0
         local page = window.ProfilePage
-        if page and window.selectedTab == window.ProfileTab and not window.hidden and page.RefreshStats then page:RefreshStats() end
+        if page and window.selectedTab == window.ProfileTab and not window.hidden and page.RefreshStats then
+            page:RefreshStats()
+            if window.RefreshFriends then window:RefreshFriends() end
+        end
     end)
 end
 

@@ -16,4 +16,6 @@ Third-party identification artwork in `assets/delta.png`, `assets/executors/*.pn
 
 The original Rayfield names and graphics identify the upstream project. Conexão UI is an independently maintained fork, with no claim of endorsement by Sirius or Corridon Capital.
 
+The 3.6 Home composition and friend-provider integration were developed with the user's Luna Interface Suite screenshots and Nebula Softworks' `CreateHomeTab` source as references. Luna Interface Suite is Copyright (c) 2024 Nebula Softworks and distributed under the [BSD 3-Clause License](licenses/Luna-BSD-3-Clause.txt). The reference links and inspected revision are recorded in [docs/REFERENCIAS.md](docs/REFERENCIAS.md). No endorsement by Nebula Softworks is implied.
+
 The previous independently implemented Conexão UI 2.1 is preserved in [legacy/v2](legacy/v2).
