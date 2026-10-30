@@ -305,6 +305,13 @@ function Settings.attach(window)
         else sizeStatus:Set(string.format("%s · %d × %d px", info.automatic and "Automático" or "Manual", info.width, info.height)) end
     end
     window:RefreshSizeStatus()
+    if window.layout.mode == "sidebar" then
+        window.SidebarIconsOnlyToggle = tab:CreateToggle({
+            name = "Mostrar apenas ícones nas abas", value = window.UIPreferences.sidebarIconsOnly == true, forgetState = true,
+            description = "Oculta os nomes e reduz a lateral. Desative para mostrar os nomes quando houver espaço na janela.",
+            callback = function(value) window:SetSidebarIconsOnly(value) end,
+        })
+    end
     mark("appearance", first)
     local savingFirst = #tab.elements + 1
     tab:CreateSection({ name = "Conta e salvamento" })

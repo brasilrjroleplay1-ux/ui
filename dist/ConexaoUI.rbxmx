@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.9 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.10 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -32,6 +32,7 @@ local ControlNotifications = require(script.Features.ControlNotifications)
 export type Window = Gen2.Window &amp; {
     OpenSettings: (self: any, category: string?) -&gt; (),
     SetSharedConfiguration: (self: any, enabled: boolean) -&gt; boolean,
+    SetSidebarIconsOnly: (self: any, enabled: boolean) -&gt; boolean,
     OpenProfile: (self: any) -&gt; any,
     OpenHome: (self: any) -&gt; any,
     GetSessionStats: (self: any) -&gt; any,
@@ -44,7 +45,7 @@ export type Window = Gen2.Window &amp; {
     RefreshSize: (self: any) -&gt; UDim2,
 }
 export type WindowConfiguration = Gen2.WindowConfiguration &amp; { shareAcrossAccounts: boolean? }
-export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: boolean?, configuration: WindowConfiguration? }
+export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: boolean?, sidebarIconsOnly: boolean?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 export type ControlNotificationProps = {
@@ -61,7 +62,7 @@ export type SliderProps = Gen2.SliderProps &amp; ControlNotificationProps &amp; 
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.9.3", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.10.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -148,6 +149,11 @@ function Library:CreateWindow(options)
     cfg.customFolder = cfg.customFolder or cfg.CustomFolder
     local accountScope = AccountStorage.prepare(cfg, p.name)
     local preferences, preferencesDir, preferencesPath = Preferences.load(cfg, p.name)
+    if preferences.sidebarIconsOnly == nil then
+        local iconsOnly = p.sidebarIconsOnly
+        if iconsOnly == nil then iconsOnly = p.SidebarIconsOnly end
+        preferences.sidebarIconsOnly = iconsOnly == true
+    end
     if cfg.autoSave == nil then cfg.autoSave = if old.Enabled ~= nil then old.Enabled ~= false elseif preferences.autoSave ~= nil then preferences.autoSave else true end
     if cfg.autoLoad == nil then cfg.autoLoad = if preferences.autoLoad ~= nil then preferences.autoLoad else true end
     local requestedTheme = p.theme or p.Theme or "conexao"
@@ -22372,6 +22378,7 @@ function Preferences.load(configuration, name)
     if type(data.autoSave) == "boolean" then state.autoSave = data.autoSave end
     if type(data.autoLoad) == "boolean" then state.autoLoad = data.autoLoad end
     if type(data.autoSize) == "boolean" then state.autoSize = data.autoSize end
+    if type(data.sidebarIconsOnly) == "boolean" then state.sidebarIconsOnly = data.sidebarIconsOnly end
     if ({ appearance = true, themes = true, saving = true, controls = true })[data.settingsCategory] then state.settingsCategory = data.settingsCategory end
     for _, key in ipairs({ "sizePercent", "transparency" }) do
         if type(data[key]) == "number" and data[key] == data[key] then state[key] = math.clamp(data[key], 0, 100) end
@@ -23307,6 +23314,13 @@ function Settings.attach(window)
         else sizeStatus:Set(string.format("%s · %d × %d px", info.automatic and "Automático" or "Manual", info.width, info.height)) end
     end
     window:RefreshSizeStatus()
+    if window.layout.mode == "sidebar" then
+        window.SidebarIconsOnlyToggle = tab:CreateToggle({
+            name = "Mostrar apenas ícones nas abas", value = window.UIPreferences.sidebarIconsOnly == true, forgetState = true,
+            description = "Oculta os nomes e reduz a lateral. Desative para mostrar os nomes quando houver espaço na janela.",
+            callback = function(value) window:SetSidebarIconsOnly(value) end,
+        })
+    end
     mark("appearance", first)
     local savingFirst = #tab.elements + 1
     tab:CreateSection({ name = "Conta e salvamento" })
@@ -23469,6 +23483,7 @@ return Navigation
 -- SPDX-License-Identifier: MPL-2.0
 -- Compact chrome with a labelled sidebar whenever the window has room for it.
 local sidebar = require(script.Parent.Parent.Gen2.components.sidebar)
+local Preferences = require(script.Parent.Preferences)
 local Shell = {}
 function Shell.attach(window)
     local layout = table.clone(window.layout)
@@ -23491,12 +23506,14 @@ function Shell.attach(window)
             if child:IsA("UIPadding") then child.PaddingTop, child.PaddingBottom = UDim.new(0, 10), UDim.new(0, 10) end
         end
         if window.profile then window.profile.Size = UDim2.new(1, 0, 0, 60) end
-        window:_applyRailWidth()
+        if window.UIPreferences.sidebarIconsOnly then sidebar.applyWidth(window, layout.railCollapsedWidth)
+        else window:_applyRailWidth() end
         sidebar.reflowProfile(window)
         window.settingsAction.action.Visible = false -- Settings remains directly available in the sidebar.
         local applyWidth = window._applyRailWidth
         function window:_applyRailWidth()
-            applyWidth(self)
+            if self.UIPreferences.sidebarIconsOnly then sidebar.applyWidth(self, self.layout.railCollapsedWidth)
+            else applyWidth(self) end
             for _, tab in ipairs(self.tabs) do
                 if tab.topbarItemTitle then
                     tab.topbarItemTitle.AutomaticSize, tab.topbarItemTitle.TextWrapped = Enum.AutomaticSize.None, false
@@ -23520,6 +23537,18 @@ function Shell.attach(window)
         layout.tabStripTop = layout.tabStripTop - delta
         window.tabList.Position = UDim2.new(0.5, 0, 0, layout.tabStripTop)
         window.bottomFade.Size = UDim2.new(1, 0, 0, 20)
+    end
+    function window:SetSidebarIconsOnly(enabled)
+        assert(type(enabled) == "boolean", "SetSidebarIconsOnly expects a boolean")
+        if self.unloaded or self.layout.mode ~= "sidebar" then return false end
+        self.UIPreferences.sidebarIconsOnly = enabled
+        self:_applyRailWidth()
+        if self.SidebarIconsOnlyToggle and self.SidebarIconsOnlyToggle.value ~= enabled then
+            self.SidebarIconsOnlyToggle:Set(enabled, true)
+        end
+        if self.RefreshContentLayouts then self:RefreshContentLayouts() end
+        Preferences.save(self)
+        return true
     end
     if window.searchPill then
         local position = window.searchPill.Position
@@ -23717,7 +23746,7 @@ function Startup.new(theme, version)
     track(edge, "Transparency", 0.4)
     self.scale = create("UIScale", { Parent = self.panel, Scale = 0.92 })
     text("Eyebrow", "CONEXÃO / INTERFACE", 28, 14, 280, 9, true)
-    self.version = text("Version", "v" .. tostring(version or "3.9"), 334, 14, 58, 10, false)
+    self.version = text("Version", "v" .. tostring(version or "3.10"), 334, 14, 58, 10, false)
     self.version.TextXAlignment = Enum.TextXAlignment.Right
     self.mark = Brand.new(create, self.panel, 64, theme)
     self.mark.root.Position = UDim2.fromOffset(28, 52)

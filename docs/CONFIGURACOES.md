@@ -1,4 +1,4 @@
-# Configurações por conta · 3.8.0
+# Configurações por conta · 3.10.0
 
 A separação já vem ativada em `CreateWindow`. A library usa o ID de `Players.LocalPlayer`, não o nome de usuário. A mesma conta continua com seus dados se mudar de nome. Sem uma identificação de conta válida, a janela não escolhe um diretório genérico.
 
@@ -6,16 +6,18 @@ A separação já vem ativada em `CreateWindow`. A library usa o ID de `Players.
 
 | Categoria | Conteúdo |
 | --- | --- |
-| Aparência | Transparência, ajuste automático, tamanho manual e tamanho atual. |
+| Aparência | Transparência, ajuste automático, tamanho manual, tamanho atual e nomes/ícones na lateral. |
 | Temas | Prévias das paletas e acesso à galeria completa. |
 | Salvamento | Perfil atual, compartilhamento, salvar/restaurar automaticamente e presets nomeados. |
 | Controles | Atalho da janela, cursor, boas-vindas, vibração e opções da lateral. |
+
+Em Aparência, **Mostrar apenas ícones nas abas** reduz a lateral e oculta os nomes. A escolha fica salva no perfil ativo; desativar volta aos nomes quando houver espaço. Também é possível definir o padrão inicial com `sidebarIconsOnly` ou alterar durante a execução com `window:SetSidebarIconsOnly(true/false)`.
 
 A barra de categorias permite rolagem horizontal no celular e mantém a opção selecionada visível. Trocar a categoria não reaplica os callbacks dos controles do script.
 
 ## Individual por padrão
 
-Cada conta tem suas próprias escolhas de toggle, slider, dropdown, input e demais controles persistentes. Tema, transparência, tamanho, salvamento/restauração e preferências nativas da janela também ficam separados. A lista de presets mostra apenas os arquivos do perfil ativo.
+Cada conta tem suas próprias escolhas de toggle, slider, dropdown, input e demais controles persistentes. Tema, transparência, tamanho, modo de ícones da lateral, salvamento/restauração e preferências nativas da janela também ficam separados. A lista de presets mostra apenas os arquivos do perfil ativo.
 
 Por exemplo, A salva intensidade 80 e duas opções no dropdown. B abre o mesmo script e recebe os valores iniciais definidos pelo autor. B salva intensidade 20. Quando A executar novamente, continua com 80 e suas duas opções; B continua com 20.
 

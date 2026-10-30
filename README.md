@@ -1,6 +1,8 @@
-# Conexão UI 3.9.3 · Conexão Studio
+# Conexão UI 3.10.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.10.0**, Configurações → Aparência inclui **Mostrar apenas ícones nas abas**. A lateral pode ficar compacta mesmo em janelas grandes, e a escolha é salva no perfil ativo. `sidebarIconsOnly = true` define o padrão inicial em `CreateWindow`; `window:SetSidebarIconsOnly(true/false)` altera e salva a preferência durante a execução.
 
 Na **3.9.3**, o cabeçalho mostra **CONEXÃO STUDIO** como um único título em negrito: as duas palavras têm o mesmo tamanho e se ajustam juntas ao espaço. O exemplo de componentes não cria a etiqueta TESTES no topo; o teste de etiquetas só cria uma ao clicar no botão correspondente.
 
@@ -156,7 +158,7 @@ local window = UI:CreateWindow({
 })
 ```
 
-O formato é JSON com extensão `.rfld`. O diretório padrão é `ConexaoUI/Configurations/Accounts/<UserId>/<projeto>/`; o perfil compartilhado usa `ConexaoUI/Configurations/Shared/<projeto>/`. Sem `fileName`, o projeto é derivado do Id/nome da janela e `game.PlaceId`. Mantenha esses identificadores estáveis. As preferências nativas usam o mesmo namespace sob `ConexaoUI/Settings/`. Tema, transparência, tamanho e opções de salvamento/restauração ficam ao lado da configuração em `<nome>.rfld.ui.json`. A escolha individual de compartilhar fica em um arquivo `.scope.json` dentro da pasta privada da conta, mesmo quando o perfil ativo é compartilhado. A restauração inicial acontece quando a janela aparece; controles acrescentados depois também recebem seus valores salvos, e seus callbacks são chamados com os valores restaurados.
+O formato é JSON com extensão `.rfld`. O diretório padrão é `ConexaoUI/Configurations/Accounts/<UserId>/<projeto>/`; o perfil compartilhado usa `ConexaoUI/Configurations/Shared/<projeto>/`. Sem `fileName`, o projeto é derivado do Id/nome da janela e `game.PlaceId`. Mantenha esses identificadores estáveis. As preferências nativas usam o mesmo namespace sob `ConexaoUI/Settings/`. Tema, transparência, tamanho, modo de ícones da lateral e opções de salvamento/restauração ficam ao lado da configuração em `<nome>.rfld.ui.json`. A escolha individual de compartilhar fica em um arquivo `.scope.json` dentro da pasta privada da conta, mesmo quando o perfil ativo é compartilhado. A restauração inicial acontece quando a janela aparece; controles acrescentados depois também recebem seus valores salvos, e seus callbacks são chamados com os valores restaurados.
 
 As APIs de arquivo dependem do ambiente. No Studio, a base usa armazenamento simulado na sessão; LocalScripts normais não gravam arquivos no PC. A página informa se o armazenamento é da sessão, do dispositivo ou está indisponível, além de mostrar falhas ao salvar. `window:Save()` e `window:Load()` retornam sucesso/falha. Para desativar a automação, use os toggles nas configurações ou informe `configuration = { autoSave = false, autoLoad = false }`. Uma opção explícita no script prevalece sobre a preferência lembrada desses dois toggles.
 

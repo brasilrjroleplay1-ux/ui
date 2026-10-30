@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.9 · API Gen2
+# Exemplos da Conexão UI 3.10 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -11,6 +11,23 @@ local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjro
 local window = UI:CreateWindow({ name = "Meu Hub", subtitle = "Conexão UI", sidebarLayout = true, theme = "conexao" })
 local tab = window:CreateTab({ name = "Principal", icon = 93364949241311 })
 ```
+
+## Lateral com nomes ou somente ícones
+
+Em Configurações → Aparência, ative **Mostrar apenas ícones nas abas**. A lateral fica menor, oculta os nomes e libera espaço para os controles. Desative para voltar a mostrar os nomes quando a janela tiver espaço. Em janelas estreitas, o ajuste automático continua usando a lateral compacta.
+
+```lua
+local window = UI:CreateWindow({
+    name = "Meu Hub", sidebarLayout = true,
+    sidebarIconsOnly = true,
+})
+window:CreateTab({ name = "Principal", icon = 93364949241311 })
+-- Também é possível mudar depois, inclusive para voltar aos nomes:
+window:SetSidebarIconsOnly(false)
+window:SetSidebarIconsOnly(true)
+```
+
+`sidebarIconsOnly` é o valor inicial: uma preferência já salva no perfil prevalece. `SetSidebarIconsOnly` aplica imediatamente, sincroniza o controle em Configurações e salva a escolha. A preferência fica separada por conta/projeto e segue a opção de perfil compartilhado. Forneça `icon` nas abas para escolher suas imagens; sem ícone, a inicial do nome mantém o acesso à aba. Esta opção se aplica a `sidebarLayout = true`.
 
 ## Button
 
@@ -185,7 +202,7 @@ window:CloseProfile() -- volta à aba que estava aberta
 window:OpenThemes()
 ```
 
-Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual e ajuste automático. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
+Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual, ajuste automático e a escolha de exibir só os ícones nas abas. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
 As categorias são Aparência, Temas, Salvamento e Controles. Elas mantêm os controles nativos na mesma página e ocultam também suas descrições quando estão inativas. A barra de categorias rola horizontalmente em telas estreitas.
 
@@ -202,7 +219,7 @@ O cabeçalho e a abertura também vêm prontos em `CreateWindow`. `name`, `subti
 
 `OpenHome` e `OpenProfile` abrem páginas distintas. Clicar no cartão do jogador abre Meu perfil; Voltar retorna à aba anterior. Nenhuma dessas ações recria os controles do seu script ou reaplica seus callbacks. As duas páginas acompanham o tema e a rolagem do painel.
 
-Janelas chamadas `Conexão Studio` usam a marca tipográfica da Conexão no cabeçalho: CONEXÃO em negrito e STUDIO em um selo. Outros nomes permanecem como o título do seu projeto. Alterar o texto do título continua funcionando, e a versão acompanha o subtítulo definido pelo script.
+Janelas chamadas `Conexão Studio` usam a marca tipográfica da Conexão no cabeçalho: CONEXÃO STUDIO em um único texto em negrito, com as duas palavras no mesmo tamanho. Outros nomes permanecem como o título do seu projeto. Alterar o texto do título continua funcionando, e a versão acompanha o subtítulo definido pelo script.
 
 No slider de tamanho, a janela fica parada durante o arraste e aplica o valor ao soltar. Nos seus próprios sliders, o callback nativo recebe `(value, dragging)`: `dragging` é `true` durante o movimento e `false` na confirmação.
 

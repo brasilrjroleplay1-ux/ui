@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: MPL-2.0
 -- Compact chrome with a labelled sidebar whenever the window has room for it.
 local sidebar = require(script.Parent.Parent.Gen2.components.sidebar)
+local Preferences = require(script.Parent.Preferences)
 local Shell = {}
 function Shell.attach(window)
     local layout = table.clone(window.layout)
@@ -24,12 +25,14 @@ function Shell.attach(window)
             if child:IsA("UIPadding") then child.PaddingTop, child.PaddingBottom = UDim.new(0, 10), UDim.new(0, 10) end
         end
         if window.profile then window.profile.Size = UDim2.new(1, 0, 0, 60) end
-        window:_applyRailWidth()
+        if window.UIPreferences.sidebarIconsOnly then sidebar.applyWidth(window, layout.railCollapsedWidth)
+        else window:_applyRailWidth() end
         sidebar.reflowProfile(window)
         window.settingsAction.action.Visible = false -- Settings remains directly available in the sidebar.
         local applyWidth = window._applyRailWidth
         function window:_applyRailWidth()
-            applyWidth(self)
+            if self.UIPreferences.sidebarIconsOnly then sidebar.applyWidth(self, self.layout.railCollapsedWidth)
+            else applyWidth(self) end
             for _, tab in ipairs(self.tabs) do
                 if tab.topbarItemTitle then
                     tab.topbarItemTitle.AutomaticSize, tab.topbarItemTitle.TextWrapped = Enum.AutomaticSize.None, false
@@ -53,6 +56,18 @@ function Shell.attach(window)
         layout.tabStripTop = layout.tabStripTop - delta
         window.tabList.Position = UDim2.new(0.5, 0, 0, layout.tabStripTop)
         window.bottomFade.Size = UDim2.new(1, 0, 0, 20)
+    end
+    function window:SetSidebarIconsOnly(enabled)
+        assert(type(enabled) == "boolean", "SetSidebarIconsOnly expects a boolean")
+        if self.unloaded or self.layout.mode ~= "sidebar" then return false end
+        self.UIPreferences.sidebarIconsOnly = enabled
+        self:_applyRailWidth()
+        if self.SidebarIconsOnlyToggle and self.SidebarIconsOnlyToggle.value ~= enabled then
+            self.SidebarIconsOnlyToggle:Set(enabled, true)
+        end
+        if self.RefreshContentLayouts then self:RefreshContentLayouts() end
+        Preferences.save(self)
+        return true
     end
     if window.searchPill then
         local position = window.searchPill.Position

@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.9 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.10 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -31,6 +31,7 @@ local ControlNotifications = require(script.Features.ControlNotifications)
 export type Window = Gen2.Window & {
     OpenSettings: (self: any, category: string?) -> (),
     SetSharedConfiguration: (self: any, enabled: boolean) -> boolean,
+    SetSidebarIconsOnly: (self: any, enabled: boolean) -> boolean,
     OpenProfile: (self: any) -> any,
     OpenHome: (self: any) -> any,
     GetSessionStats: (self: any) -> any,
@@ -43,7 +44,7 @@ export type Window = Gen2.Window & {
     RefreshSize: (self: any) -> UDim2,
 }
 export type WindowConfiguration = Gen2.WindowConfiguration & { shareAcrossAccounts: boolean? }
-export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean?, configuration: WindowConfiguration? }
+export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean?, sidebarIconsOnly: boolean?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 export type ControlNotificationProps = {
@@ -60,7 +61,7 @@ export type SliderProps = Gen2.SliderProps & ControlNotificationProps & { format
 export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.9.3", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.10.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -147,6 +148,11 @@ function Library:CreateWindow(options)
     cfg.customFolder = cfg.customFolder or cfg.CustomFolder
     local accountScope = AccountStorage.prepare(cfg, p.name)
     local preferences, preferencesDir, preferencesPath = Preferences.load(cfg, p.name)
+    if preferences.sidebarIconsOnly == nil then
+        local iconsOnly = p.sidebarIconsOnly
+        if iconsOnly == nil then iconsOnly = p.SidebarIconsOnly end
+        preferences.sidebarIconsOnly = iconsOnly == true
+    end
     if cfg.autoSave == nil then cfg.autoSave = if old.Enabled ~= nil then old.Enabled ~= false elseif preferences.autoSave ~= nil then preferences.autoSave else true end
     if cfg.autoLoad == nil then cfg.autoLoad = if preferences.autoLoad ~= nil then preferences.autoLoad else true end
     local requestedTheme = p.theme or p.Theme or "conexao"

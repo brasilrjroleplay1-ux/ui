@@ -20,6 +20,7 @@ function Preferences.load(configuration, name)
     if type(data.autoSave) == "boolean" then state.autoSave = data.autoSave end
     if type(data.autoLoad) == "boolean" then state.autoLoad = data.autoLoad end
     if type(data.autoSize) == "boolean" then state.autoSize = data.autoSize end
+    if type(data.sidebarIconsOnly) == "boolean" then state.sidebarIconsOnly = data.sidebarIconsOnly end
     if ({ appearance = true, themes = true, saving = true, controls = true })[data.settingsCategory] then state.settingsCategory = data.settingsCategory end
     for _, key in ipairs({ "sizePercent", "transparency" }) do
         if type(data[key]) == "number" and data[key] == data[key] then state[key] = math.clamp(data[key], 0, 100) end
