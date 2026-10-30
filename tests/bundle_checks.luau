@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.4.1", "new entry point is bundled")
+check(UI.Version == "3.5.0", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -164,29 +164,31 @@ end
 for _, width in ipairs({ 180, 240, 320, 426, 440, 559, 560, 640, 900 }) do
     dashboard.main.AbsoluteSize = Vector2.new(width, 600)
     dashboard:Layout()
-    local previousRight, previousBottom = 0, 0
-    for index, field in ipairs(profile.fields) do
-        local at, size = field.main.Position, field.main.Size
-        local left = at.X.Scale * width + at.X.Offset
-        local top = at.Y.Offset
-        local right = left + size.X.Scale * width + size.X.Offset
-        local bottom = top + size.Y.Offset
-        assert(left >= 0 and right <= width and bottom <= dashboard.cards.Size.Y.Offset, "profile cards must fit the available content area")
-        if index > 1 then assert(left >= previousRight or top >= previousBottom, "profile cards must not overlap") end
-        previousRight, previousBottom = right, bottom
+    local bannerWidth, bannerHeight = dashboard.banner.Size.X.Offset, dashboard.banner.Size.Y.Offset
+    inside(dashboard.banner, width, dashboard.hero.Size.Y.Offset, "welcome banner")
+    if profile.fields[1].main.Visible then
+        inside(profile.fields[1].main, width, dashboard.hero.Size.Y.Offset, "client card")
+        assert(profile.fields[1].main.Position.X.Offset >= bannerWidth + 12, "client card must not overlap the greeting")
     end
-    assert(dashboard.actions.Position.Y.Offset >= dashboard.cards.Position.Y.Offset + dashboard.cards.Size.Y.Offset, "actions must remain below the account cards")
-    assert(dashboard.main.Size.Y.Offset >= dashboard.actions.Position.Y.Offset + dashboard.actions.Size.Y.Offset, "profile content must remain scrollable through its last action")
-    local bannerHeight = dashboard.banner.Size.Y.Offset
-    for _, node in ipairs({ dashboard.plate, dashboard.connected, profile.playerName, profile.username, dashboard.badges }) do inside(node, width, bannerHeight, node.Name) end
-    inside(profile.avatar, 112, 112, "avatar")
+    assert(dashboard.actions.Position.Y.Offset >= dashboard.hero.Position.Y.Offset + dashboard.hero.Size.Y.Offset, "quick actions must remain below the welcome row")
+    assert(dashboard.cards.Position.Y.Offset >= dashboard.actions.Position.Y.Offset + dashboard.actions.Size.Y.Offset, "details must remain below quick actions")
+    assert(dashboard.main.Size.Y.Offset >= dashboard.cards.Position.Y.Offset + dashboard.cards.Size.Y.Offset, "all session details must remain scrollable")
+    for _, node in ipairs({ dashboard.plate, dashboard.connected, profile.playerName, profile.username, dashboard.badges }) do inside(node, bannerWidth, bannerHeight, node.Name) end
+    inside(profile.avatar, dashboard.plate.Size.X.Offset, dashboard.plate.Size.Y.Offset, "avatar")
     local badgeWidth, badgeHeight = dashboard.badges.Size.X.Offset, dashboard.badges.Size.Y.Offset
     inside(dashboard.executorPill, badgeWidth, badgeHeight, "executor badge")
     inside(dashboard.platformPill, badgeWidth, badgeHeight, "platform badge")
     inside(profile.settingsButton, width, dashboard.actions.Size.Y.Offset, "settings action")
     inside(profile.themesButton, width, dashboard.actions.Size.Y.Offset, "themes action")
+    inside(profile.copyServerButton, width, dashboard.actions.Size.Y.Offset, "copy server action")
+    inside(dashboard.session, width, dashboard.cards.Size.Y.Offset, "session panel")
+    inside(profile.fields[2].main, width, dashboard.cards.Size.Y.Offset, "account card")
+    local sx, sy, sw, sh = rect(dashboard.session, width, dashboard.cards.Size.Y.Offset)
+    local ax, ay = rect(profile.fields[2].main, width, dashboard.cards.Size.Y.Offset)
+    assert(ax >= sx + sw or ay >= sy + sh, "account and session panels must not overlap")
+    for _, stat in ipairs(dashboard.stats) do inside(stat.main, sw, sh, "session stat") end
     for _, field in ipairs(profile.fields) do
-        local fieldWidth = field.main.Size.X.Scale * width + field.main.Size.X.Offset
+        local fieldWidth = field.main.Size.X.Offset
         for _, node in ipairs({ field.heading, field.valueLabel, field.subtitle, field.icon.root.Parent }) do inside(node, fieldWidth, field.main.Size.Y.Offset, "account card content") end
     end
 end
@@ -289,6 +291,31 @@ w:CloseProfile()
 
 check(w.SettingsTab.name == "Configurações" and w.AutoSaveToggle and w.AutoLoadToggle and w.ThemeGallery, "settings and theme previews are included without script-side setup")
 check(#w.ThemeGallery.cards == 6 and #UI.Themes == 60, "six featured previews and sixty complete palettes are available")
+do
+local gallery = w.ThemeGallery
+local gallerySize, galleryElements = gallery.main.AbsoluteSize, w.elements.AbsoluteSize
+local galleryView, galleryContent = gallery.gridFrame.AbsoluteWindowSize, gallery.grid.AbsoluteContentSize
+for _, dimensions in ipairs({ { 280, 300 }, { 520, 480 }, { 820, 900 } }) do
+    local width, height = dimensions[1], dimensions[2]
+    gallery.main.AbsoluteSize = Vector2.new(width, 400)
+    w.elements.AbsoluteSize = Vector2.new(width + 40, height)
+    gallery:Layout()
+    local viewport = gallery.main.Size.Y.Offset - 88
+    check(viewport >= 156 and viewport <= 300 and gallery.main.Size.Y.Offset <= 388, "featured previews use a bounded viewport instead of adding six full cards to settings")
+    local columns = width < 380 and 1 or (width >= 690 and 3 or 2)
+    gallery.gridFrame.AbsoluteWindowSize = Vector2.new(width - 6, viewport)
+    gallery.grid.AbsoluteContentSize = Vector2.new(width - 6, math.ceil(6 / columns) * 168 - 12)
+    gallery.scroll:Queue()
+    check(gallery.gridFrame:IsA("ScrollingFrame") and gallery.gridFrame.ScrollingEnabled and gallery.gridFrame.ClipsDescendants and gallery.gridFrame.CanvasSize.Y.Offset > viewport, "featured themes scroll and clip inside their own fixed area")
+    local beforeButton = gallery.more.Position
+    gallery.gridFrame.CanvasPosition = Vector2.new(0, gallery.gridFrame.CanvasSize.Y.Offset - viewport)
+    gallery.gridFrame:GetPropertyChangedSignal("CanvasPosition"):Fire()
+    check(gallery.scroll.atEnd and gallery.more.Position == beforeButton, "featured theme scroll reaches the bottom while the catalogue button stays outside the scroller")
+end
+gallery.main.AbsoluteSize, w.elements.AbsoluteSize = gallerySize, galleryElements
+gallery.gridFrame.AbsoluteWindowSize, gallery.grid.AbsoluteContentSize = galleryView, galleryContent
+gallery:Layout()
+end
 w.ThemeGallery.cards[5].hit.MouseButton1Click:Fire()
 check(w.ThemeId == "porcelana" and w.ThemeGallery.cards[5].selected.Visible, "a preview applies its real theme and marks the selection")
 check(w.ProfilePage.fields[1].valueLabel.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
@@ -296,6 +323,34 @@ check(w.ProfilePage.platformIcon.parts[1].BackgroundColor3 == Color3.new(1, 1, 1
 local themes = w:OpenThemes()
 check(#themes.cards == 60, "the complete theme picker renders all sixty previews")
 check(themes.visibleCount == 60 and #themes.filters == 8 and themes.root.Parent == w.elements, "theme search and family filters belong to the content panel")
+do
+local originalThemeElements, originalThemeView = w.elements.AbsoluteSize, themes.root.AbsoluteWindowSize
+local originalThemeListView = themes.list.AbsoluteWindowSize
+local themeGrid = childOfClass(themes.list, "UIGridLayout")
+local originalThemeGridSize = themeGrid.AbsoluteContentSize
+for _, dimensions in ipairs({ { 280, 240 }, { 520, 400 }, { 820, 720 } }) do
+    local width, height = dimensions[1], dimensions[2]
+    w.elements.AbsoluteSize = Vector2.new(width, height)
+    themes.root.AbsoluteWindowSize = Vector2.new(width - 20, height)
+    themes:Layout()
+    local mainHeight, contentHeight = themes.main.Size.Y.Offset, themes.content.Size.Y.Offset
+    check(mainHeight <= height - 44 and not themes.root.ScrollingEnabled, "the complete theme page fits its viewport and does not scroll its header away")
+    inside(themes.search, width - 40, contentHeight, "theme search")
+    if themes.families.Visible then inside(themes.families, width - 40, contentHeight, "theme families") end
+    inside(themes.list, width - 40, contentHeight, "theme results")
+    local view = themes.list.Size.Y.Offset
+    themes.list.AbsoluteWindowSize = Vector2.new(width - 40, view)
+    themeGrid.AbsoluteContentSize = Vector2.new(width - 40, 60 * 168 - 12)
+    themes._scrollers[1]:Queue()
+    local searchAt, familiesAt = themes.search.Position, themes.families.Position
+    themes.list.CanvasPosition = Vector2.new(0, themes.list.CanvasSize.Y.Offset - view)
+    themes.list:GetPropertyChangedSignal("CanvasPosition"):Fire()
+    check(themes._scrollers[1].atEnd and themes.search.Position == searchAt and themes.families.Position == familiesAt, "all sixty previews remain reachable without moving search and filters")
+end
+w.elements.AbsoluteSize, themes.root.AbsoluteWindowSize = originalThemeElements, originalThemeView
+themes.list.AbsoluteWindowSize, themeGrid.AbsoluteContentSize = originalThemeListView, originalThemeGridSize
+themes:Layout()
+end
 local function searchThemes(query)
     themes.search.Text = query
     themes.search:GetPropertyChangedSignal("Text"):Fire()
@@ -488,8 +543,12 @@ _G.getcustomasset = function(path)
             if node then decoded = node.Value end
         end
     end
-    check(decoded == fs.readFile(root .. "/../../assets/delta.png"), "embedded logo decodes to the exact packaged PNG before the local asset API loads it")
-    return "rbxasset://local/delta-logo.png"
+    local id = path:match("/([a-z0-9]+)%-logo")
+    local catalog = serde.decode("json", fs.readFile(root .. "/../../assets/executors/catalog.json"))
+    local expected
+    for _, entry in ipairs(catalog) do if entry.id == id and entry.file then expected = fs.readFile(root .. "/../../assets/executors/" .. entry.file) end end
+    check(expected and decoded == expected, "embedded logo decodes to its exact packaged PNG: " .. tostring(id))
+    return "rbxasset://local/" .. id .. "-logo.png"
 end
 deltaWindow = UI:CreateWindow({ Id = "DeltaArtwork341" })
 deltaPage = deltaWindow:OpenProfile()
@@ -500,8 +559,52 @@ check(deltaPage.executorIcon.parts[1].ImageTransparency == 1 and deltaPage.platf
 deltaWindow:Show()
 check(deltaPage.executorIcon.parts[1].ImageTransparency == 0 and deltaPage.platformIcon.parts[1].BackgroundTransparency == 0, "reopening restores both logo types")
 deltaWindow:Unload()
+local catalog = serde.decode("json", fs.readFile(root .. "/../../assets/executors/catalog.json"))
+for _, entry in ipairs(catalog) do
+    _G.identifyexecutor = function() return entry.name .. " Runtime", "1.0" end
+    local client = UI:CreateWindow({ Id = "Brand35_" .. entry.id })
+    local page = client:OpenHome()
+    check(page.executorIcon.kind == entry.id and page.fields[1].icon.kind == entry.id, "runtime names and version suffixes select the matching brand: " .. entry.name)
+    check((page.executorIcon.artwork == true) == (entry.file ~= nil), "known images and initials fallbacks match the catalogue: " .. entry.name)
+    client:Unload()
+end
+UI:RegisterExecutorIcon("Meu Executor", 987654321, { "Cliente Pessoal" })
+_G.identifyexecutor = function() return "Cliente Pessoal", "2" end
+local branded = UI:CreateWindow({ Id = "CustomBrand35" })
+check(branded:OpenHome().executorIcon.parts[1].Image == "rbxassetid://987654321", "scripts can register logos and aliases for additional clients")
+branded:Unload()
 _G.getcustomasset, _G.identifyexecutor = previousAsset, previousIdentify
 game:GetService("RunService").IsStudio = previousStudio
+
+do
+local playersService, statsService, runService = game:GetService("Players"), game:GetService("Stats"), game:GetService("RunService")
+local previousPlayers, previousMaximum, previousNetwork = playersService.GetPlayers, playersService.MaxPlayers, statsService.Network
+playersService.GetPlayers = function() return { {}, {}, {} } end
+playersService.MaxPlayers = 12
+statsService.Network = { ServerStatsItem = { ["Data Ping"] = { GetValue = function() return 87 end } } }
+local statsWindow = UI:CreateWindow({ Id = "LiveSession35" })
+local statsPage = statsWindow:OpenHome()
+for i = 1, 120 do runService.RenderStepped:Fire(1 / 60) runService.Heartbeat:Fire(1 / 60) end
+statsPage:RefreshStats()
+local stats = statsWindow:GetSessionStats()
+check(stats.players == 3 and stats.maximum == 12 and stats.fps == 60 and stats.ping == 87, "dashboard samples real player, FPS and latency providers")
+check(statsPage.dashboard.stats[1].value.Text == "3 / 12" and statsPage.dashboard.stats[2].value.Text == "87 ms", "live samples update the visible session cards")
+check(stats.elapsed > 1.99 and stats.elapsed < 2.01, "session duration accumulates elapsed time rather than counting update loops")
+local jobBefore, clipboardBefore, serverCopy = game.JobId, _G.setclipboard, nil
+game.JobId = "test-job-35"
+_G.setclipboard = function(value) serverCopy = value end
+statsPage.copyServerButton.MouseButton1Click:Fire()
+check(serverCopy == "test-job-35" and statsPage.dashboard.notice.Visible, "the server shortcut copies the current Job ID only when clicked")
+game.JobId, _G.setclipboard = jobBefore, clipboardBefore
+statsWindow:Unload()
+local elapsedBefore = statsWindow:GetSessionStats().elapsed
+runService.Heartbeat:Fire(1)
+check(statsWindow:GetSessionStats().elapsed == elapsedBefore and #statsWindow.connections == 0, "unloading disconnects session sampling")
+playersService.GetPlayers, playersService.MaxPlayers, statsService.Network = previousPlayers, previousMaximum, previousNetwork
+local unavailable = UI:CreateWindow({ Id = "UnknownMetrics35" })
+check(unavailable:GetSessionStats().fpsText == "—" and unavailable:GetSessionStats().pingText == "—", "unavailable metrics stay unknown instead of showing fabricated values")
+unavailable:Unload()
+end
 
 local themeWindow = UI:CreateWindow({ Id = "ThemePersist34", name = "ThemePersist34" })
 themeWindow:ChangeTheme("porcelana")
@@ -535,7 +638,7 @@ local DemoUI, demoWindow = (function()
 -- DEMO
 return UI, window
 end)()
-check(demoWindow and #demoWindow.tabs == 1 and demoWindow.selectedTab == demoWindow.SettingsTab, "the clean standalone demo opens only the built-in settings page")
+check(demoWindow and #demoWindow.tabs == 2 and demoWindow.selectedTab == demoWindow.ProfileTab and demoWindow.SettingsTab.topbarItem, "the standalone demo opens the built-in dashboard with settings still visible")
 DemoUI:Destroy()
 check(demoWindow.unloaded, "standalone demo tears down cleanly")
 

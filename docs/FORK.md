@@ -1,6 +1,6 @@
 # Base oficial Gen2
 
-Conexão UI 3.4 utiliza [SiriusSoftwareLtd/rayfield-gen2](https://github.com/SiriusSoftwareLtd/rayfield-gen2/tree/576c1ff19448285f9506b50bee221977aef3ffbb), versão 1.2.1, commit `576c1ff19448285f9506b50bee221977aef3ffbb`.
+Conexão UI 3.5 utiliza [SiriusSoftwareLtd/rayfield-gen2](https://github.com/SiriusSoftwareLtd/rayfield-gen2/tree/576c1ff19448285f9506b50bee221977aef3ffbb), versão 1.2.1, commit `576c1ff19448285f9506b50bee221977aef3ffbb`.
 
 Os componentes e os seis temas são os arquivos dessa base. A construção visual de `components/window.luau` foi preservada; a alteração nesse arquivo é o valor inicial de analytics. O diretório de arquivos e o nome do arquivo de preferências também foram separados para a Conexão. As alterações estão registradas em [UPSTREAM.json](../vendor/rayfield-gen2/UPSTREAM.json).
 
@@ -23,5 +23,7 @@ Em 3.3.2, o ajuste automático também atualiza o valor e o indicador do slider.
 Em 3.4, `Features/Themes.luau` oferece 54 paletas da Conexão mais os seis temas clássicos, com contraste de texto adaptado para superfícies claras e escuras. A galeria de configurações tem prévias reais, busca sem distinção de acentos e filtros por família. `Features/Localization.luau` fornece nomes e descrições em português pela API de localização da base, mantendo flags, callbacks e os arquivos do vendor intactos. O [catálogo](TEMAS.md) lista os 60 temas.
 
 Em 3.4.1, os helpers `utility/image.luau` e `utility/imageCache.luau` passam a solicitar headshots de 420 × 420 px; o cache local usa o sufixo `_420` para não reaproveitar a miniatura antiga de 48 px. Os testes e o verificador de procedência registram essas alterações. O perfil usa uma superfície arredondada sem overlays retangulares, moldura com espaço para o avatar, badges com logos, cartões mais altos e ações responsivas. A imagem do Delta está incorporada em `Features/BrandAssets.luau`; `BrandIcon.luau` também oferece identificadores geométricos sem imagens externas. [Créditos da imagem](../assets/README.md).
+
+Em 3.5, a composição do painel inicial segue as referências de Home fornecidas, incluindo a organização visual da Luna Interface Suite, com implementação própria. `Features/Session.luau` amostra métricas disponíveis com listeners vinculados ao ciclo de vida da janela. `ExecutorCatalog` reconhece 29 nomes e `BrandAssets` incorpora 21 imagens; o script pode registrar logos adicionais. A área de destaques limita a altura e rola internamente. O seletor completo usa uma página ajustada ao viewport com cabeçalho separado da lista. Essas mudanças preservam os arquivos do vendor.
 
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

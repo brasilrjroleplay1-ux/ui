@@ -13,6 +13,13 @@ local function buildPage(window, player, executorInfo, version)
     page.dashboard = Dashboard.new(window, tab, page, player, executorInfo)
     tab:_register(page.dashboard)
 
+    function page:RefreshStats()
+        if not window.GetSessionStats then return end
+        local snapshot = window:GetSessionStats()
+        for _, item in ipairs(self.dashboard.stats) do item.value.Text = snapshot[item.key] or "—" end
+        self.dashboard.accountSave.Text = "Salvamento: " .. snapshot.saveText
+    end
+
     function page:Refresh()
         player = game:GetService("Players").LocalPlayer or player
         self.playerName.Text = player.DisplayName
@@ -30,6 +37,8 @@ local function buildPage(window, player, executorInfo, version)
         self.fields[1]:Set(executorInfo.name)
         self.fields[1].subtitle.Text = executorInfo.version and ("Versão " .. executorInfo.version) or "Versão não informada"
         self.fields[2]:Set(tostring(player.UserId))
+        self.dashboard.accountVersion.Text = "Conexão Studio " .. version
+        self:RefreshStats()
         self.dashboard.notice.Visible = false
         self.dashboard:Layout()
     end
@@ -67,6 +76,7 @@ function Profile.attach(window, executorInfo, version)
         page.tab:Select()
         return page
     end
+    window.OpenHome = window.OpenProfile
     if window.profile then
         window.profileAvatar.Size = UDim2.fromOffset(40, 40)
         window.profileAvatar.ZIndex = 123

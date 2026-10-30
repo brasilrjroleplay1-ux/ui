@@ -67,15 +67,16 @@ function Dashboard.new(window, tab, page, player, executorInfo)
     end
 
     self.main = frame(tab.tabPage, "ProfileDashboard", { Size = UDim2.new(1, -20, 0, 398), BackgroundTransparency = 1 })
-    local title = label(self.main, "Meu perfil", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, -90, 0, 24), TextSize = 20 }, false, true)
-    local subtitle = label(self.main, "Conta e preferências", { Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, -90, 0, 16), TextSize = 12 })
+    local title = label(self.main, "Visão geral", { Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, -90, 0, 24), TextSize = 20 }, false, true)
+    local subtitle = label(self.main, "Conta, cliente e sessão", { Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, -90, 0, 16), TextSize = 12 })
     self:Track(subtitle, "TextTransparency", 0.3)
     local back = action(self.main, "Voltar", false, function() window:CloseProfile() end)
     back.AnchorPoint, back.Position, back.Size = Vector2.new(1, 0), UDim2.new(1, 0, 0, 2), UDim2.fromOffset(74, 32)
     page.backButton = { interact = back }
 
-    self.banner = frame(self.main, "ProfileBanner", {
-        Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 198),
+    self.hero = frame(self.main, "WelcomeRow", { Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 156), BackgroundTransparency = 1 })
+    self.banner = frame(self.hero, "ProfileBanner", {
+        Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, 0, 0, 156),
         BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1,
     }, { BackgroundTransparency = "ElementTransparency" })
     Surface.round(window, self.banner, 18)
@@ -99,7 +100,7 @@ function Dashboard.new(window, tab, page, player, executorInfo)
         AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(84, 99), Size = UDim2.fromOffset(112, 112),
         BackgroundColor3 = Color3.fromRGB(14, 16, 27), BackgroundTransparency = 1, ZIndex = 5,
     })
-    Surface.round(window, self.plate, 24)
+    Surface.round(window, self.plate, 18)
     self:Track(self.plate, "BackgroundTransparency", 0.18)
     local avatarRim = window:Create("UIStroke", { Parent = self.plate, Color = Color3.new(1, 1, 1), Transparency = 1, Thickness = 2 })
     self:Track(avatarRim, "Transparency", 0.45)
@@ -111,9 +112,9 @@ function Dashboard.new(window, tab, page, player, executorInfo)
             if not window.unloaded and window.ProfilePage == page and page.avatar and page.avatar.Parent then image.assign(page.avatar, "Image", uri) end
         end),
     })
-    Surface.round(window, page.avatar, 18)
+    Surface.round(window, page.avatar, 14)
     self:Track(page.avatar, "ImageTransparency", 0)
-    self.connected = label(self.banner, "CONECTADO", { TextSize = 10 }, true, true)
+    self.connected = label(self.banner, "BEM-VINDO DE VOLTA", { TextSize = 10 }, true, true)
     self:Track(self.connected, "TextTransparency", 0.12)
     page.playerName = label(self.banner, player.DisplayName, { TextSize = 28, TextScaled = true }, true, true)
     window:Create("UITextSizeConstraint", { Parent = page.playerName, MaxTextSize = 28, MinTextSize = 12 })
@@ -133,9 +134,9 @@ function Dashboard.new(window, tab, page, player, executorInfo)
     self.executorPill, page.executorBadge, page.executorIcon = badge("Executor", executorInfo.name, executorInfo.name)
     self.platformPill, page.platformBadge, page.platformIcon = badge("Platform", executorInfo.environment == "Roblox Studio" and "Studio" or "Roblox", executorInfo.environment)
 
-    self.cards = frame(self.main, "AccountCards", { BackgroundTransparency = 1 })
-    local function card(name, brand, hasCopy)
-        local host = surface(self.cards, name)
+    self.cards = frame(self.main, "SessionAndAccount", { BackgroundTransparency = 1 })
+    local function card(parent, name, brand, hasCopy)
+        local host = surface(parent, name)
         local icon = frame(host, "Icon", { Position = UDim2.fromOffset(16, 16), Size = UDim2.fromOffset(32, 32), BackgroundTransparency = 1, ZIndex = 4 }, { BackgroundColor3 = "AccentColor" })
         Surface.round(window, icon, 9)
         self:Track(icon, "BackgroundTransparency", 0.82)
@@ -152,8 +153,8 @@ function Dashboard.new(window, tab, page, player, executorInfo)
         function data:Set(text) self.valueLabel.Text = tostring(text) end
         return data
     end
-    page.fields[1] = card("EXECUTOR", executorInfo.name, false)
-    page.fields[2] = card("ID DA CONTA", "Roblox", true)
+    page.fields[1] = card(self.hero, "CLIENTE", executorInfo.name, false)
+    page.fields[2] = card(self.cards, "ID DA CONTA", "Roblox", true)
     page.fields[2].subtitle.Text = "Identificador do jogador"
     page.copyButton = action(page.fields[2].main, "Copiar", false, function()
         local env = _G
@@ -169,69 +170,124 @@ function Dashboard.new(window, tab, page, player, executorInfo)
     end)
     page.copyButton.AnchorPoint, page.copyButton.Position, page.copyButton.Size = Vector2.new(1, 0), UDim2.new(1, -14, 0, 16), UDim2.fromOffset(50, 28)
     page.copyButton.TextSize = 11
+    self.clientNote = label(page.fields[1].main, executorInfo.name == "Não identificado" and "Identificação indisponível" or "Identificado neste dispositivo", { Position = UDim2.fromOffset(18, 120), Size = UDim2.new(1, -36, 0, 18), TextSize = 11 })
+    self:Track(self.clientNote, "TextTransparency", 0.3)
+    self.accountVersion = label(page.fields[2].main, "Conexão Studio", { Position = UDim2.fromOffset(18, 132), Size = UDim2.new(1, -36, 0, 18), TextSize = 12 }, false, true)
+    self.accountSave = label(page.fields[2].main, "", { Position = UDim2.fromOffset(18, 158), Size = UDim2.new(1, -36, 0, 18), TextSize = 11 })
+    self:Track(self.accountSave, "TextTransparency", 0.3)
+    self.accountClient = label(page.fields[2].main, executorInfo.name .. (executorInfo.version and (" · " .. executorInfo.version) or ""), { Position = UDim2.fromOffset(18, 184), Size = UDim2.new(1, -36, 0, 18), TextSize = 11 })
+    self.session = surface(self.cards, "SessionPanel")
+    label(self.session, "SESSÃO", { Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -32, 0, 20), TextSize = 12 }, false, true)
+    self.stats = {}
+    for _, definition in ipairs({ { "playerText", "Jogadores" }, { "pingText", "Latência" }, { "fpsText", "FPS" }, { "timeText", "Tempo no painel" }, { "placeText", "Place ID" }, { "saveText", "Salvamento" } }) do
+        local tile = frame(self.session, definition[1], { BackgroundTransparency = 1, ZIndex = 4 }, { BackgroundColor3 = "StatBackground" })
+        Surface.round(window, tile, 10)
+        self:Track(tile, "BackgroundTransparency", 0.15)
+        local caption = label(tile, definition[2], { Position = UDim2.fromOffset(10, 9), Size = UDim2.new(1, -20, 0, 15), TextSize = 10 }, false, true)
+        self:Track(caption, "TextTransparency", 0.28)
+        local value = label(tile, "—", { Position = UDim2.fromOffset(10, 29), Size = UDim2.new(1, -20, 0, 24), TextSize = 18, TextScaled = true }, false, true)
+        window:Create("UITextSizeConstraint", { Parent = value, MinTextSize = 10, MaxTextSize = 18 })
+        table.insert(self.stats, { key = definition[1], main = tile, value = value })
+    end
     self.actions = frame(self.main, "ProfileActions", { BackgroundTransparency = 1 })
-    page.settingsButton = action(self.actions, "Configurações", true, function() window:OpenSettings() end)
+    page.settingsButton = action(self.actions, "Configurações", false, function() window:OpenSettings() end)
     page.themesButton = action(self.actions, "Temas", false, function() window:OpenThemes() end)
+    page.copyServerButton = action(self.actions, "Copiar servidor", false, function()
+        local id = type(game.JobId) == "string" and game.JobId or ""
+        local env = _G
+        if type(getgenv) == "function" then local ok, value = pcall(getgenv) if ok and type(value) == "table" then env = value end end
+        local copy = env.setclipboard or env.toclipboard or getfenv().setclipboard or getfenv().toclipboard
+        local ok, result
+        if id ~= "" and type(copy) == "function" then ok, result = pcall(copy, id) end
+        self.notice.Text = id == "" and "Este ambiente não informou um ID de servidor." or (ok and result ~= false and "ID do servidor copiado." or "Copiar não está disponível neste cliente.")
+        self.notice.Visible = true
+        self:Layout()
+        window:_reveal(self.notice, { TextTransparency = 0.2 }, true)
+    end)
+    self.actionIcons = {}
+    for _, definition in ipairs({ { page.settingsButton, "settings" }, { page.themesButton, "themes" }, { page.copyServerButton, "copy" } }) do
+        local button, name = definition[1], definition[2]
+        local icon = BrandIcon.new(window, button, name, { Position = UDim2.new(0, 10, 0.5, -9), Size = UDim2.fromOffset(18, 18), ZIndex = 10 }, function(node, property, value) self:Track(node, property, value) end)
+        local padding = window:Create("UIPadding", { Parent = button, PaddingLeft = UDim.new(0, 24), PaddingRight = UDim.new(0, 4) })
+        table.insert(self.actionIcons, { icon = icon.root, padding = padding, button = button })
+    end
     self.notice = label(self.main, "", { TextSize = 11, Size = UDim2.new(1, 0, 0, 24), Visible = false })
 
     function self:Layout()
         local width = self.main.AbsoluteSize.X
         if width <= 0 then width = math.max(180, window.elements.AbsoluteSize.X - 40) end
-        local compact = width < 440
-        self.narrow = compact
+        local wide = width >= 600
+        local left = wide and math.floor((width - 12) * 0.64) or width
+        local right = width - left - 12
+        local centered = left < 340
+        self.narrow = not wide
         local backWidth = width < 260 and 60 or 74
         back.Size = UDim2.fromOffset(backWidth, 32)
         title.Size, title.TextSize = UDim2.new(1, -backWidth - 12, 0, 24), width < 260 and 18 or 20
         subtitle.Position, subtitle.Size = UDim2.fromOffset(0, 34), UDim2.new(1, 0, 0, 16)
-        self.plate.Position = compact and UDim2.new(0.5, 0, 0, 96) or UDim2.fromOffset(84, 99)
-        self.plate.Size = UDim2.fromOffset(112, 112)
-        page.avatar.Size = UDim2.fromOffset(100, 100)
-        self.connected.Position = compact and UDim2.fromOffset(16, 16) or UDim2.fromOffset(164, 26)
-        self.connected.Size = compact and UDim2.new(1, -32, 0, 14) or UDim2.new(1, -188, 0, 14)
-        self.connected.TextXAlignment = compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left
-        page.playerName.Position = compact and UDim2.fromOffset(18, 166) or UDim2.fromOffset(164, 52)
-        page.playerName.Size = compact and UDim2.new(1, -36, 0, 34) or UDim2.new(1, -188, 0, 38)
-        page.playerName.TextXAlignment = compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left
-        page.username.Position = compact and UDim2.fromOffset(18, 206) or UDim2.fromOffset(164, 98)
-        page.username.Size = compact and UDim2.new(1, -36, 0, 20) or UDim2.new(1, -188, 0, 20)
-        page.username.TextXAlignment = compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left
-        local badgeSpace = compact and width - 32 or width - 188
-        local platformWidth = page.platformBadge.Text == "Studio" and 92 or 100
-        local wantedExecutorWidth = math.clamp(46 + utf8.len(page.executorBadge.Text) * 7, 88, 180)
-        local wrapBadges = badgeSpace < 88 + 8 + platformWidth
-        local executorWidth = wrapBadges and math.min(wantedExecutorWidth, badgeSpace)
-            or math.min(wantedExecutorWidth, badgeSpace - 8 - platformWidth)
-        local badgeHeight = wrapBadges and 76 or 34
-        self.badges.Position = compact and UDim2.fromOffset(16, 246) or UDim2.fromOffset(164, 136)
-        self.badges.Size = UDim2.new(0, badgeSpace, 0, badgeHeight)
-        local usedWidth = executorWidth + 8 + platformWidth
-        local badgeStart = compact and math.max(0, (badgeSpace - usedWidth) / 2) or 0
-        self.executorPill.Position = UDim2.fromOffset(wrapBadges and (badgeSpace - executorWidth) / 2 or badgeStart, 0)
-        self.executorPill.Size = UDim2.fromOffset(executorWidth, 34)
-        self.platformPill.Position = UDim2.fromOffset(wrapBadges and (badgeSpace - platformWidth) / 2 or badgeStart + executorWidth + 8, wrapBadges and 42 or 0)
-        self.platformPill.Size = UDim2.fromOffset(platformWidth, 34)
-        local bannerHeight = compact and (246 + badgeHeight + 20) or 198
-        self.banner.Size = UDim2.new(1, 0, 0, bannerHeight)
-        local stackedCards = width < 560
-        local cardHeight, cardGap = 124, 12
-        local cardsHeight = stackedCards and cardHeight * 2 + cardGap or cardHeight
-        local cardTop = 58 + bannerHeight + 16
-        self.cards.Position, self.cards.Size = UDim2.fromOffset(0, cardTop), UDim2.new(1, 0, 0, cardsHeight)
-        for index, field in ipairs(page.fields) do
-            field.main.Position = stackedCards and UDim2.fromOffset(0, (index - 1) * (cardHeight + cardGap)) or UDim2.new((index - 1) * 0.5, (index - 1) * 6, 0, 0)
-            field.main.Size = stackedCards and UDim2.new(1, 0, 0, cardHeight) or UDim2.new(0.5, -6, 0, cardHeight)
+        local photo = centered and 64 or 76
+        self.plate.Position = centered and UDim2.new(0.5, 0, 0, 66) or UDim2.fromOffset(54, 78)
+        self.plate.Size = UDim2.fromOffset(photo, photo)
+        page.avatar.Size = UDim2.fromOffset(photo - 10, photo - 10)
+        local textLeft = centered and 16 or 108
+        local textWidth = centered and left - 32 or left - 124
+        self.connected.Position, self.connected.Size = UDim2.fromOffset(textLeft, centered and 12 or 18), UDim2.fromOffset(textWidth, 14)
+        page.playerName.Position, page.playerName.Size = UDim2.fromOffset(textLeft, centered and 110 or 42), UDim2.fromOffset(textWidth, 32)
+        page.username.Position, page.username.Size = UDim2.fromOffset(textLeft, centered and 146 or 80), UDim2.fromOffset(textWidth, 20)
+        for _, node in ipairs({ self.connected, page.playerName, page.username }) do node.TextXAlignment = centered and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left end
+        local badgeSpace = textWidth
+        local platformWidth = page.platformBadge.Text == "Studio" and 88 or 94
+        local wrap = badgeSpace < 80 + 8 + platformWidth
+        local wanted = math.clamp(46 + utf8.len(page.executorBadge.Text) * 6, 80, 160)
+        local executorWidth = math.min(wanted, wrap and badgeSpace or badgeSpace - 8 - platformWidth)
+        local badgeHeight = wrap and 64 or 28
+        local badgeTop = centered and 178 or 112
+        self.badges.Position, self.badges.Size = UDim2.fromOffset(textLeft, badgeTop), UDim2.fromOffset(badgeSpace, badgeHeight)
+        local start = centered and math.max(0, (badgeSpace - executorWidth - platformWidth - 8) / 2) or 0
+        self.executorPill.Position = UDim2.fromOffset(wrap and (badgeSpace - executorWidth) / 2 or start, 0)
+        self.executorPill.Size = UDim2.fromOffset(executorWidth, 28)
+        self.platformPill.Position = UDim2.fromOffset(wrap and (badgeSpace - platformWidth) / 2 or start + executorWidth + 8, wrap and 36 or 0)
+        self.platformPill.Size = UDim2.fromOffset(platformWidth, 28)
+        local bannerHeight = math.max(156, badgeTop + badgeHeight + 16)
+        self.hero.Size = UDim2.new(1, 0, 0, bannerHeight)
+        self.banner.Size = UDim2.fromOffset(left, bannerHeight)
+        page.fields[1].main.Visible = wide
+        page.fields[1].main.Position = wide and UDim2.fromOffset(left + 12, 0) or UDim2.fromOffset(0, 0)
+        page.fields[1].main.Size = UDim2.fromOffset(wide and right or width, bannerHeight)
+        self.clientNote.Visible = wide
+        self.accountClient.Visible = not wide
+        local actionColumns = width < 340 and 1 or (width < 620 and 2 or 3)
+        local actionRows = math.ceil(3 / actionColumns)
+        local actionHeight = actionRows * 42 + (actionRows - 1) * 8
+        local actionsTop = 58 + bannerHeight + 12
+        self.actions.Position, self.actions.Size = UDim2.fromOffset(0, actionsTop), UDim2.new(1, 0, 0, actionHeight)
+        local actionWidth = (width - (actionColumns - 1) * 8) / actionColumns
+        for index, item in ipairs(self.actionIcons) do
+            item.button.Position = UDim2.fromOffset(((index - 1) % actionColumns) * (actionWidth + 8), math.floor((index - 1) / actionColumns) * 50)
+            item.button.Size = UDim2.fromOffset(actionWidth, 42)
+            item.icon.Visible = actionWidth >= 140
+            item.padding.PaddingLeft = UDim.new(0, actionWidth >= 140 and 24 or 4)
         end
-        page.fields[2].heading.Text = width < 240 and "ID" or "ID DA CONTA"
-        local actionsTop, stackedActions = cardTop + cardsHeight + 16, width < 300
-        local actionsHeight = stackedActions and 92 or 42
-        self.actions.Position, self.actions.Size = UDim2.fromOffset(0, actionsTop), UDim2.new(1, 0, 0, actionsHeight)
-        page.settingsButton.Position = UDim2.fromOffset(0, 0)
-        page.settingsButton.Size = stackedActions and UDim2.new(1, 0, 0, 42) or UDim2.new(0.5, -5, 1, 0)
-        page.themesButton.Position = stackedActions and UDim2.fromOffset(0, 50) or UDim2.new(0.5, 5, 0, 0)
-        page.themesButton.Size = page.settingsButton.Size
-        self.notice.Position, self.notice.Size = UDim2.fromOffset(0, actionsTop + actionsHeight + 8), UDim2.new(1, 0, 0, 32)
+        local statsWidth = wide and left or width
+        local statColumns = statsWidth >= 330 and 3 or (statsWidth >= 230 and 2 or 1)
+        local statWidth = (statsWidth - 32 - (statColumns - 1) * 8) / statColumns
+        local statRows = math.ceil(#self.stats / statColumns)
+        local sessionHeight = 44 + statRows * 68 + (statRows - 1) * 8 + 12
+        local accountHeight = math.max(220, wide and sessionHeight or 220)
+        self.session.Position, self.session.Size = UDim2.fromOffset(0, 0), UDim2.fromOffset(statsWidth, sessionHeight)
+        for index, item in ipairs(self.stats) do
+            item.main.Position = UDim2.fromOffset(16 + ((index - 1) % statColumns) * (statWidth + 8), 44 + math.floor((index - 1) / statColumns) * 76)
+            item.main.Size = UDim2.fromOffset(statWidth, 68)
+        end
+        page.fields[2].main.Position = wide and UDim2.fromOffset(left + 12, 0) or UDim2.fromOffset(0, sessionHeight + 12)
+        page.fields[2].main.Size = UDim2.fromOffset(wide and right or width, accountHeight)
+        page.fields[2].heading.Text = (wide and right or width) < 240 and "ID" or "ID DA CONTA"
+        local detailsHeight = wide and math.max(sessionHeight, accountHeight) or sessionHeight + 12 + accountHeight
+        local detailsTop = actionsTop + actionHeight + 16
+        self.cards.Position, self.cards.Size = UDim2.fromOffset(0, detailsTop), UDim2.new(1, 0, 0, detailsHeight)
+        self.notice.Position, self.notice.Size = UDim2.fromOffset(0, detailsTop + detailsHeight + 8), UDim2.new(1, 0, 0, 36)
         self.notice.TextWrapped = true
-        self.main.Size = UDim2.new(1, -20, 0, actionsTop + actionsHeight + (self.notice.Visible and 48 or 12))
+        self.main.Size = UDim2.new(1, -20, 0, detailsTop + detailsHeight + (self.notice.Visible and 56 or 12))
     end
     function self:_setShown(shown, animate)
         for _, target in ipairs(self.targets) do

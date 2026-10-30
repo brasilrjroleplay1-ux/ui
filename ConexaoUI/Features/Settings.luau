@@ -99,7 +99,7 @@ local function selection(window, entries)
 end
 
 function Settings.openThemes(window)
-    local picker = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.")
+    local picker = Surface.new(window, "Temas", "Toque numa prévia para aplicar. Sua escolha fica salva.", { fitViewport = true })
     picker.group = "Todos"
     picker.search = window:Create("TextBox", {
         Name = "ThemeSearch", Parent = picker.content, Size = UDim2.new(1, 0, 0, 40),
@@ -128,10 +128,11 @@ function Settings.openThemes(window)
         left += width + 8
     end
     families.CanvasSize = UDim2.fromOffset(left, 0)
+    picker.families = families
     local scroll = window:Create("ScrollingFrame", {
         Name = "ThemeResults", Parent = picker.content, Position = UDim2.fromOffset(0, 94), Size = UDim2.new(1, 0, 1, -94), BackgroundTransparency = 1, BorderSizePixel = 0,
         AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 3, ZIndex = 4012,
-        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y, ClipsDescendants = true,
     }, { ScrollBarImageColor3 = "AccentColor" })
     picker.list = scroll
     local grid = window:Create("UIGridLayout", {
@@ -175,9 +176,23 @@ function Settings.openThemes(window)
         self:Filter()
     end
     picker:Connect(picker.search:GetPropertyChangedSignal("Text"), function() picker:Filter() end)
-    picker.onLayout = function(width)
+    picker.onLayout = function(width, height)
         local columns = width < 420 and 1 or (width >= 700 and 3 or 2)
         grid.CellSize = UDim2.new(1 / columns, -(12 * (columns - 1) + 12) / columns, 0, 156)
+        local compact = height < 320
+        local contentTop, searchHeight = compact and 44 or 76, compact and 32 or 40
+        local showFamilies = height >= 210
+        local listTop = searchHeight + (showFamilies and 54 or 8)
+        local self = picker
+        self.subtitle.Visible = not compact
+        self.content.Position = UDim2.fromOffset(0, contentTop)
+        self.content.Size = UDim2.new(1, 0, 0, math.max(1, height - contentTop))
+        self.search.Size = UDim2.new(1, 0, 0, searchHeight)
+        families.Visible = showFamilies
+        families.Position = UDim2.fromOffset(0, searchHeight + 8)
+        scroll.Position = UDim2.fromOffset(0, listTop)
+        scroll.Size = UDim2.new(1, 0, 0, math.max(1, height - contentTop - listTop))
+        self.empty.Position = UDim2.fromOffset(8, listTop)
     end
     picker:Layout()
     picker:Filter()
@@ -192,12 +207,15 @@ local function gallery(window, tab)
         BackgroundTransparency = 1, BorderSizePixel = 0,
     })
     Surface.label(window, self.main, "TEMAS COM PRÉVIA", { Position = UDim2.fromOffset(4, 0), TextSize = 13, ZIndex = 7 })
-    self.gridFrame = window:Create("Frame", {
+    self.gridFrame = window:Create("ScrollingFrame", {
         Parent = self.main, BackgroundTransparency = 1, Position = UDim2.fromOffset(3, 32), Size = UDim2.new(1, -6, 1, -88), ZIndex = 7,
+        BorderSizePixel = 0, CanvasSize = UDim2.new(), ClipsDescendants = true,
     })
     self.grid = window:Create("UIGridLayout", {
         Parent = self.gridFrame, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.new(0.5, -6, 0, 156), SortOrder = Enum.SortOrder.LayoutOrder,
     })
+    self.scroll = Scrolling.frame(window, self, self.gridFrame, self.grid)
+    window:Create("UIPadding", { Parent = self.gridFrame, PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 4) })
     local featured = {}
     for _, id in ipairs({ "conexao", "cyberpunk", "floresta", "nebula", "porcelana", "obsidiana" }) do
         table.insert(featured, Themes.entry(id))
@@ -211,10 +229,16 @@ local function gallery(window, tab)
         local width = self.main.AbsoluteSize.X
         if width <= 0 then width = 500 end
         local columns = width < 380 and 1 or (width >= 690 and 3 or 2)
-        self.grid.CellSize = UDim2.new(1 / columns, (columns - 1) * -12 / columns, 0, 156)
-        self.main.Size = UDim2.new(1, -20, 0, 88 + math.ceil(#self.cards / columns) * 168 - 12)
+        self.grid.CellSize = UDim2.new(1 / columns, -(12 * (columns - 1) + 12) / columns, 0, 156)
+        local available = window.elements.AbsoluteSize.Y
+        if available <= 0 then available = 400 end
+        local content = math.ceil(#self.cards / columns) * 168 - 12 + 7
+        local viewport = math.min(content, math.clamp(math.floor(available * 0.45), 156, 300))
+        self.main.Size = UDim2.new(1, -20, 0, 88 + viewport)
+        self.scroll:Queue()
     end
     self:Connect(self.main:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
+    self:Connect(window.elements:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
     function self:_refreshTheme() selection(window, self.cards) end
     function self:_setShown(shown) self.main.Visible = shown end
     self:Layout()

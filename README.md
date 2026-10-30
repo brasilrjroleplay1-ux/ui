@@ -1,4 +1,4 @@
-# Conexão UI 3.4.1 · Conexão Studio
+# Conexão UI 3.5.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -8,11 +8,13 @@ Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conex�
 loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/Demo.luau"))()
 ```
 
-A demo abre diretamente em **Configurações**, com transparência, tamanho, salvamento e temas. Usa o tema `conexao`. Clique no cartão com avatar/nome no rodapé da sidebar para abrir seu perfil.
+A demo abre em **Visão geral**, com perfil, cliente, atalhos e cartões da sessão. Usa o tema `conexao`. **Configurações** continua pronta na sidebar, com transparência, tamanho, salvamento e temas. O cartão com avatar/nome no rodapé também abre o painel inicial.
 
 A abertura mostra **Conexão Studio**, com marca em vetores e texto local. Os créditos da base permanecem no código e no repositório. O nome da sua janela continua personalizável em `CreateWindow`.
 
-Na **3.4.1**, o perfil e o rodapé usam miniaturas de **420 × 420 px**. O banner tem uma única superfície arredondada, sem camadas retangulares ou círculos cortados. Avatar, identificação e cartões se reorganizam conforme a largura; os botões ficam empilhados nas telas menores. A logo do Delta está incluída no pacote e carrega localmente quando o cliente oferece `getcustomasset`/`getsynasset`; sem essas APIs, aparece um símbolo Δ junto ao nome. Roblox/Studio têm ícones vetoriais locais. [Origem da imagem](assets/README.md).
+Na **3.5.0**, a composição combina boas-vindas compactas, cartão do cliente, atalhos com ícones e uma grade de estatísticas, inspirada nas referências visuais fornecidas e na Home da [Luna Interface Suite](https://github.com/Nebula-Softworks/Luna-Interface-Suite). A implementação é da Conexão sobre a base Gen2; não carrega código da Luna. O avatar continua em **420 × 420 px**. A página usa a rolagem do painel e reorganiza os cartões em telas menores.
+
+O catálogo reconhece **29 nomes de executores e inclui 21 imagens de logo**, além dos identificadores vetoriais Roblox/Studio. Imagens do catálogo carregam localmente com `getcustomasset`/`getsynasset`, sem baixar logos durante a execução. Clientes sem imagem disponível usam iniciais ou um símbolo; nomes desconhecidos mantêm sua identificação, sem receber a logo de outro produto. [Catálogo e origem das imagens](assets/README.md).
 
 Os exemplos de botões, campos, avisos e grupos estão separados em [dist/Components.luau](dist/Components.luau) e no [script completo](Example.luau). A library cria as configurações; as abas do seu projeto são criadas pelo seu script.
 
@@ -39,7 +41,7 @@ tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "A", "B", "C" }, 
 
 ## O que já vem pronto
 
-- Perfil da sidebar clicável: abre uma página dentro do painel principal com banner em gradiente, avatar maior, nome, @usuário e badges do cliente. Os cartões de executor/versão e ID se organizam em duas colunas ou uma no celular. Há ações para copiar o ID, abrir Configurações/Temas e voltar à aba anterior.
+- Painel inicial e perfil clicável: banner compacto, avatar, nome, @usuário e logos de cliente/plataforma; cartões de cliente e conta; atalhos para Configurações, Temas e copiar o Job ID. A sessão mostra jogadores/limite, FPS, ping, tempo no painel, Place ID e estado do salvamento. Métricas indisponíveis aparecem como `—`.
 - Página **Configurações** pronta e visível na sidebar: transparência, tamanho manual/automático, salvamento/restauração, temas com prévias, atalhos e opções nativas com nomes e descrições em português. A engrenagem continua abrindo essa mesma página.
 - Dropdown dentro da área de conteúdo, mantendo a sidebar acessível: busca, cartões de opções, seleção única/múltipla, Padrão, Limpar e Selecionar todos. Voltar, Escape ou selecionar outra aba encerra o seletor. Em telas estreitas usa uma coluna, e o cabeçalho do controle separa o título do valor.
 - Salvamento e carregamento automáticos habilitados por padrão, incluindo toggles, sliders, dropdowns únicos/múltiplos, inputs, teclas e cores. Use `flag` estável e único por controle.
@@ -74,6 +76,8 @@ As páginas e os seletores recalculam a área rolável a partir do conteúdo e d
 | `onyx` | Dourado sobre carvão |
 
 Os seis temas acima continuam disponíveis. A galeria completa oferece **60 prévias**, com as famílias Assinatura, Neon, Natureza, Cósmicos, Claros, Minerais e Clássicos. A busca aceita nome, ID, cores e estilo, inclusive sem acentos. Os filtros funcionam junto com a busca, e a lista se adapta à largura do painel.
+
+As prévias das configurações ocupam uma área de **156–300 px de altura com rolagem própria**. A galeria completa também tem altura limitada: busca e filtros ficam fora da lista rolável. Em janelas baixas, o cabeçalho fica compacto; nas menores, a busca permanece disponível e as famílias voltam a aparecer quando houver espaço. O mapa de cores na documentação é uma imagem de referência, não o tamanho da galeria no Roblox.
 
 Veja o [catálogo completo e o mapa das paletas](docs/TEMAS.md). Os temas originais mantêm os IDs `default`, `amethyst`, `cobalt`, `ember`, `frost` e `rose`. A escolha é aplicada na hora e lembrada na próxima execução, mantendo a transparência configurada. Para fixar o tema definido pelo script, use `rememberTheme = false` em `CreateWindow`.
 
@@ -116,6 +120,23 @@ local window = UI:CreateWindow({
 O formato é JSON com extensão `.rfld`, armazenado em `ConexaoUI/Configurations/`. Sem `fileName`, o nome é derivado do Id/nome da janela e `game.PlaceId`. Mantenha esses identificadores estáveis. As preferências nativas usam `ConexaoUI/Settings/conexao.rfld`. Tema, transparência, tamanho e preferências de salvamento/restauração ficam ao lado da configuração em `<nome>.rfld.ui.json`. A restauração inicial acontece quando a janela aparece; controles acrescentados depois também recebem seus valores salvos, e seus callbacks são chamados com os valores restaurados.
 
 As APIs de arquivo dependem do ambiente. No Studio, a base usa armazenamento simulado na sessão; LocalScripts normais não gravam arquivos no PC. A página informa se o armazenamento é da sessão, do dispositivo ou está indisponível, além de mostrar falhas ao salvar. `window:Save()` e `window:Load()` retornam sucesso/falha. Para desativar a automação, use os toggles nas configurações ou informe `configuration = { autoSave = false, autoLoad = false }`. Uma opção explícita no script prevalece sobre a preferência lembrada desses dois toggles.
+
+## Painel inicial e logos adicionais
+
+`OpenHome()` e `OpenProfile()` abrem a mesma página. A amostragem de FPS e tempo é encerrada ao destruir a janela; dados de rede ficam protegidos contra APIs ausentes. A UI não deduz região de servidor a partir do país do jogador e não anuncia compatibilidade de recursos a partir do nome do executor.
+
+```lua
+window:OpenHome()
+local stats = window:GetSessionStats()
+print(stats.players, stats.maximum, stats.fps, stats.ping, stats.elapsed)
+```
+
+Para uma logo fora do catálogo, registre um asset Roblox ou URI local **antes de criar a janela**:
+
+```lua
+-- Substitua o número pelo ID público da sua imagem.
+UI:RegisterExecutorIcon("Meu Cliente", 1234567890, { "Meu Cliente Mobile" })
+```
 
 ## Instalar no Studio
 

@@ -23,6 +23,10 @@ for name,digest in meta['original_sha256'].items():
     assert hashlib.sha256(source.encode()).hexdigest()==digest,f'Undeclared upstream change: {name}'
 assert len(list((VENDOR/'src').rglob('*.luau')))==len(meta['original_sha256'])
 print(f'PASS: {len(meta["original_sha256"])} pinned Gen2 modules verified against upstream; only documented fork edits.')
-embedded=re.search(r'local encoded = \[\[(.*?)\]\]',(ROOT/'ConexaoUI/Features/BrandAssets.luau').read_text(),re.S).group(1)
-assert base64.b64decode(embedded)==(ROOT/'assets/delta.png').read_bytes(),'Embedded Delta artwork differs from the attributed source image'
-print('PASS: embedded Delta artwork matches the packaged PNG.')
+embedded=dict(re.findall(r'\["([a-z0-9]+)"\] = \[\[(.*?)\]\]',(ROOT/'ConexaoUI/Features/BrandAssets.luau').read_text(),re.S))
+catalog=json.loads((ROOT/'assets/executors/catalog.json').read_text())
+for entry in catalog:
+    if 'file' in entry:
+        assert base64.b64decode(embedded[entry['id']])==(ROOT/'assets/executors'/entry['file']).read_bytes(),entry['id']
+assert len(embedded)==sum('file' in entry for entry in catalog)
+print(f'PASS: {len(embedded)} embedded brand images match their packaged PNGs.')

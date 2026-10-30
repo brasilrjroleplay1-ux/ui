@@ -46,6 +46,10 @@ function Surface.new(window, title, subtitle, options)
     local self = setmetatable({ window = window, tab = tab, previousTab = previous, connections = {}, closed = false, __type = "ContentPicker" }, Surface)
     window._conexaoPanel = self
     self.root = tab.tabPage
+    if options.fitViewport then
+        self.root.ScrollingEnabled = false
+        self.root.CanvasPosition = Vector2.new(0, 0)
+    end
     self.main = window:Create("Frame", {
         Name = "ContentPicker", Parent = self.root, BackgroundTransparency = 1,
         Size = UDim2.new(1, -20, 0, 340), BorderSizePixel = 0,
@@ -73,7 +77,14 @@ function Surface.new(window, title, subtitle, options)
     function self:Layout()
         if self.closed then return end
         local size = window.elements.AbsoluteSize
-        local height = math.max(240, size.Y - 44)
+        local height
+        if options.fitViewport then
+            local view = self.root.AbsoluteWindowSize
+            local available = typeof(view) == "Vector2" and view.Y > 0 and math.min(view.Y, size.Y) or size.Y
+            height = math.max(1, available - 44)
+        else
+            height = math.max(240, size.Y - 44)
+        end
         local width = math.max(1, size.X - 40)
         self.main.Size = UDim2.new(1, -20, 0, height)
         if self.onLayout then self.onLayout(width, height) end
@@ -84,6 +95,9 @@ function Surface.new(window, title, subtitle, options)
         if key.KeyCode == Enum.KeyCode.Escape then self:Close() end
     end)
     self:Connect(window.elements:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
+    if options.fitViewport then
+        self:Connect(self.root:GetPropertyChangedSignal("AbsoluteWindowSize"), function() self:Layout() end)
+    end
     self:Layout()
     tab:_register(self)
     local remove = tab.Remove

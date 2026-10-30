@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.4 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.5 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local Gen2 = require(script.Gen2)
 local DropdownPanel = require(script.Features.Dropdown)
@@ -12,10 +12,14 @@ local Appearance = require(script.Features.Appearance)
 local Scrolling = require(script.Features.Scrolling)
 local Startup = require(script.Features.Startup)
 local Localization = require(script.Features.Localization)
+local Session = require(script.Features.Session)
+local BrandIcon = require(script.Features.BrandIcon)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
     OpenProfile: (self: any) -> any,
+    OpenHome: (self: any) -> any,
+    GetSessionStats: (self: any) -> any,
     CloseProfile: (self: any) -> (),
     OpenThemes: (self: any) -> any,
     SettingsTab: Gen2.Tab,
@@ -26,7 +30,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.4.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
+local Library = { Version = "3.5.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -169,6 +173,7 @@ function Library:CreateWindow(options)
     Responsive.attach(window)
     Appearance.attach(window)
     Settings.attach(window)
+    Session.attach(window)
     Scrolling.attachWindow(window)
     if window.searchAction then
         local search = window.searchAction.callback
@@ -201,5 +206,8 @@ end
 
 function Library:Destroy()
     for _, window in pairs(table.clone(self.Windows)) do window:Unload() end
+end
+function Library:RegisterExecutorIcon(name, icon, aliases)
+    return BrandIcon.register(name, icon, aliases)
 end
 return Library
