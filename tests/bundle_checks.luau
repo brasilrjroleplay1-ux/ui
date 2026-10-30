@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.5.2", "new entry point is bundled")
+check(UI.Version == "3.5.3", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -161,38 +161,47 @@ local function inside(node, width, height, name)
     local x, y, w, h = rect(node, width, height)
     assert(x >= 0 and y >= 0 and w > 0 and h > 0 and x + w <= width + 0.01 and y + h <= height + 0.01, name .. " must fit without clipping")
 end
-for _, width in ipairs({ 180, 240, 320, 426, 440, 559, 560, 640, 900 }) do
+check(not profile.settingsButton and not profile.themesButton and not profile.copyServerButton and not dashboard.actions, "home omits the settings, theme and copy-server shortcuts requested for removal")
+for _, node in ipairs(dashboard.main:GetDescendants()) do
+    check(not node:IsA("TextButton") or (node.Text ~= "Configurações" and node.Text ~= "Temas" and node.Text ~= "Copiar servidor"), "no removed shortcut is left hidden in Home")
+end
+for _, width in ipairs({ 180, 219, 240, 320, 399, 419, 420, 426, 440, 550, 559, 560, 640, 820, 900 }) do
     dashboard.main.AbsoluteSize = Vector2.new(width, 600)
     dashboard:Layout()
-    local bannerWidth, bannerHeight = dashboard.banner.Size.X.Offset, dashboard.banner.Size.Y.Offset
+    local _, _, bannerWidth, bannerHeight = rect(dashboard.banner, width, dashboard.hero.Size.Y.Offset)
     inside(dashboard.banner, width, dashboard.hero.Size.Y.Offset, "welcome banner")
-    if profile.fields[1].main.Visible then
-        inside(profile.fields[1].main, width, dashboard.hero.Size.Y.Offset, "client card")
-        assert(profile.fields[1].main.Position.X.Offset >= bannerWidth + 12, "client card must not overlap the greeting")
-    end
-    assert(dashboard.actions.Position.Y.Offset >= dashboard.hero.Position.Y.Offset + dashboard.hero.Size.Y.Offset, "quick actions must remain below the welcome row")
-    assert(dashboard.cards.Position.Y.Offset >= dashboard.actions.Position.Y.Offset + dashboard.actions.Size.Y.Offset, "details must remain below quick actions")
+    assert(bannerHeight <= 84, "greeting must remain a compact strip instead of a large banner")
+    assert(dashboard.cards.Position.Y.Offset >= dashboard.hero.Position.Y.Offset + dashboard.hero.Size.Y.Offset + 12, "cards must remain below the greeting")
     assert(dashboard.main.Size.Y.Offset >= dashboard.cards.Position.Y.Offset + dashboard.cards.Size.Y.Offset, "all session details must remain scrollable")
-    for _, node in ipairs({ dashboard.plate, dashboard.connected, profile.playerName, profile.username, dashboard.badges }) do inside(node, bannerWidth, bannerHeight, node.Name) end
+    for _, node in ipairs({ dashboard.plate, dashboard.connected, profile.playerName, profile.username }) do inside(node, bannerWidth, bannerHeight, node.Name) end
     inside(profile.avatar, dashboard.plate.Size.X.Offset, dashboard.plate.Size.Y.Offset, "avatar")
-    local badgeWidth, badgeHeight = dashboard.badges.Size.X.Offset, dashboard.badges.Size.Y.Offset
-    inside(dashboard.executorPill, badgeWidth, badgeHeight, "executor badge")
-    inside(dashboard.platformPill, badgeWidth, badgeHeight, "platform badge")
-    inside(profile.settingsButton, width, dashboard.actions.Size.Y.Offset, "settings action")
-    inside(profile.themesButton, width, dashboard.actions.Size.Y.Offset, "themes action")
-    inside(profile.copyServerButton, width, dashboard.actions.Size.Y.Offset, "copy server action")
     inside(dashboard.session, width, dashboard.cards.Size.Y.Offset, "session panel")
+    inside(profile.fields[1].main, width, dashboard.cards.Size.Y.Offset, "client card")
     inside(profile.fields[2].main, width, dashboard.cards.Size.Y.Offset, "account card")
     local sx, sy, sw, sh = rect(dashboard.session, width, dashboard.cards.Size.Y.Offset)
-    local ax, ay = rect(profile.fields[2].main, width, dashboard.cards.Size.Y.Offset)
-    assert(ax >= sx + sw or ay >= sy + sh, "account and session panels must not overlap")
-    for _, stat in ipairs(dashboard.stats) do inside(stat.main, sw, sh, "session stat") end
+    local cx, cy, cw, ch = rect(profile.fields[1].main, width, dashboard.cards.Size.Y.Offset)
+    local ax, ay, aw = rect(profile.fields[2].main, width, dashboard.cards.Size.Y.Offset)
+    if width >= 420 then
+        assert(cx >= sx + sw + 12 and ax == cx and cy == sy and ay >= cy + ch + 12, "tablet Home keeps session on the left and client/account stacked on the right")
+        assert(dashboard.main.Size.Y.Offset <= 384, "the screenshot-sized layout exposes all metrics without the old banner/shortcut height")
+    else
+        assert(cx == 0 and sy >= cy + ch + 12 and ay >= sy + sh + 12, "phone cards stack without hiding client information")
+    end
+    for _, stat in ipairs(dashboard.stats) do
+        inside(stat.main, sw, sh, "session stat")
+        inside(stat.caption, stat.main.Size.X.Offset, stat.main.Size.Y.Offset, "stat caption")
+        inside(stat.value, stat.main.Size.X.Offset, stat.main.Size.Y.Offset, "stat value")
+    end
     for _, field in ipairs(profile.fields) do
         local fieldWidth = field.main.Size.X.Offset
-        for _, node in ipairs({ field.heading, field.valueLabel, field.subtitle, field.icon.root.Parent }) do inside(node, fieldWidth, field.main.Size.Y.Offset, "account card content") end
+        for _, node in ipairs({ field.heading, field.valueLabel, field.subtitle, field.icon.root }) do inside(node, fieldWidth, field.main.Size.Y.Offset, "account card content") end
     end
+    inside(dashboard.platformPill, cw, ch, "platform badge")
+    inside(dashboard.clientNote, cw, ch, "client status")
+    inside(profile.copyButton, aw, profile.fields[2].main.Size.Y.Offset, "copy account ID")
+    inside(dashboard.accountSave, aw, profile.fields[2].main.Size.Y.Offset, "save status")
 end
-check(true, "profile cards and actions fit phone, tablet and desktop content widths without overlapping")
+check(true, "compact Home cards fit phone, tablet and desktop content widths without overlapping")
 dashboard.main.AbsoluteSize = Vector2.new(420, 120)
 dashboard:Layout()
 local oldClipboard = _G.setclipboard
@@ -204,12 +213,12 @@ _G.setclipboard = function() return false end
 profile.copyButton.MouseButton1Click:Fire()
 check(dashboard.notice.Text:find("não está disponível", 1, true) and w.selectedTab == w.ProfileTab, "an unavailable clipboard reports inline and keeps profile navigation working")
 _G.setclipboard = oldClipboard
-profile.settingsButton.MouseButton1Click:Fire()
-check(w.selectedTab == w.SettingsTab, "the profile settings action opens the built-in configuration page")
+w:OpenSettings()
+check(w.selectedTab == w.SettingsTab, "built-in settings remain available after removing the duplicate Home shortcut")
 w:OpenProfile()
-profile.themesButton.MouseButton1Click:Fire()
+w:OpenThemes()
 local profileThemes = w._conexaoPanel
-check(profileThemes and #profileThemes.cards == 60 and profileThemes.root.Parent == w.elements, "the profile theme action opens theme previews inside the same panel")
+check(profileThemes and #profileThemes.cards == 60 and profileThemes.root.Parent == w.elements, "theme previews remain available inside the same panel")
 profileThemes:Close()
 check(w.selectedTab == w.ProfileTab, "returning from theme selection restores the redesigned profile")
 w:CloseProfile()
@@ -319,7 +328,32 @@ end
 w.ThemeGallery.cards[5].hit.MouseButton1Click:Fire()
 check(w.ThemeId == "porcelana" and w.ThemeGallery.cards[5].selected.Visible, "a preview applies its real theme and marks the selection")
 check(w.ProfilePage.fields[1].valueLabel.TextColor3 == w.theme.ContentColor, "the in-panel profile follows live theme changes")
-check(w.ProfilePage.platformIcon.parts[1].BackgroundColor3 == Color3.new(1, 1, 1), "banner platform marks remain white after switching to a light theme")
+check(w.ProfilePage.platformIcon.parts[1].BackgroundColor3 == w.theme.ContentColor, "platform marks follow the text color to stay readable on light cards")
+do
+    local function luminance(color)
+        local function channel(v) return v <= 0.04045 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4 end
+        return 0.2126 * channel(color.R) + 0.7152 * channel(color.G) + 0.0722 * channel(color.B)
+    end
+    local function contrast(a, b)
+        local x, y = luminance(a), luminance(b)
+        return (math.max(x, y) + 0.05) / (math.min(x, y) + 0.05)
+    end
+    local previous = w.ThemeId
+    for _, id in ipairs({ "conexao", "ember", "rose", "porcelana", "matcha", "frost" }) do
+        w:ChangeTheme(id)
+        local home = w.ProfilePage.dashboard
+        for _, node in ipairs({ home.banner, home.session, w.ProfilePage.fields[1].main, w.ProfilePage.fields[2].main }) do
+            local gradient = childOfClass(node, "UIGradient")
+            for _, point in ipairs(gradient.Color.Keypoints) do
+                check(contrast(w.theme.ContentColor, point.Value) >= 4.5, "Home text contrasts with each surface in " .. id)
+            end
+        end
+        home:_setShown(true, false)
+        check(home.stats[1].value.TextTransparency == 0 and home.stats[1].main.BackgroundTransparency == 0, "session values and tiles remain visible in " .. id)
+        check(w.ProfilePage.platformIcon.parts[1].BackgroundColor3 == w.theme.ContentColor, "platform logo follows " .. id)
+    end
+    w:ChangeTheme(previous)
+end
 local themes = w:OpenThemes()
 check(#themes.cards == 60, "the complete theme picker renders all sixty previews")
 check(themes.visibleCount == 60 and #themes.filters == 8 and themes.root.Parent == w.elements, "theme search and family filters belong to the content panel")
@@ -607,12 +641,9 @@ local stats = statsWindow:GetSessionStats()
 check(stats.players == 3 and stats.maximum == 12 and stats.fps == 60 and stats.ping == 87, "dashboard samples real player, FPS and latency providers")
 check(statsPage.dashboard.stats[1].value.Text == "3 / 12" and statsPage.dashboard.stats[2].value.Text == "87 ms", "live samples update the visible session cards")
 check(stats.elapsed > 1.99 and stats.elapsed < 2.01, "session duration accumulates elapsed time rather than counting update loops")
-local jobBefore, clipboardBefore, serverCopy = game.JobId, _G.setclipboard, nil
-game.JobId = "test-job-35"
-_G.setclipboard = function(value) serverCopy = value end
-statsPage.copyServerButton.MouseButton1Click:Fire()
-check(serverCopy == "test-job-35" and statsPage.dashboard.notice.Visible, "the server shortcut copies the current Job ID only when clicked")
-game.JobId, _G.setclipboard = jobBefore, clipboardBefore
+statsWindow.configuration.autoSave = false
+statsPage:RefreshStats()
+check(statsPage.dashboard.stats[6].value.Text == "Desativado" and statsPage.dashboard.accountSave.Text:find("Desativado", 1, true), "session and account cards share the live save state")
 statsWindow:Unload()
 local elapsedBefore = statsWindow:GetSessionStats().elapsed
 runService.Heartbeat:Fire(1)

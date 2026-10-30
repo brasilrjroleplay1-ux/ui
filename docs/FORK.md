@@ -30,4 +30,6 @@ Em 3.5.1, `ExecutorPolicy` e `ExecutorAccess` restringem o suporte a Delta, Wave
 
 Em 3.5.2, `Features/ControlLayout.luau` dimensiona os controles em largura total a partir da largura atual e dos limites do texto. O adaptador reserva a área do interruptor, empilha sliders/campos quando necessário, protege a altura das linhas durante cliques e ajusta as descrições. Layouts antigos ficam preservados em contêineres ocultos pertencentes ao controle, para manter a limpeza ao remover uma aba. Os cabeçalhos de dropdown também medem o título antes de escolher sua disposição. As alterações ficam na camada Conexão, sem novos ajustes no vendor.
 
+Em 3.5.3, a Home troca o banner alto e os três atalhos por uma faixa de boas-vindas de 84 px e uma composição de cartões inspirada na referência Luna. A partir de 420 px de conteúdo, sessão e cliente/conta usam duas colunas; em larguras menores, os cartões ficam em uma coluna com rolagem nativa. O cliente permanece visível em todas as larguras. Fundos discretos, contraste do texto e logos que acompanham as cores do tema substituem o grande gradiente colorido. Configurações e temas continuam disponíveis pelos acessos nativos existentes.
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.
