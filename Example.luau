@@ -1,10 +1,10 @@
--- Exemplo de componentes da Conexão UI 3.7 usando a base Rayfield Gen2.
+-- Exemplo de componentes da Conexão UI 3.8 usando a base Rayfield Gen2.
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/ConexaoUI.luau"))()
 local previousDemo = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("ConexaoDemo")
 if previousDemo and previousDemo:IsA("ScreenGui") then previousDemo:Destroy() end
 local window = UI:CreateWindow({
     Id = "ConexaoComponents",
-    name = "CONEXÃO STUDIO", subtitle = "3.7.3", sidebarLayout = true,
+    name = "CONEXÃO STUDIO", subtitle = "3.8.0", sidebarLayout = true,
     theme = "conexao",
     configuration = { fileName = "conexao_componentes_v3" },
 })

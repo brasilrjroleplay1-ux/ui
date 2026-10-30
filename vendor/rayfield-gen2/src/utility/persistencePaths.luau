@@ -42,8 +42,11 @@ function paths.getConfigPath(window: ConfigWindow, name: unknown?): (string?, st
     return dir, path.join(dir, safe .. ".rfld")
 end
 
-function paths.getSettingsPath(): (string, string)
+function paths.getSettingsPath(window: { configuration: { customFolder: string? }? }?): (string, string)
     local dir = variables.fileSystemManager:getPath("Settings")
+    if window and window.configuration and window.configuration.customFolder then
+        dir = path.join(dir, path.sanitizeFolder(window.configuration.customFolder))
+    end
     return dir, path.join(dir, "conexao.rfld")
 end
 

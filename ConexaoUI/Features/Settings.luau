@@ -6,6 +6,7 @@ local Preferences = require(script.Parent.Preferences)
 local selector = require(script.Parent.Parent.Gen2.components.tabSelector)
 local constants = require(script.Parent.Parent.Gen2.utility.constants)
 local Scrolling = require(script.Parent.Scrolling)
+local Navigation = require(script.Parent.SettingsNavigation)
 local Settings = {}
 
 -- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
@@ -248,6 +249,14 @@ end
 
 function Settings.attach(window)
     local tab = window.SettingsTab
+    local membership, nativeCategory = {}, "controls"
+    for _, element in ipairs(tab.elements) do
+        if element.name == "Configurations" then nativeCategory = "saving" end
+        membership[element] = nativeCategory
+    end
+    local function mark(category, first)
+        for index = first, #tab.elements do membership[tab.elements[index]] = category end
+    end
     tab.name, tab.tabPage.Name = "Configurações", "Configurações"
     tab.icon, tab.neglectSelector = constants.icons.settings, false
     selector.build(tab, window.layout)
@@ -296,6 +305,29 @@ function Settings.attach(window)
         else sizeStatus:Set(string.format("%s · %d × %d px", info.automatic and "Automático" or "Manual", info.width, info.height)) end
     end
     window:RefreshSizeStatus()
+    mark("appearance", first)
+    local savingFirst = #tab.elements + 1
+    tab:CreateSection({ name = "Conta e salvamento" })
+    local scope = window.ConfigurationScope
+    local scopeStatus = tab:CreateText({ name = "Perfil de configuração", text = "" })
+    window.ConfigScopeStatus = scopeStatus
+    function window:RefreshScopeStatus()
+        local active = scope.shared and "Compartilhado · somente contas que ativarem" or ("Individual · @" .. scope.username)
+        local pending = scope.nextShared ~= scope.shared and (scope.nextShared and "\nPróxima execução: compartilhado" or "\nPróxima execução: individual") or ""
+        scopeStatus:Set(active .. pending)
+    end
+    window.ShareAcrossAccountsToggle = tab:CreateToggle({ name = "Compartilhar entre contas", value = scope.nextShared,
+        description = "Aplica na próxima execução. Só contas que ativarem usam o perfil compartilhado. Um perfil novo começa com os valores iniciais do script.",
+        callback = function(value)
+            if not window:SetSharedConfiguration(value) then
+                window.ShareAcrossAccountsToggle:Set(scope.nextShared, true)
+                window:Toast({ title = "Não foi possível salvar essa preferência", type = "error" })
+            else
+                window:Toast({ title = "Preferência salva", subtitle = scope.nextShared ~= scope.shared and "Execute novamente para trocar de perfil." or "O perfil atual continua selecionado." })
+            end
+        end,
+    })
+    window:RefreshScopeStatus()
     local mode, persistent = Preferences.storage()
     local status = tab:CreateText({ name = "Salvamento automático", text = mode })
     window.SaveStatus = { mode = mode, persistent = persistent, success = nil }
@@ -326,14 +358,22 @@ function Settings.attach(window)
     tab:CreateButton({ name = "Salvar agora", callback = function()
         window:Toast({ title = window:Save() and "Escolhas salvas" or "Não foi possível salvar" })
     end })
-    tab:CreateButton({ name = "Ver meu perfil", callback = function() window:OpenProfile() end })
+    mark("saving", savingFirst)
+    local profileButton = tab:CreateButton({ name = "Ver meu perfil", callback = function() window:OpenProfile() end })
+    membership[profileButton] = "controls"
     window.ThemeGallery = gallery(window, tab)
+    membership[window.ThemeGallery] = "themes"
     local added = {}
     for index = first, #tab.elements do table.insert(added, tab.elements[index]) end
     for index, element in ipairs(added) do tab:_moveElement(element, index) end
+    Navigation.attach(window, membership)
     window:RefreshSaveStatus()
     function window:OpenThemes() return Settings.openThemes(self) end
-    function window:OpenSettings() if self._conexaoPanel then self._conexaoPanel:Close() end self.SettingsTab:Select() end
+    function window:OpenSettings(category)
+        if self._conexaoPanel then self._conexaoPanel:Close() end
+        if category then self.SettingsNavigation:Select(category, true) end
+        self.SettingsTab:Select()
+    end
 end
 
 return Settings

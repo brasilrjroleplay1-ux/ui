@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.7 · API Gen2
+# Exemplos da Conexão UI 3.8 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -111,6 +111,7 @@ Eles já existem depois de `CreateWindow`. Não é necessário recriar a aba nem
 
 ```lua
 window:OpenSettings()
+window:OpenSettings("saving") -- appearance, themes, saving ou controls
 window:OpenHome() -- painel de conta, cliente e sessão
 window:OpenProfile() -- página Meu perfil: identidade, executor, versão e ambiente
 window:CloseProfile() -- volta à aba que estava aberta
@@ -118,6 +119,17 @@ window:OpenThemes()
 ```
 
 Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual e ajuste automático. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
+
+As categorias são Aparência, Temas, Salvamento e Controles. Elas mantêm os controles nativos na mesma página e ocultam também suas descrições quando estão inativas. A barra de categorias rola horizontalmente em telas estreitas.
+
+Os arquivos são individuais por ID da conta, inclusive presets nomeados e preferências da janela. Ativar Compartilhar entre contas em Salvamento seleciona um perfil compartilhado para a próxima execução. Cada conta precisa ativar sua própria opção; voltar ao modo individual restaura o perfil privado preservado. Um perfil compartilhado novo começa com os valores iniciais do script, sem copiar automaticamente o perfil privado. Os arquivos antigos sem conta identificada permanecem no disco e não são carregados automaticamente.
+
+```lua
+local salvo = window:SetSharedConfiguration(true) -- preferência desta conta; aplica na próxima execução
+print(salvo, window.ConfigurationScope.shared, window.ConfigurationScope.nextShared)
+```
+
+`configuration.shareAcrossAccounts` define somente o padrão inicial. A escolha já lembrada da conta prevalece. Veja [Configurações por conta](CONFIGURACOES.md).
 
 O cabeçalho e a abertura também vêm prontos em `CreateWindow`. `name`, `subtitle` e `icon` continuam personalizando os dados do cabeçalho. Sem `icon`, ele usa a marca vetorial da Conexão; nomes e subtítulos longos permanecem dentro do espaço disponível antes dos botões. As cores da marca, bordas e versão acompanham o tema. Na 3.6.1, o topo tem 44 px, usa uma linha e contém a busca. A lateral mostra ícones e nomes; abaixo de 480 px de janela, usa o modo compacto. Seções criadas com `window:CreateSection` mantêm seus nomes na lateral expandida.
 

@@ -14,6 +14,7 @@ local enums = require(script.Parent.enums)
 local persistenceSettings = {}
 
 type SettingsWindow = {
+    configuration: { customFolder: string? }?,
     settings: {
         toggleKeybind: EnumItem,
         mouseOverride: boolean,
@@ -35,12 +36,12 @@ type DecodedSettings = {
     usageAnalytics: unknown?,
 }
 
-function persistenceSettings.getSettingsPath(): (string, string)
-    return paths.getSettingsPath()
+function persistenceSettings.getSettingsPath(window: SettingsWindow?): (string, string)
+    return paths.getSettingsPath(window)
 end
 
 function persistenceSettings.saveSettings(window: SettingsWindow): boolean
-    local dir, fullPath = persistenceSettings.getSettingsPath()
+    local dir, fullPath = persistenceSettings.getSettingsPath(window)
 
     local data: { [string]: unknown } = {
         toggleKeybind = {
@@ -94,7 +95,7 @@ local function decodeFile(fullPath: string): (DecodedSettings?, string?)
 end
 
 function persistenceSettings.loadSettings(window: SettingsWindow): boolean
-    local dir, fullPath = persistenceSettings.getSettingsPath()
+    local dir, fullPath = persistenceSettings.getSettingsPath(window)
 
     local settings = decodeFile(fullPath)
 

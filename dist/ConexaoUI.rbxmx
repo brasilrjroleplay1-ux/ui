@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.7 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.8 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -26,9 +26,11 @@ local Shell = require(script.Features.Shell)
 local Friends = require(script.Features.Friends)
 local SliderInput = require(script.Features.SliderInput)
 local Feedback = require(script.Features.Feedback)
+local AccountStorage = require(script.Features.AccountStorage)
 
 export type Window = Gen2.Window &amp; {
-    OpenSettings: (self: any) -&gt; (),
+    OpenSettings: (self: any, category: string?) -&gt; (),
+    SetSharedConfiguration: (self: any, enabled: boolean) -&gt; boolean,
     OpenProfile: (self: any) -&gt; any,
     OpenHome: (self: any) -&gt; any,
     GetSessionStats: (self: any) -&gt; any,
@@ -40,14 +42,15 @@ export type Window = Gen2.Window &amp; {
     ThemeId: string?,
     RefreshSize: (self: any) -&gt; UDim2,
 }
-export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: boolean? }
+export type WindowConfiguration = Gen2.WindowConfiguration &amp; { shareAcrossAccounts: boolean? }
+export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: boolean?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 export type SliderProps = Gen2.SliderProps &amp; { format: ("number" | "percent")?, editable: boolean? }
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.7.3", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.8.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -130,6 +133,7 @@ function Library:CreateWindow(options)
     if cfg.autoLoad == nil then cfg.autoLoad = cfg.AutoLoad end
     cfg.fileName = cfg.fileName or cfg.FileName or old.Name or ((p.Id or p.name) .. "-" .. tostring(game.PlaceId))
     cfg.customFolder = cfg.customFolder or cfg.CustomFolder
+    local accountScope = AccountStorage.prepare(cfg, p.name)
     local preferences, preferencesDir, preferencesPath = Preferences.load(cfg, p.name)
     if cfg.autoSave == nil then cfg.autoSave = if old.Enabled ~= nil then old.Enabled ~= false elseif preferences.autoSave ~= nil then preferences.autoSave else true end
     if cfg.autoLoad == nil then cfg.autoLoad = if preferences.autoLoad ~= nil then preferences.autoLoad else true end
@@ -151,6 +155,7 @@ function Library:CreateWindow(options)
     self.Windows[id] = window
     window.SettingsTab = window.rfSettings
     window.UIPreferences, window._preferencesDir, window._preferencesPath = preferences, preferencesDir, preferencesPath
+    AccountStorage.attach(window, accountScope)
     window.ThemeId = themeId
     window.screenGui.Name = "ConexaoUI3_" .. id
     -- Install the first-open hooks before adapters that may yield while measuring fonts.
@@ -18934,8 +18939,11 @@ function paths.getConfigPath(window: ConfigWindow, name: unknown?): (string?, st
     return dir, path.join(dir, safe .. ".rfld")
 end
 
-function paths.getSettingsPath(): (string, string)
+function paths.getSettingsPath(window: { configuration: { customFolder: string? }? }?): (string, string)
     local dir = variables.fileSystemManager:getPath("Settings")
+    if window and window.configuration and window.configuration.customFolder then
+        dir = path.join(dir, path.sanitizeFolder(window.configuration.customFolder))
+    end
     return dir, path.join(dir, "conexao.rfld")
 end
 
@@ -18956,6 +18964,7 @@ local enums = require(script.Parent.enums)
 local persistenceSettings = {}
 
 type SettingsWindow = {
+    configuration: { customFolder: string? }?,
     settings: {
         toggleKeybind: EnumItem,
         mouseOverride: boolean,
@@ -18977,12 +18986,12 @@ type DecodedSettings = {
     usageAnalytics: unknown?,
 }
 
-function persistenceSettings.getSettingsPath(): (string, string)
-    return paths.getSettingsPath()
+function persistenceSettings.getSettingsPath(window: SettingsWindow?): (string, string)
+    return paths.getSettingsPath(window)
 end
 
 function persistenceSettings.saveSettings(window: SettingsWindow): boolean
-    local dir, fullPath = persistenceSettings.getSettingsPath()
+    local dir, fullPath = persistenceSettings.getSettingsPath(window)
 
     local data: { [string]: unknown } = {
         toggleKeybind = {
@@ -19036,7 +19045,7 @@ local function decodeFile(fullPath: string): (DecodedSettings?, string?)
 end
 
 function persistenceSettings.loadSettings(window: SettingsWindow): boolean
-    local dir, fullPath = persistenceSettings.getSettingsPath()
+    local dir, fullPath = persistenceSettings.getSettingsPath(window)
 
     local settings = decodeFile(fullPath)
 
@@ -20505,6 +20514,64 @@ function Account.attach(window, info, version)
     end
 end
 return Account
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">AccountStorage</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Namespacing, not access control against the host. Sharing is an explicit per-account choice.
+local utility = script.Parent.Parent.Gen2.utility
+local files = require(utility.filesystem)
+local atomic = require(utility.persistenceWrite)
+local paths = require(utility.persistencePaths)
+local path = require(utility.path)
+local http = game:GetService("HttpService")
+local Storage = {}
+function Storage.prepare(configuration, name)
+    local player = game:GetService("Players").LocalPlayer
+    local id = player and player.UserId
+    local studio = game:GetService("RunService"):IsStudio()
+    assert(type(id) == "number" and id == id and math.abs(id) &lt; 9007199254740992 and id % 1 == 0 and (id &gt; 0 or studio), "Conexão Studio: aguarde a identificação da conta Roblox antes de criar a janela.")
+    local account = string.format("%.0f", id)
+    local folder = path.sanitizeFolder(configuration.customFolder or ""):gsub("/+$", "")
+    local file = path.sanitizeFile(configuration.fileName or name)
+    if file == "" then file = "Configuration" end
+    local suffix = (folder ~= "" and folder .. "/" or "") .. file
+    local private = "Accounts/" .. account .. "/" .. suffix
+    local shared = "Shared/" .. suffix
+    local dir, base = paths.getConfigPath({ configuration = { customFolder = private, fileName = file }, name = name })
+    local meta = base .. ".scope.json"
+    local function read(filePath)
+        local ok, data = pcall(function() return http:JSONDecode(files.readfile(filePath)) end)
+        if ok and type(data) == "table" and data.version == 1 and type(data.shareAcrossAccounts) == "boolean" then return data end
+    end
+    -- A failed or corrupt opt-in must not enable sharing from an uncommitted temp file.
+    local saved = read(meta)
+    local enabled = saved and saved.shareAcrossAccounts
+    if not saved then
+        local requested = configuration.shareAcrossAccounts
+        if requested == nil then requested = configuration.ShareAcrossAccounts end
+        enabled = requested == true
+    end
+    configuration.customFolder = enabled and shared or private
+    configuration.fileName = file
+    return { userId = id, username = player.Name, shared = enabled, nextShared = enabled,
+        privateFolder = private, sharedFolder = shared, folder = configuration.customFolder, metadataDir = dir, metadataPath = meta }
+end
+function Storage.attach(window, scope)
+    window.ConfigurationScope = scope
+    function window:SetSharedConfiguration(enabled)
+        assert(type(enabled) == "boolean", "Use true ou false para compartilhar configurações.")
+        if self.unloaded then return false end
+        local ok = pcall(function()
+            atomic.write(scope.metadataDir, scope.metadataPath, http:JSONEncode({ version = 1, shareAcrossAccounts = enabled }))
+        end)
+        if ok then
+            scope.nextShared = enabled
+            if self.ShareAcrossAccountsToggle then self.ShareAcrossAccountsToggle:Set(enabled, true) end
+            if self.RefreshScopeStatus then self:RefreshScopeStatus() end
+        end
+        return ok
+    end
+end
+return Storage
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Appearance</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 local Appearance = {}
@@ -22095,6 +22162,7 @@ function Preferences.load(configuration, name)
     if type(data.autoSave) == "boolean" then state.autoSave = data.autoSave end
     if type(data.autoLoad) == "boolean" then state.autoLoad = data.autoLoad end
     if type(data.autoSize) == "boolean" then state.autoSize = data.autoSize end
+    if ({ appearance = true, themes = true, saving = true, controls = true })[data.settingsCategory] then state.settingsCategory = data.settingsCategory end
     for _, key in ipairs({ "sizePercent", "transparency" }) do
         if type(data[key]) == "number" and data[key] == data[key] then state[key] = math.clamp(data[key], 0, 100) end
     end
@@ -22730,6 +22798,7 @@ local Preferences = require(script.Parent.Preferences)
 local selector = require(script.Parent.Parent.Gen2.components.tabSelector)
 local constants = require(script.Parent.Parent.Gen2.utility.constants)
 local Scrolling = require(script.Parent.Scrolling)
+local Navigation = require(script.Parent.SettingsNavigation)
 local Settings = {}
 
 -- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
@@ -22972,6 +23041,14 @@ end
 
 function Settings.attach(window)
     local tab = window.SettingsTab
+    local membership, nativeCategory = {}, "controls"
+    for _, element in ipairs(tab.elements) do
+        if element.name == "Configurations" then nativeCategory = "saving" end
+        membership[element] = nativeCategory
+    end
+    local function mark(category, first)
+        for index = first, #tab.elements do membership[tab.elements[index]] = category end
+    end
     tab.name, tab.tabPage.Name = "Configurações", "Configurações"
     tab.icon, tab.neglectSelector = constants.icons.settings, false
     selector.build(tab, window.layout)
@@ -23020,6 +23097,29 @@ function Settings.attach(window)
         else sizeStatus:Set(string.format("%s · %d × %d px", info.automatic and "Automático" or "Manual", info.width, info.height)) end
     end
     window:RefreshSizeStatus()
+    mark("appearance", first)
+    local savingFirst = #tab.elements + 1
+    tab:CreateSection({ name = "Conta e salvamento" })
+    local scope = window.ConfigurationScope
+    local scopeStatus = tab:CreateText({ name = "Perfil de configuração", text = "" })
+    window.ConfigScopeStatus = scopeStatus
+    function window:RefreshScopeStatus()
+        local active = scope.shared and "Compartilhado · somente contas que ativarem" or ("Individual · @" .. scope.username)
+        local pending = scope.nextShared ~= scope.shared and (scope.nextShared and "\nPróxima execução: compartilhado" or "\nPróxima execução: individual") or ""
+        scopeStatus:Set(active .. pending)
+    end
+    window.ShareAcrossAccountsToggle = tab:CreateToggle({ name = "Compartilhar entre contas", value = scope.nextShared,
+        description = "Aplica na próxima execução. Só contas que ativarem usam o perfil compartilhado. Um perfil novo começa com os valores iniciais do script.",
+        callback = function(value)
+            if not window:SetSharedConfiguration(value) then
+                window.ShareAcrossAccountsToggle:Set(scope.nextShared, true)
+                window:Toast({ title = "Não foi possível salvar essa preferência", type = "error" })
+            else
+                window:Toast({ title = "Preferência salva", subtitle = scope.nextShared ~= scope.shared and "Execute novamente para trocar de perfil." or "O perfil atual continua selecionado." })
+            end
+        end,
+    })
+    window:RefreshScopeStatus()
     local mode, persistent = Preferences.storage()
     local status = tab:CreateText({ name = "Salvamento automático", text = mode })
     window.SaveStatus = { mode = mode, persistent = persistent, success = nil }
@@ -23050,17 +23150,111 @@ function Settings.attach(window)
     tab:CreateButton({ name = "Salvar agora", callback = function()
         window:Toast({ title = window:Save() and "Escolhas salvas" or "Não foi possível salvar" })
     end })
-    tab:CreateButton({ name = "Ver meu perfil", callback = function() window:OpenProfile() end })
+    mark("saving", savingFirst)
+    local profileButton = tab:CreateButton({ name = "Ver meu perfil", callback = function() window:OpenProfile() end })
+    membership[profileButton] = "controls"
     window.ThemeGallery = gallery(window, tab)
+    membership[window.ThemeGallery] = "themes"
     local added = {}
     for index = first, #tab.elements do table.insert(added, tab.elements[index]) end
     for index, element in ipairs(added) do tab:_moveElement(element, index) end
+    Navigation.attach(window, membership)
     window:RefreshSaveStatus()
     function window:OpenThemes() return Settings.openThemes(self) end
-    function window:OpenSettings() if self._conexaoPanel then self._conexaoPanel:Close() end self.SettingsTab:Select() end
+    function window:OpenSettings(category)
+        if self._conexaoPanel then self._conexaoPanel:Close() end
+        if category then self.SettingsNavigation:Select(category, true) end
+        self.SettingsTab:Select()
+    end
 end
 
 return Settings
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">SettingsNavigation</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Keep controls on their native tab; category visibility also owns their separate descriptors.
+local Preferences = require(script.Parent.Preferences)
+local Navigation = {}
+local definitions = { { "appearance", "Aparência", 102 }, { "themes", "Temas", 76 }, { "saving", "Salvamento", 114 }, { "controls", "Controles", 100 } }
+function Navigation.attach(window, membership)
+    local tab = window.SettingsTab
+    local self = { window = window, tab = tab, name = "Categorias", __type = "SettingsNavigation", buttons = {}, membership = membership, connections = {}, shown = not window.hidden }
+    window.SettingsNavigation = self
+    local function create(class, props, theme) return window:Create(class, props, theme) end
+    self.main = create("Frame", { Name = "SettingsCategories", Parent = tab.tabPage, Size = UDim2.new(1, -24, 0, 46), BackgroundTransparency = 1, BorderSizePixel = 0 })
+    self.scroller = create("ScrollingFrame", { Parent = self.main, Name = "CategoryBar", BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1),
+        CanvasSize = UDim2.fromOffset(418, 0), ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 2,
+        ScrollBarImageTransparency = 0.5, ClipsDescendants = true, Active = true, ScrollingEnabled = true, CanvasPosition = Vector2.new(), ElasticBehavior = Enum.ElasticBehavior.Never,
+    }, { ScrollBarImageColor3 = "AccentColor" })
+    create("UIPadding", { Parent = self.scroller, PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 7), PaddingLeft = UDim.new(0, 1), PaddingRight = UDim.new(0, 1) })
+    create("UIListLayout", { Parent = self.scroller, FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+    local width = 2
+    for i, definition in ipairs(definitions) do
+        local key, title, size = definition[1], definition[2], definition[3]
+        local offset = width + (i &gt; 1 and 6 or 0)
+        width += size + (i &gt; 1 and 6 or 0)
+        local button = create("TextButton", { Parent = self.scroller, Name = key, Text = title, TextSize = 12, AutoButtonColor = false, BorderSizePixel = 0,
+            Size = UDim2.fromOffset(size, 32), LayoutOrder = i, BackgroundTransparency = 1, TextTransparency = 1, ZIndex = 8,
+        }, { FontFace = "TitleFont", TextColor3 = "ContentColor", BackgroundColor3 = "AccentColor" })
+        create("UICorner", { Parent = button, CornerRadius = UDim.new(0, 8) })
+        local stroke = create("UIStroke", { Parent = button, Thickness = 1, Transparency = 1 }, { Color = "AccentStroke" })
+        self.buttons[key] = { button = button, stroke = stroke, offset = offset }
+        window:ConnectFor(self, button.MouseButton1Click, function() if window:_interactive() then self:Select(key, true) end end)
+    end
+    self.scroller.CanvasSize = UDim2.fromOffset(width, 0)
+    function self:Layout()
+        local current = self.buttons[self.active]
+        if not current then return end
+        local view = self.scroller.AbsoluteWindowSize.X
+        if view &lt;= 0 then view = self.main.AbsoluteSize.X end
+        if view &lt;= 0 then return end
+        local x = self.scroller.CanvasPosition.X
+        x = math.min(x, current.offset)
+        x = math.max(x, current.offset + current.button.Size.X.Offset - view)
+        self.scroller.CanvasPosition = Vector2.new(math.clamp(x, 0, math.max(0, width - view)), 0)
+    end
+    function self:Paint(animate)
+        for key, item in pairs(self.buttons) do
+            local active = key == self.active
+            window:_reveal(item.button, { BackgroundTransparency = self.shown and (active and 0.82 or 0.97) or 1, TextTransparency = self.shown and (active and 0 or 0.2) or 1 }, animate)
+            window:_reveal(item.stroke, { Transparency = self.shown and (active and 0.38 or 0.87) or 1 }, animate)
+        end
+    end
+    function self:Select(key, remember)
+        assert(self.buttons[key], "Categoria de configurações inválida.")
+        if window.unloaded then return end
+        if window.WindowSizeSlider.dragging then window.WindowSizeSlider:_endDrag() end
+        if window._conexaoPanel then window._conexaoPanel:Close() end
+        self.active = key
+        for control, category in pairs(self.membership) do control:_setShown(not window.hidden and category == key, false) end
+        self:Paint(false)
+        self:Layout()
+        tab.tabPage.CanvasPosition = Vector2.new(0, 0)
+        if tab._scrollController then tab._scrollController.desiredY, tab._scrollController.atEnd = 0, false tab._scrollController:Queue() end
+        if remember then window.UIPreferences.settingsCategory = key Preferences.save(window) end
+    end
+    function self:_setShown(shown, animate)
+        self.shown = shown
+        self.main.Visible = true -- reserve the navigation row while native controls reveal
+        self.scroller.ScrollBarImageTransparency = shown and 0.5 or 1
+        self:Paint(animate)
+    end
+    function self:_refreshTheme() self:Paint(false) end
+    window:ConnectFor(self, self.scroller:GetPropertyChangedSignal("AbsoluteWindowSize"), function() self:Layout() end)
+    for control, category in pairs(membership) do
+        local show = control._setShown
+        function control:_setShown(shown, animate)
+            show(self, shown, animate)
+            local visible = window.SettingsNavigation.active == category
+            self.main.Visible = visible
+            if self.descriptor and self.descriptor.main.Parent == tab.tabPage then self.descriptor.main.Visible = visible end
+        end
+    end
+    tab:_register(self)
+    self.main.LayoutOrder = -10000
+    self:Select(self.buttons[window.UIPreferences.settingsCategory] and window.UIPreferences.settingsCategory or "appearance", false)
+    return self
+end
+return Navigation
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Shell</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Compact chrome with a labelled sidebar whenever the window has room for it.
@@ -23313,7 +23507,7 @@ function Startup.new(theme, version)
     track(edge, "Transparency", 0.4)
     self.scale = create("UIScale", { Parent = self.panel, Scale = 0.92 })
     text("Eyebrow", "CONEXÃO / INTERFACE", 28, 14, 280, 9, true)
-    self.version = text("Version", "v" .. tostring(version or "3.7"), 334, 14, 58, 10, false)
+    self.version = text("Version", "v" .. tostring(version or "3.8"), 334, 14, 58, 10, false)
     self.version.TextXAlignment = Enum.TextXAlignment.Right
     self.mark = Brand.new(create, self.panel, 64, theme)
     self.mark.root.Position = UDim2.fromOffset(28, 52)

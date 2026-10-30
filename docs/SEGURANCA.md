@@ -18,6 +18,8 @@ Isso não desativa toda a comunicação da interface. Avatares, fontes e imagens
 
 O salvamento automático grava configurações e preferências no diretório `ConexaoUI`. A base sanitiza os nomes de arquivo e subpastas antes de montar os caminhos. Cache de imagens e fontes também usa o diretório da library. Isso organiza os acessos da Conexão, sem restringir o acesso que o executor ou o script consumidor já tem ao dispositivo.
 
+A partir da 3.8.0, o ID da conta e o projeto separam escolhas e preferências; não há fallback automático para arquivos antigos sem conta. Compartilhar requer uma escolha própria de cada conta e só troca o perfil na próxima execução. Um ID ausente ou inválido não seleciona um diretório genérico. A separação evita restauração acidental entre contas; não é criptografia nem uma barreira contra quem pode ler os arquivos ou modificar o runtime.
+
 O bundle contém a base e as extensões em código legível; a UI não baixa outra library Luau para montá-las. Os módulos do vendor são fixados em um commit e verificados por hash, com as alterações documentadas em `FORK.md`. Para reproduzir uma versão publicada, use o endereço raw de um commit específico. O carregamento inicial com `loadstring(game:HttpGet(...))` ainda depende da rede e do executor.
 
 ## Validação

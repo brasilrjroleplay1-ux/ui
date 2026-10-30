@@ -46,3 +46,6 @@ with tempfile.TemporaryDirectory() as folder:
     privacy=Path(folder)/'privacy.luau'
     privacy.write_text(prefix+(ROOT/'tests/privacy_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(privacy)],'privacy')
+    accounts=Path(folder)/'accounts.luau'
+    accounts.write_text(prefix+(ROOT/'tests/account_storage_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(accounts)],'accounts')

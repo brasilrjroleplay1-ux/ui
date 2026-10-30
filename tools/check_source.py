@@ -8,7 +8,16 @@ patches={
     'src/init.luau':[('local bannerFactory = if typeof(properties) == "table" then (properties :: any).startup else nil\n    local banner = if typeof(bannerFactory) == "function" then bannerFactory() else createBanner()', 'local banner = createBanner()')],
     'src/components/window.luau':[('usageAnalytics = false,','usageAnalytics = true,')],
     'src/utility/filesystemManager.luau':[('local DEFAULT_ROOT_PATH = "ConexaoUI"','local DEFAULT_ROOT_PATH = "Rayfield"')],
-    'src/utility/persistencePaths.luau':[('path.join(dir, "conexao.rfld")','path.join(dir, "rayfield.rfld")')],
+     'src/utility/persistencePaths.luau':[
+        ('path.join(dir, "conexao.rfld")','path.join(dir, "rayfield.rfld")'),
+        ('function paths.getSettingsPath(window: { configuration: { customFolder: string? }? }?): (string, string)\n    local dir = variables.fileSystemManager:getPath("Settings")\n    if window and window.configuration and window.configuration.customFolder then\n        dir = path.join(dir, path.sanitizeFolder(window.configuration.customFolder))\n    end', 'function paths.getSettingsPath(): (string, string)\n    local dir = variables.fileSystemManager:getPath("Settings")'),
+    ],
+    'src/utility/persistenceSettings.luau':[
+        ('type SettingsWindow = {\n    configuration: { customFolder: string? }?,', 'type SettingsWindow = {'),
+        ('function persistenceSettings.getSettingsPath(window: SettingsWindow?): (string, string)\n    return paths.getSettingsPath(window)', 'function persistenceSettings.getSettingsPath(): (string, string)\n    return paths.getSettingsPath()'),
+        ('function persistenceSettings.saveSettings(window: SettingsWindow): boolean\n    local dir, fullPath = persistenceSettings.getSettingsPath(window)', 'function persistenceSettings.saveSettings(window: SettingsWindow): boolean\n    local dir, fullPath = persistenceSettings.getSettingsPath()'),
+        ('function persistenceSettings.loadSettings(window: SettingsWindow): boolean\n    local dir, fullPath = persistenceSettings.getSettingsPath(window)', 'function persistenceSettings.loadSettings(window: SettingsWindow): boolean\n    local dir, fullPath = persistenceSettings.getSettingsPath()'),
+    ],
     'src/utility/image.luau':[('w=420&h=420','w=48&h=48')],
     'src/utility/imageCache.luau':[
         ('local headshotPx = 420','local headshotPx = 48'),

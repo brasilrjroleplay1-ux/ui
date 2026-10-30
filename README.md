@@ -1,6 +1,8 @@
-# Conexão UI 3.7.3 · Conexão Studio
+# Conexão UI 3.8.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.8.0**, Configurações se divide em **Aparência, Temas, Salvamento e Controles**. O salvamento separa os dados pelo ID da conta Roblox e pelo projeto: escolhas dos controles, tema, transparência, tamanho, preferências da janela e presets nomeados. Outra conta começa com seus próprios valores. O compartilhamento fica desligado por padrão e cada conta precisa ativá-lo em Salvamento; a mudança vale na próxima execução. Arquivos antigos sem dono identificado são preservados e não são importados automaticamente. [Como funciona](docs/CONFIGURACOES.md).
 
 ## Executar a demonstração
 
@@ -132,17 +134,18 @@ local window = UI:CreateWindow({
         autoLoad = true,
         fileName = "meu_hub",
         customFolder = "meu_projeto",
+        shareAcrossAccounts = false, -- padrão inicial; a escolha lembrada da conta prevalece
     },
 })
 ```
 
-O formato é JSON com extensão `.rfld`, armazenado em `ConexaoUI/Configurations/`. Sem `fileName`, o nome é derivado do Id/nome da janela e `game.PlaceId`. Mantenha esses identificadores estáveis. As preferências nativas usam `ConexaoUI/Settings/conexao.rfld`. Tema, transparência, tamanho e preferências de salvamento/restauração ficam ao lado da configuração em `<nome>.rfld.ui.json`. A restauração inicial acontece quando a janela aparece; controles acrescentados depois também recebem seus valores salvos, e seus callbacks são chamados com os valores restaurados.
+O formato é JSON com extensão `.rfld`. O diretório padrão é `ConexaoUI/Configurations/Accounts/<UserId>/<projeto>/`; o perfil compartilhado usa `ConexaoUI/Configurations/Shared/<projeto>/`. Sem `fileName`, o projeto é derivado do Id/nome da janela e `game.PlaceId`. Mantenha esses identificadores estáveis. As preferências nativas usam o mesmo namespace sob `ConexaoUI/Settings/`. Tema, transparência, tamanho e opções de salvamento/restauração ficam ao lado da configuração em `<nome>.rfld.ui.json`. A escolha individual de compartilhar fica em um arquivo `.scope.json` dentro da pasta privada da conta, mesmo quando o perfil ativo é compartilhado. A restauração inicial acontece quando a janela aparece; controles acrescentados depois também recebem seus valores salvos, e seus callbacks são chamados com os valores restaurados.
 
 As APIs de arquivo dependem do ambiente. No Studio, a base usa armazenamento simulado na sessão; LocalScripts normais não gravam arquivos no PC. A página informa se o armazenamento é da sessão, do dispositivo ou está indisponível, além de mostrar falhas ao salvar. `window:Save()` e `window:Load()` retornam sucesso/falha. Para desativar a automação, use os toggles nas configurações ou informe `configuration = { autoSave = false, autoLoad = false }`. Uma opção explícita no script prevalece sobre a preferência lembrada desses dois toggles.
 
 ## Painel inicial e logos adicionais
 
-`OpenHome()` e `OpenProfile()` abrem a mesma página. A amostragem de FPS e tempo é encerrada ao destruir a janela; dados de rede ficam protegidos contra APIs ausentes. A UI não deduz região de servidor a partir do país do jogador e não anuncia compatibilidade de recursos a partir do nome do executor.
+`OpenHome()` abre o painel de sessão; `OpenProfile()` abre a página do jogador. A amostragem de FPS e tempo é encerrada ao destruir a janela; dados de rede ficam protegidos contra APIs ausentes. A UI não deduz região de servidor a partir do país do jogador e não anuncia compatibilidade de recursos a partir do nome do executor.
 
 ```lua
 window:OpenHome()

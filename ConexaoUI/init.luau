@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.7 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.8 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -25,9 +25,11 @@ local Shell = require(script.Features.Shell)
 local Friends = require(script.Features.Friends)
 local SliderInput = require(script.Features.SliderInput)
 local Feedback = require(script.Features.Feedback)
+local AccountStorage = require(script.Features.AccountStorage)
 
 export type Window = Gen2.Window & {
-    OpenSettings: (self: any) -> (),
+    OpenSettings: (self: any, category: string?) -> (),
+    SetSharedConfiguration: (self: any, enabled: boolean) -> boolean,
     OpenProfile: (self: any) -> any,
     OpenHome: (self: any) -> any,
     GetSessionStats: (self: any) -> any,
@@ -39,14 +41,15 @@ export type Window = Gen2.Window & {
     ThemeId: string?,
     RefreshSize: (self: any) -> UDim2,
 }
-export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean? }
+export type WindowConfiguration = Gen2.WindowConfiguration & { shareAcrossAccounts: boolean? }
+export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 export type SliderProps = Gen2.SliderProps & { format: ("number" | "percent")?, editable: boolean? }
 export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.7.3", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.8.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -129,6 +132,7 @@ function Library:CreateWindow(options)
     if cfg.autoLoad == nil then cfg.autoLoad = cfg.AutoLoad end
     cfg.fileName = cfg.fileName or cfg.FileName or old.Name or ((p.Id or p.name) .. "-" .. tostring(game.PlaceId))
     cfg.customFolder = cfg.customFolder or cfg.CustomFolder
+    local accountScope = AccountStorage.prepare(cfg, p.name)
     local preferences, preferencesDir, preferencesPath = Preferences.load(cfg, p.name)
     if cfg.autoSave == nil then cfg.autoSave = if old.Enabled ~= nil then old.Enabled ~= false elseif preferences.autoSave ~= nil then preferences.autoSave else true end
     if cfg.autoLoad == nil then cfg.autoLoad = if preferences.autoLoad ~= nil then preferences.autoLoad else true end
@@ -150,6 +154,7 @@ function Library:CreateWindow(options)
     self.Windows[id] = window
     window.SettingsTab = window.rfSettings
     window.UIPreferences, window._preferencesDir, window._preferencesPath = preferences, preferencesDir, preferencesPath
+    AccountStorage.attach(window, accountScope)
     window.ThemeId = themeId
     window.screenGui.Name = "ConexaoUI3_" .. id
     -- Install the first-open hooks before adapters that may yield while measuring fonts.
