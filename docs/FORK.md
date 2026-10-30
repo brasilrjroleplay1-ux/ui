@@ -38,4 +38,6 @@ Em 3.6.0, `Shell` dá a cada janela uma cópia das métricas do layout, reduz o 
 
 Em 3.6.1, `Shell` restaura a lateral expandida com nomes das abas e cartão do jogador completo; a busca permanece no grupo de ações do cabeçalho. Abaixo de 480 px, o layout usa a lateral compacta. Títulos das abas ficam limitados à área restante do ícone. `Account` fornece a página Meu perfil, independente de `HomeTab`/`HomePage`, com identidade, executor, versão, ambiente e navegação de retorno. As consultas de sessão/amigos pertencem à Home. As duas páginas têm ciclo de vida próprio, liberação de referências e respostas de avatar protegidas após remoção.
 
+Em 3.6.2, `Header` acrescenta uma marca tipográfica para janelas chamadas Conexão Studio: peso Bold na família de fonte do tema, degradê discreto, linha de assinatura e selo STUDIO. O título original fica preservado; mudar seu texto troca para a apresentação de título personalizado. A versão usa uma apresentação própria sincronizada ao subtítulo, com contraste consistente nas rotas de abertura e restauração.
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

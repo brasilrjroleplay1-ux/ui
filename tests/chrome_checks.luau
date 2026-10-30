@@ -18,6 +18,7 @@ local window = UI:CreateWindow({ Id = "Header354", name = "CONEXÃO STUDIO", sub
 local header = window.BrandHeader
 check(header.mark and #header.mark.links == 2 and header.mark.root.Parent == window.topContainer, "the header contains the shared vector signature")
 check(window.title.Text == "CONEXÃO STUDIO" and header.version.Text == UI.Version and window.title.FontFace == window.theme.TitleFont, "the wordmark retains the script title, version and themed title font")
+check(header.branded and header.wordmark.Visible and not window.title.Visible and header.wordmark.FontFace.Weight == Enum.FontWeight.Bold, "Conexão Studio receives a bold brand wordmark without rewriting the script title")
 local statusTag = window:CreateTag({ text = "Conectado" })
 for _, width in ipairs({ 180, 220, 240, 319, 320, 379, 380, 426, 539, 540, 685, 1000 }) do
     window.main.AbsoluteSize = Vector2.new(width, 450)
@@ -27,6 +28,8 @@ for _, width in ipairs({ 180, 220, 240, 319, 320, 379, 380, 426, 539, 540, 685, 
     check(left.x + left.w < right.x, "wordmark and action group never collide")
     local title = inside(window.titleContainer, left.w, left.h, "title container fits brand cluster")
     inside(window.title, title.w, title.h, "window name remains bounded")
+    if header.wordmark.Visible then inside(header.wordmark, title.w, title.h, "large brand name fits the header") inside(header.wordmarkRule, title.w, title.h, "signature line fits the header") end
+    if header.studioTag.Visible then inside(header.studioTag, title.w, title.h, "Studio signature fits beside the brand name") end
     if header.mark.root.Visible then inside(header.mark.root, left.w, left.h, "vector mark fits brand cluster") end
     if header.pill.Visible then inside(header.pill, title.w, title.h, "version capsule fits title container") end
     if header.caption.Visible then inside(header.caption, title.w, title.h, "signature caption fits title container") end
@@ -42,10 +45,16 @@ end
 statusTag:Remove()
 header:Layout()
 check(not header.tagSlot.Visible, "removing the final status tag clears its metadata slot")
+check(header.wordmark.TextSize == 23 and header.studioTag.Visible and header.versionDisplay.Text == UI.Version, "wide headers show the larger wordmark, Studio signature and readable version")
+window.title.Text = "Outro projeto"
+window.title:GetPropertyChangedSignal("Text"):Fire()
+check(not header.branded and window.title.Visible and not header.wordmark.Visible and not header.studioTag.Visible, "a script can replace the branded title with its own name")
+window.title.Text = "CONEXÃO STUDIO"
+window.title:GetPropertyChangedSignal("Text"):Fire()
 window:Hide()
-check(header.mark.targets[1].node.BackgroundTransparency == 1 and header.pill.BackgroundTransparency == 1, "header decorations disappear when hidden")
+check(header.mark.targets[1].node.BackgroundTransparency == 1 and header.pill.BackgroundTransparency == 1 and header.wordmark.TextTransparency == 1 and header.versionDisplay.TextTransparency == 1, "header decorations disappear when hidden")
 window:Show()
-check(header.mark.targets[1].node.BackgroundTransparency == 0 and header.pill.BackgroundTransparency < 1, "native restore also restores the custom header")
+check(header.mark.targets[1].node.BackgroundTransparency == 0 and header.pill.BackgroundTransparency < 1 and header.wordmark.TextTransparency == 0 and header.versionDisplay.TextTransparency == 0.18, "native restore preserves the wordmark and version contrast")
 window:ToggleMinimise()
 check(window.minimised and header.mark.plate.BackgroundTransparency == 0, "minimising keeps the header signature visible")
 window:ToggleMinimise()

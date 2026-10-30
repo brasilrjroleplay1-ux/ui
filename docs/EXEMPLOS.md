@@ -112,6 +112,8 @@ O cabeçalho e a abertura também vêm prontos em `CreateWindow`. `name`, `subti
 
 `OpenHome` e `OpenProfile` abrem páginas distintas. Clicar no cartão do jogador abre Meu perfil; Voltar retorna à aba anterior. Nenhuma dessas ações recria os controles do seu script ou reaplica seus callbacks. As duas páginas acompanham o tema e a rolagem do painel.
 
+Janelas chamadas `Conexão Studio` usam a marca tipográfica da Conexão no cabeçalho: CONEXÃO em negrito e STUDIO em um selo. Outros nomes permanecem como o título do seu projeto. Alterar o texto do título continua funcionando, e a versão acompanha o subtítulo definido pelo script.
+
 No slider de tamanho, a janela fica parada durante o arraste e aplica o valor ao soltar. Nos seus próprios sliders, o callback nativo recebe `(value, dragging)`: `dragging` é `true` durante o movimento e `false` na confirmação.
 
 Os controles em largura total ajustam título, valor e campo à largura real. Textos longos de toggles e botões quebram em linhas; sliders, inputs e teclas podem empilhar seu conteúdo. Sliders `minimal = true` continuam sem título/valor e com altura compacta. Os callbacks e os valores continuam sendo gerenciados pela base Gen2.

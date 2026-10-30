@@ -1,4 +1,4 @@
-# Conexão UI 3.6.1 · Conexão Studio
+# Conexão UI 3.6.2 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -11,6 +11,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/
 A demo abre em **Início**, com saudação, servidor, executor e amigos, usando o tema neutro `default`. **Configurações** continua pronta na lateral, com transparência, tamanho, salvamento e temas. O cartão inferior mostra avatar, nome e executor e abre **Meu perfil**, uma página separada. A demo 3.6 salva suas preferências em `conexao_demo_studio36`.
 
 A **3.6.1** mantém o cabeçalho de **44 px** e restaura a busca no topo. A lateral de **196 px** mostra ícones e nomes das abas, com avatar, nome do jogador e executor no rodapé. Abaixo de 480 px de largura de janela, ela se recolhe para 64 px para preservar a área dos controles. O topo usa marca, título e subtítulo na mesma linha. Nome, subtítulo e ícone continuam personalizáveis em `CreateWindow`.
+
+Na **3.6.2**, o título Conexão Studio usa **CONEXÃO** maior e em negrito, com degradê discreto ligado ao tema, linha de assinatura e selo **STUDIO**. A versão mantém o contraste ao reabrir a janela. A marca se ajusta antes de tocar nos botões do topo; janelas com outros nomes continuam exibindo o título definido pelo script.
 
 A abertura de **Conexão Studio** monta os elos da marca, faz uma passagem de luz pelo cartão e avança o indicador pelas etapas de construção da interface. O cartão sai antes da entrada da janela, que expande, revela o cabeçalho e depois o conteúdo. A entrada da janela termina em cerca de 0,76 s; ao reabrir, continua usando a restauração nativa. O cartão se ajusta à largura e à altura da tela. Fechar ou descarregar durante a sequência cancela a abertura e remove suas conexões. Os créditos da base permanecem no código e no repositório.
 
