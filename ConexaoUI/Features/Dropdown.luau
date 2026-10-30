@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: MPL-2.0
 -- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
 local Surface = require(script.Parent.Surface)
+local Popover = require(script.Parent.DropdownPopover)
 local Scrolling = require(script.Parent.Scrolling)
 local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local Dropdown = {}
@@ -58,16 +59,15 @@ function Dropdown.attach(control, props)
     function control:_open()
         if self._isOpen or self.locked or self.window.unloaded then return end
         local w = self.window
-        local picker = Surface.new(w, self.name, self.multiSelect and "Escolha uma ou mais opções" or "Escolha uma opção", { footer = true })
+        local picker = Popover.new(w, self)
         self.selectionPanel, self._isOpen = picker, true
         self.chevron.Rotation = 0
         picker.onClose = function()
             self.selectionPanel, self._isOpen = nil, false
             if self.chevron.Parent then self.chevron.Rotation = 180 end
         end
-        picker:Connect(self.main.Destroying, function() picker:Close() end)
         picker.search = w:Create("TextBox", {
-            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 40),
+            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 34),
             Text = "", PlaceholderText = "Buscar opção...", ClearTextOnFocus = false,
             TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0,
             BackgroundTransparency = 0.88, ZIndex = 4016,
@@ -75,19 +75,18 @@ function Dropdown.attach(control, props)
         Surface.round(w, picker.search, 11)
         w:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
         picker.list = w:Create("ScrollingFrame", {
-            Parent = picker.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
+            Parent = picker.content, Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 1, -44),
             BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
             AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
             ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 4012,
         }, { ScrollBarImageColor3 = "AccentColor" })
-        picker.grid = w:Create("UIGridLayout", {
-            Parent = picker.list, CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.5, -7, 0, 50),
-            SortOrder = Enum.SortOrder.LayoutOrder,
+        picker.grid = w:Create("UIListLayout", {
+            Parent = picker.list, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder,
         })
         Scrolling.frame(w, picker, picker.list, picker.grid)
         w:Create("UIPadding", { Parent = picker.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
         picker.empty = Surface.label(w, picker.content, "Nenhuma opção encontrada", {
-            Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
+            Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 0, 40), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         })
         picker.items, picker.optionConnections = {}, {}
         function picker:Sync()
@@ -100,6 +99,8 @@ function Dropdown.attach(control, props)
                 item.frame.BackgroundTransparency = chosen and 0.65 or 0.95
                 item.stroke.Transparency = chosen and 0.15 or 0.7
                 item.marker.Text = chosen and "✓" or ""
+                item.checkbox.BackgroundTransparency = chosen and 0 or 1
+                item.checkStroke.Transparency = chosen and 0.1 or 0.55
                 item.label.TextTransparency = chosen and 0 or 0.15
             end
             self.empty.Visible = count == 0
@@ -115,21 +116,32 @@ function Dropdown.attach(control, props)
             self.items = {}
             for index, name in ipairs(control.options) do
                 local frame = w:Create("Frame", {
-                    Name = name, Parent = self.list, BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
+                    Name = name, Parent = self.list, Size = UDim2.new(1, -8, 0, 40), BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
                 }, { BackgroundColor3 = "AccentColor" })
                 Surface.round(w, frame, 12)
                 local stroke = w:Create("UIStroke", { Parent = frame, Thickness = 1 }, { Color = "AccentStroke" })
                 local label = Surface.label(w, frame, name, {
-                    Position = UDim2.fromOffset(12, 4), Size = UDim2.new(1, -46, 1, -8), TextSize = 13,
+                    Position = UDim2.fromOffset(44, 4), Size = UDim2.new(1, -56, 1, -8), TextSize = 13,
+                    TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
                 })
-                local marker = Surface.label(w, frame, "", {
-                    AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(22, 22), TextSize = 18,
+                local checkbox = w:Create("Frame", {
+                    Name = "Checkbox", Parent = frame, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0),
+                    Size = UDim2.fromOffset(20, 20), BorderSizePixel = 0, ZIndex = 4014,
+                }, { BackgroundColor3 = "AccentColor" })
+                Surface.round(w, checkbox, 5)
+                local checkStroke = w:Create("UIStroke", { Parent = checkbox, Thickness = 1 }, { Color = "AccentStroke" })
+                local marker = Surface.label(w, checkbox, "", {
+                    Size = UDim2.fromScale(1, 1), TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4015,
                 })
+                w.themeProperties[marker].TextColor3 = { "AccentColor", function(c)
+                    return (c.R * 0.299 + c.G * 0.587 + c.B * 0.114) > 0.58 and Color3.fromRGB(12, 17, 25) or Color3.new(1, 1, 1)
+                end }
+                marker.TextColor3 = w.themeProperties[marker].TextColor3[2](w.theme.AccentColor)
                 local hit = w:Create("TextButton", {
                     Parent = frame, Text = "", BackgroundTransparency = 1, AutoButtonColor = false,
                     Size = UDim2.fromScale(1, 1), ZIndex = 4017,
                 })
-                local item = { name = name, frame = frame, label = label, marker = marker, stroke = stroke, hit = hit }
+                local item = { name = name, frame = frame, label = label, marker = marker, checkbox = checkbox, checkStroke = checkStroke, stroke = stroke, hit = hit }
                 table.insert(self.items, item)
                 table.insert(self.optionConnections, self:Connect(hit.MouseButton1Click, function()
                     if control.locked then return end
@@ -145,6 +157,7 @@ function Dropdown.attach(control, props)
                 end))
             end
             self:Sync()
+            self:Layout()
         end
         picker:Connect(picker.search:GetPropertyChangedSignal("Text"), function()
             picker.list.CanvasPosition = Vector2.new(0, 0)
@@ -159,20 +172,21 @@ function Dropdown.attach(control, props)
         for index, action in ipairs(actions) do
             local button = Surface.button(w, picker.footer, action[1], {
                 Position = UDim2.new((index - 1) / #actions, index == 1 and 0 or 3, 0, 0),
-                Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 12,
+                Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 11,
             }, index == #actions)
             picker.actions[index] = button
             picker:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
-        end
-        picker.onLayout = function(width)
-            local cols = width < 420 and 1 or 2
-            picker.grid.CellSize = UDim2.new(1 / cols, cols == 1 and -8 or -9, 0, 50)
         end
         picker:Layout()
         picker:Rebuild()
     end
     -- The inline card remains collapsed, even when the native methods refresh/filter options.
     control._resizeToOptions = function() end
+    local lock = control.Lock
+    function control:Lock(...)
+        self:_close()
+        return lock(self, ...)
+    end
     for _, name in ipairs({ "Set", "Refresh", "Add", "Remove" }) do
         local original = control[name]
         control[name] = function(self, ...)

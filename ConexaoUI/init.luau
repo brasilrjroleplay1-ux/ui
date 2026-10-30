@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.8 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.9 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -26,6 +26,7 @@ local Friends = require(script.Features.Friends)
 local SliderInput = require(script.Features.SliderInput)
 local Feedback = require(script.Features.Feedback)
 local AccountStorage = require(script.Features.AccountStorage)
+local ControlNotifications = require(script.Features.ControlNotifications)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any, category: string?) -> (),
@@ -45,11 +46,21 @@ export type WindowConfiguration = Gen2.WindowConfiguration & { shareAcrossAccoun
 export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
-export type SliderProps = Gen2.SliderProps & { format: ("number" | "percent")?, editable: boolean? }
+export type ControlNotificationProps = {
+    notification: boolean?, notificationMessage: (string | (...any) -> string)?,
+    notificationTitle: string?, notificationType: ("info" | "success" | "warning" | "error")?, notificationDuration: number?,
+}
+export type ButtonProps = Gen2.ButtonProps & ControlNotificationProps
+export type ToggleProps = Gen2.ToggleProps & ControlNotificationProps
+export type DropdownProps = Gen2.DropdownProps & ControlNotificationProps
+export type InputProps = Gen2.InputProps & ControlNotificationProps
+export type KeybindProps = Gen2.KeybindProps & ControlNotificationProps
+export type ColorPickerProps = Gen2.ColorPickerProps & ControlNotificationProps
+export type SliderProps = Gen2.SliderProps & ControlNotificationProps & { format: ("number" | "percent")?, editable: boolean? }
 export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.8.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.9.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -94,7 +105,9 @@ local function adaptHost(host)
                 local mapped = properties(props)
                 if kind == "Slider" then SliderInput.prepare(mapped) end
                 if kind == "ColorPicker" and mapped.color == nil and mapped.Color == nil then mapped.color = mapped.value or mapped.Value end
+                local enableNotifications = ControlNotifications.prepare(self.window, kind, mapped)
                 local control = method(self, mapped)
+                enableNotifications()
                 if control then
                     if kind == "Slider" then SliderInput.attach(control, mapped) end
                     Controls.attach(control)
@@ -212,6 +225,11 @@ function Library:CreateWindow(options)
     function window:Hide(...)
         if self._conexaoPanel then self._conexaoPanel:Close() end
         return hide(self, ...)
+    end
+    local minimise = window.ToggleMinimise
+    function window:ToggleMinimise(...)
+        if self._conexaoPanel then self._conexaoPanel:Close() end
+        return minimise(self, ...)
     end
     local unload = window.Unload
     function window:Unload()

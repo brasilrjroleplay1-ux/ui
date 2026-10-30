@@ -1,4 +1,4 @@
--- Teste completo da Conexão UI 3.8. Os controles deste arquivo pertencem ao script.
+-- Teste completo da Conexão UI 3.9. Os controles deste arquivo pertencem ao script.
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/ConexaoUI.luau"))()
 local window = UI:CreateWindow({
     Id = "ConexaoDemo3", -- substitui a janela da demo inicial ao executar este exemplo
@@ -53,13 +53,20 @@ end
 local secaoTestes = testes:CreateSection({ name = "Botão e toggle" })
 local botao = testes:CreateButton({
     name = "Testar botão", icon = 125823673784681,
-    callback = function() notificar("Botão clicado", "O callback do botão foi executado.", "success") end,
+    notification = true,
+    notificationTitle = "Botão clicado", notificationType = "success",
+    notificationMessage = "O callback do botão foi executado.",
+    callback = function() registrar("Botão clicado", "O callback do botão foi executado.") end,
 })
 local ativacao = testes:CreateToggle({
     name = "Toggle com notificação", flag = "demo/ativo", value = false,
-    callback = function(ativo)
-        notificar("Toggle alterado", ativo and "Você ativou o toggle." or "Você desativou o toggle.", ativo and "success" or "info")
-    end,
+    notification = true, notificationTitle = "Toggle alterado",
+    notificationMessage = function(ativo) return ativo and "Você ativou o toggle." or "Você desativou o toggle." end,
+    callback = function(ativo) registrar("Toggle alterado", ativo and "Você ativou o toggle." or "Você desativou o toggle.") end,
+})
+-- false dispensa notificationMessage; o callback continua funcionando normalmente.
+testes:CreateButton({ name = "Botão sem notificação", notification = false,
+    callback = function() registrar("Sem notificação", "O callback foi executado sem criar um aviso.") end,
 })
 testes:CreateToggle({
     name = "Bloquear o botão de teste", value = false, forgetState = true,
@@ -118,14 +125,16 @@ sliders:CreateSlider({ minimal = true, flag = "demo/compacto", range = { 0, 100 
 
 -- DROPDOWNS: false permite uma escolha; true permite várias, inclusive todas.
 local opcoes = { "Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5" }
-dropdowns:CreateText({ name = "Uma ou várias escolhas", text = "O seletor abre dentro do painel. Teste a busca, Padrão, Limpar e Selecionar todos no dropdown múltiplo." })
+dropdowns:CreateText({ name = "Uma ou várias escolhas", text = "A lista abre ao lado do campo, sem trocar de aba. Marque ou desmarque os checkboxes; teste a busca, Padrão, Limpar e Selecionar todos." })
 dropdowns:CreateDropdown({
     name = "Escolha única", flag = "demo/unica", options = opcoes, value = "Opção 1", multiSelect = false,
-    callback = function(escolha) notificar("Escolha única", textoDaSelecao(escolha)) end,
+    notification = true, notificationMessage = textoDaSelecao,
+    callback = function(escolha) registrar("Escolha única", textoDaSelecao(escolha)) end,
 })
 local multiplo = dropdowns:CreateDropdown({
     name = "Escolha múltipla", flag = "demo/multipla", options = opcoes, value = { "Opção 1" }, multiSelect = true,
-    callback = function(escolhas) notificar("Escolha múltipla", textoDaSelecao(escolhas)) end,
+    notification = true, notificationMessage = textoDaSelecao,
+    callback = function(escolhas) registrar("Escolha múltipla", textoDaSelecao(escolhas)) end,
 })
 local listaLonga = {}
 for i = 1, 30 do table.insert(listaLonga, string.format("Item %02d", i)) end

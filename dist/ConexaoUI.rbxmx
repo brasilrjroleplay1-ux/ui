@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.8 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.9 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -27,6 +27,7 @@ local Friends = require(script.Features.Friends)
 local SliderInput = require(script.Features.SliderInput)
 local Feedback = require(script.Features.Feedback)
 local AccountStorage = require(script.Features.AccountStorage)
+local ControlNotifications = require(script.Features.ControlNotifications)
 
 export type Window = Gen2.Window &amp; {
     OpenSettings: (self: any, category: string?) -&gt; (),
@@ -46,11 +47,21 @@ export type WindowConfiguration = Gen2.WindowConfiguration &amp; { shareAcrossAc
 export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: boolean?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
-export type SliderProps = Gen2.SliderProps &amp; { format: ("number" | "percent")?, editable: boolean? }
+export type ControlNotificationProps = {
+    notification: boolean?, notificationMessage: (string | (...any) -&gt; string)?,
+    notificationTitle: string?, notificationType: ("info" | "success" | "warning" | "error")?, notificationDuration: number?,
+}
+export type ButtonProps = Gen2.ButtonProps &amp; ControlNotificationProps
+export type ToggleProps = Gen2.ToggleProps &amp; ControlNotificationProps
+export type DropdownProps = Gen2.DropdownProps &amp; ControlNotificationProps
+export type InputProps = Gen2.InputProps &amp; ControlNotificationProps
+export type KeybindProps = Gen2.KeybindProps &amp; ControlNotificationProps
+export type ColorPickerProps = Gen2.ColorPickerProps &amp; ControlNotificationProps
+export type SliderProps = Gen2.SliderProps &amp; ControlNotificationProps &amp; { format: ("number" | "percent")?, editable: boolean? }
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.8.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.9.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -95,7 +106,9 @@ local function adaptHost(host)
                 local mapped = properties(props)
                 if kind == "Slider" then SliderInput.prepare(mapped) end
                 if kind == "ColorPicker" and mapped.color == nil and mapped.Color == nil then mapped.color = mapped.value or mapped.Value end
+                local enableNotifications = ControlNotifications.prepare(self.window, kind, mapped)
                 local control = method(self, mapped)
+                enableNotifications()
                 if control then
                     if kind == "Slider" then SliderInput.attach(control, mapped) end
                     Controls.attach(control)
@@ -213,6 +226,11 @@ function Library:CreateWindow(options)
     function window:Hide(...)
         if self._conexaoPanel then self._conexaoPanel:Close() end
         return hide(self, ...)
+    end
+    local minimise = window.ToggleMinimise
+    function window:ToggleMinimise(...)
+        if self._conexaoPanel then self._conexaoPanel:Close() end
+        return minimise(self, ...)
     end
     local unload = window.Unload
     function window:Unload()
@@ -21086,10 +21104,45 @@ function Controls.attach(control)
 end
 
 return Controls
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">ControlNotifications</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Optional script-owned messages; notifications are disabled unless explicitly enabled.
+local Notifications = {}
+local interactive = { Button = true, Toggle = true, Slider = true, Dropdown = true, Input = true, Keybind = true, ColorPicker = true }
+local function prop(p, name)
+    if p[name] ~= nil then return p[name] end
+    return p[name:sub(1, 1):upper() .. name:sub(2)]
+end
+function Notifications.prepare(window, kind, props)
+    if not interactive[kind] or prop(props, "notification") ~= true then return function() end end
+    local message = prop(props, "notificationMessage")
+    assert(type(message) == "function" or (type(message) == "string" and message:match("%S")), "notification = true requires notificationMessage (text or function)")
+    local callback = props.callback or props.Callback or function() end
+    local armed = false
+    props.callback = function(...)
+        -- Snapshot before calling user code: it may yield or manually load a profile.
+        local announce = armed and not window._loading and not window.unloaded
+        local args = table.pack(...)
+        local result = table.pack(callback(table.unpack(args, 1, args.n)))
+        if announce and not window.unloaded and not (kind == "Slider" and args[2] == true) then
+            local content = type(message) == "function" and message(table.unpack(args, 1, args.n)) or message
+            if type(content) == "string" and content:match("%S") then
+                window:Notify({
+                    title = prop(props, "notificationTitle") or props.name or props.Name or kind,
+                    content = content, type = prop(props, "notificationType"), duration = prop(props, "notificationDuration"),
+                })
+            end
+        end
+        return table.unpack(result, 1, result.n)
+    end
+    return function() armed = true end
+end
+return Notifications
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Dropdown</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
 local Surface = require(script.Parent.Surface)
+local Popover = require(script.Parent.DropdownPopover)
 local Scrolling = require(script.Parent.Scrolling)
 local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local Dropdown = {}
@@ -21146,16 +21199,15 @@ function Dropdown.attach(control, props)
     function control:_open()
         if self._isOpen or self.locked or self.window.unloaded then return end
         local w = self.window
-        local picker = Surface.new(w, self.name, self.multiSelect and "Escolha uma ou mais opções" or "Escolha uma opção", { footer = true })
+        local picker = Popover.new(w, self)
         self.selectionPanel, self._isOpen = picker, true
         self.chevron.Rotation = 0
         picker.onClose = function()
             self.selectionPanel, self._isOpen = nil, false
             if self.chevron.Parent then self.chevron.Rotation = 180 end
         end
-        picker:Connect(self.main.Destroying, function() picker:Close() end)
         picker.search = w:Create("TextBox", {
-            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 40),
+            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 34),
             Text = "", PlaceholderText = "Buscar opção...", ClearTextOnFocus = false,
             TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0,
             BackgroundTransparency = 0.88, ZIndex = 4016,
@@ -21163,19 +21215,18 @@ function Dropdown.attach(control, props)
         Surface.round(w, picker.search, 11)
         w:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
         picker.list = w:Create("ScrollingFrame", {
-            Parent = picker.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
+            Parent = picker.content, Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 1, -44),
             BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
             AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
             ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 4012,
         }, { ScrollBarImageColor3 = "AccentColor" })
-        picker.grid = w:Create("UIGridLayout", {
-            Parent = picker.list, CellPadding = UDim2.fromOffset(10, 10), CellSize = UDim2.new(0.5, -7, 0, 50),
-            SortOrder = Enum.SortOrder.LayoutOrder,
+        picker.grid = w:Create("UIListLayout", {
+            Parent = picker.list, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder,
         })
         Scrolling.frame(w, picker, picker.list, picker.grid)
         w:Create("UIPadding", { Parent = picker.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
         picker.empty = Surface.label(w, picker.content, "Nenhuma opção encontrada", {
-            Position = UDim2.fromOffset(0, 58), Size = UDim2.new(1, 0, 0, 44), TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
+            Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 0, 40), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         })
         picker.items, picker.optionConnections = {}, {}
         function picker:Sync()
@@ -21188,6 +21239,8 @@ function Dropdown.attach(control, props)
                 item.frame.BackgroundTransparency = chosen and 0.65 or 0.95
                 item.stroke.Transparency = chosen and 0.15 or 0.7
                 item.marker.Text = chosen and "✓" or ""
+                item.checkbox.BackgroundTransparency = chosen and 0 or 1
+                item.checkStroke.Transparency = chosen and 0.1 or 0.55
                 item.label.TextTransparency = chosen and 0 or 0.15
             end
             self.empty.Visible = count == 0
@@ -21203,21 +21256,32 @@ function Dropdown.attach(control, props)
             self.items = {}
             for index, name in ipairs(control.options) do
                 local frame = w:Create("Frame", {
-                    Name = name, Parent = self.list, BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
+                    Name = name, Parent = self.list, Size = UDim2.new(1, -8, 0, 40), BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
                 }, { BackgroundColor3 = "AccentColor" })
                 Surface.round(w, frame, 12)
                 local stroke = w:Create("UIStroke", { Parent = frame, Thickness = 1 }, { Color = "AccentStroke" })
                 local label = Surface.label(w, frame, name, {
-                    Position = UDim2.fromOffset(12, 4), Size = UDim2.new(1, -46, 1, -8), TextSize = 13,
+                    Position = UDim2.fromOffset(44, 4), Size = UDim2.new(1, -56, 1, -8), TextSize = 13,
+                    TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
                 })
-                local marker = Surface.label(w, frame, "", {
-                    AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(22, 22), TextSize = 18,
+                local checkbox = w:Create("Frame", {
+                    Name = "Checkbox", Parent = frame, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0),
+                    Size = UDim2.fromOffset(20, 20), BorderSizePixel = 0, ZIndex = 4014,
+                }, { BackgroundColor3 = "AccentColor" })
+                Surface.round(w, checkbox, 5)
+                local checkStroke = w:Create("UIStroke", { Parent = checkbox, Thickness = 1 }, { Color = "AccentStroke" })
+                local marker = Surface.label(w, checkbox, "", {
+                    Size = UDim2.fromScale(1, 1), TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4015,
                 })
+                w.themeProperties[marker].TextColor3 = { "AccentColor", function(c)
+                    return (c.R * 0.299 + c.G * 0.587 + c.B * 0.114) &gt; 0.58 and Color3.fromRGB(12, 17, 25) or Color3.new(1, 1, 1)
+                end }
+                marker.TextColor3 = w.themeProperties[marker].TextColor3[2](w.theme.AccentColor)
                 local hit = w:Create("TextButton", {
                     Parent = frame, Text = "", BackgroundTransparency = 1, AutoButtonColor = false,
                     Size = UDim2.fromScale(1, 1), ZIndex = 4017,
                 })
-                local item = { name = name, frame = frame, label = label, marker = marker, stroke = stroke, hit = hit }
+                local item = { name = name, frame = frame, label = label, marker = marker, checkbox = checkbox, checkStroke = checkStroke, stroke = stroke, hit = hit }
                 table.insert(self.items, item)
                 table.insert(self.optionConnections, self:Connect(hit.MouseButton1Click, function()
                     if control.locked then return end
@@ -21233,6 +21297,7 @@ function Dropdown.attach(control, props)
                 end))
             end
             self:Sync()
+            self:Layout()
         end
         picker:Connect(picker.search:GetPropertyChangedSignal("Text"), function()
             picker.list.CanvasPosition = Vector2.new(0, 0)
@@ -21247,20 +21312,21 @@ function Dropdown.attach(control, props)
         for index, action in ipairs(actions) do
             local button = Surface.button(w, picker.footer, action[1], {
                 Position = UDim2.new((index - 1) / #actions, index == 1 and 0 or 3, 0, 0),
-                Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 12,
+                Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 11,
             }, index == #actions)
             picker.actions[index] = button
             picker:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
-        end
-        picker.onLayout = function(width)
-            local cols = width &lt; 420 and 1 or 2
-            picker.grid.CellSize = UDim2.new(1 / cols, cols == 1 and -8 or -9, 0, 50)
         end
         picker:Layout()
         picker:Rebuild()
     end
     -- The inline card remains collapsed, even when the native methods refresh/filter options.
     control._resizeToOptions = function() end
+    local lock = control.Lock
+    function control:Lock(...)
+        self:_close()
+        return lock(self, ...)
+    end
     for _, name in ipairs({ "Set", "Refresh", "Add", "Remove" }) do
         local original = control[name]
         control[name] = function(self, ...)
@@ -21276,6 +21342,123 @@ function Dropdown.attach(control, props)
 end
 
 return Dropdown
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">DropdownPopover</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- A bounded, anchored surface. It never changes the selected tab or consumes layout space.
+local Surface = require(script.Parent.Surface)
+local input, run, gui = game:GetService("UserInputService"), game:GetService("RunService"), game:GetService("GuiService")
+local Popover = {}
+
+local function contains(node, point)
+    local p, s = node.AbsolutePosition, node.AbsoluteSize
+    return point.X &gt;= p.X and point.Y &gt;= p.Y and point.X &lt;= p.X + s.X and point.Y &lt;= p.Y + s.Y
+end
+
+function Popover.new(window, control)
+    if window._conexaoPanel then window._conexaoPanel:Close() end
+    local self = { window = window, tab = window.selectedTab, connections = {}, closed = false, __type = "DropdownPopover" }
+    window._conexaoPanel = self
+    function self:Connect(signal, callback) return window:ConnectFor(self, signal, callback) end
+    function self:Close()
+        if self.closed then return end
+        self.closed = true
+        if window._conexaoPanel == self then window._conexaoPanel = nil end
+        window:DisconnectMany(self, table.clone(self.connections))
+        if self.onClose then self.onClose() end
+        window:DestroySubtree(self.main)
+    end
+    self.main = window:Create("Frame", {
+        Name = "DropdownPopover", Parent = window.screenGui, BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 0, Active = true, ClipsDescendants = true, ZIndex = 4010,
+        Size = UDim2.fromOffset(300, 300),
+    })
+    self.root, self.panel = self.main, self.main
+    Surface.round(window, self.main, 14)
+    window:Create("UIGradient", { Parent = self.main, Rotation = 90 }, { Color = "WindowColor" })
+    window:Create("UIStroke", { Parent = self.main, Thickness = 1, Transparency = 0.25 }, { Color = "AccentStroke" })
+    self.title = Surface.label(window, self.main, control.name, {
+        Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -60, 0, 22), TextSize = 15,
+        TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
+    })
+    self.subtitle = Surface.label(window, self.main, "", {
+        Position = UDim2.fromOffset(14, 36), Size = UDim2.new(1, -28, 0, 18), TextSize = 11, TextTransparency = 0.25,
+    })
+    self.closeButton = Surface.button(window, self.main, "×", {
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(32, 32), TextSize = 20,
+    })
+    self.content = window:Create("Frame", {
+        Parent = self.main, BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 62),
+        Size = UDim2.new(1, -24, 1, -122), ZIndex = 4011,
+    })
+    self.footer = window:Create("Frame", {
+        Parent = self.main, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 1, -48),
+        Size = UDim2.new(1, -24, 0, 36), ZIndex = 4011,
+    })
+    function self:Layout()
+        if self.closed then return end
+        if window.unloaded or window.hidden or window.minimised or not control.main.Parent or window.selectedTab ~= self.tab then self:Close() return end
+        local ancestor = control.main
+        while ancestor and ancestor ~= window.screenGui do
+            if ancestor:IsA("GuiObject") and not ancestor.Visible then self:Close() return end
+            ancestor = ancestor.Parent
+        end
+        local camera = workspace.CurrentCamera
+        local view = camera and camera.ViewportSize or window.screenGui.AbsoluteSize
+        if not view or view.X &lt;= 0 or view.Y &lt;= 0 then return end
+        local top, bottom = Vector2.new(0, 0), Vector2.new(0, 0)
+        local ok, a, b = pcall(gui.GetGuiInset, gui)
+        if ok and typeof(a) == "Vector2" then top = a end
+        if ok and typeof(b) == "Vector2" then bottom = b end
+        local left, upper = top.X + 8, top.Y + 8
+        local right, lower = view.X - bottom.X - 8, view.Y - bottom.Y - 8
+        local width = math.min(300, math.max(1, right - left))
+        local height = math.min(168 + math.clamp(#control.options, 1, 5) * 44, math.max(1, lower - upper))
+        local p, s = control.main.AbsolutePosition, control.main.AbsoluteSize
+        -- Close once the anchor scrolls outside its owning viewport.
+        local parent = control.main.Parent
+        while parent and parent ~= window.screenGui do
+            if parent:IsA("ScrollingFrame") then
+                local at, size = parent.AbsolutePosition, parent.AbsoluteSize
+                if p.Y + s.Y &lt;= at.Y or p.Y &gt;= at.Y + size.Y then self:Close() return end
+            end
+            parent = parent.Parent
+        end
+        local x, y, side = p.X + s.X + 8, p.Y, "right"
+        if x + width &gt; right then
+            if p.X - width - 8 &gt;= left then x, side = p.X - width - 8, "left"
+            else
+                x, y, side = p.X + s.X - width, p.Y + s.Y + 8, "below"
+                if y + height &gt; lower and p.Y - height - 8 &gt;= upper then y, side = p.Y - height - 8, "above" end
+            end
+        end
+        x, y = math.clamp(x, left, math.max(left, right - width)), math.clamp(y, upper, math.max(upper, lower - height))
+        -- Layout signals can arrive during a resize animation, when Scrolling defers writes.
+        local scrollReady = not window.animating and not window._revealing
+            and not (window.WindowSizeSlider and window.WindowSizeSlider.dragging)
+        if scrollReady and not self.scrollReady then
+            for _, scroll in ipairs(self._scrollers or {}) do scroll:Queue() end
+        end
+        self.scrollReady = scrollReady
+        local signature = string.format("%g:%g:%g:%g", x, y, width, height)
+        self.side = side
+        if self.geometry == signature then return end
+        self.geometry = signature
+        self.main.Position, self.main.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(width, height)
+    end
+    self:Connect(self.closeButton.MouseButton1Click, function() self:Close() end)
+    self:Connect(input.InputBegan, function(key)
+        if key.KeyCode == Enum.KeyCode.Escape then self:Close()
+        elseif key.UserInputType == Enum.UserInputType.MouseButton1 or key.UserInputType == Enum.UserInputType.Touch then
+            local point = key.Position
+            if point and not contains(self.main, point) and not contains(control.main, point) then self:Close() end
+        end
+    end)
+    self:Connect(run.Heartbeat, function() self:Layout() end)
+    self:Connect(control.main.Destroying, function() self:Close() end)
+    return self
+end
+
+return Popover
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Entrance</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- The native Show path still owns configuration loading, cursor and restore behavior.
@@ -23507,7 +23690,7 @@ function Startup.new(theme, version)
     track(edge, "Transparency", 0.4)
     self.scale = create("UIScale", { Parent = self.panel, Scale = 0.92 })
     text("Eyebrow", "CONEXÃO / INTERFACE", 28, 14, 280, 9, true)
-    self.version = text("Version", "v" .. tostring(version or "3.8"), 334, 14, 58, 10, false)
+    self.version = text("Version", "v" .. tostring(version or "3.9"), 334, 14, 58, 10, false)
     self.version.TextXAlignment = Enum.TextXAlignment.Right
     self.mark = Brand.new(create, self.panel, 64, theme)
     self.mark.root.Position = UDim2.fromOffset(28, 52)

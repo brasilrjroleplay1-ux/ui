@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.8.0", "new entry point is bundled")
+check(UI.Version == "3.9.0", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -253,7 +253,7 @@ w:CloseProfile()
 multi:Open()
 local panel = multi.selectionPanel
 check(panel and panel.search and #panel.items == 3 and #panel.actions == 3, "multi dropdown opens a separate searchable panel with bulk actions")
-check(panel.root.Parent == w.elements and w.selectedTab == panel.tab and not panel.scrim, "dropdown renders as a native content page without a fullscreen popup")
+check(panel.root.Parent == w.screenGui and w.selectedTab == tab and not panel.scrim, "dropdown stays anchored over the same tab without replacing its content")
 check(multi.main.Size.Y.Offset == 41 and multi.panel.Visible == false, "dropdown does not expand or push the underlying page")
 panel.search.Text = "b"
 -- The upstream table shim does not emit property events on existing raw keys.
@@ -266,12 +266,12 @@ check(#multi.value == 0, "clear removes every selected value")
 panel.actions[1].MouseButton1Click:Fire()
 check(#multi.value == 1 and multi.value[1] == "A", "default restores the script's original choices")
 panel.items[2].hit.MouseButton1Click:Fire()
-check(#multi.value == 2 and table.find(multi.value, "B") ~= nil, "a multi-select card toggles independently without closing the panel")
+check(#multi.value == 2 and table.find(multi.value, "B") ~= nil, "a multi-select checkbox toggles independently without closing the panel")
 multi:Refresh({ "A", "B", "C", "D" })
 check(#panel.items == 4 and multi.main.Size.Y.Offset == 41, "Refresh rebuilds the open panel while preserving the compact header")
 panel.closeButton.MouseButton1Click:Fire()
-check(not multi._isOpen and not multi.selectionPanel and not w._conexaoPanel, "Back closes the picker and returns to the previous page")
-check(w.selectedTab == tab, "closing a dropdown restores the page containing its control")
+check(not multi._isOpen and not multi.selectionPanel and not w._conexaoPanel, "Close dismisses only the anchored picker")
+check(w.selectedTab == tab, "closing a dropdown keeps its original page selected")
 multi:Open()
 local navPanel = multi.selectionPanel
 w.SettingsTab.topbarItemInteract.MouseButton1Click:Fire()
@@ -289,7 +289,7 @@ local oldSize, oldPosition, oldElementsSize = w.main.AbsoluteSize, w.main.Absolu
 w.main.AbsoluteSize, w.main.AbsolutePosition = Vector2.new(320, 480), Vector2.new(0, 0)
 w.elements.AbsoluteSize = Vector2.new(256, 416)
 smallPanel:Layout()
-check(smallPanel.grid.CellSize.X.Scale == 1 and smallPanel.main.Size.X.Scale == 1 and smallPanel.root.Parent == w.elements, "a narrow phone viewport gets one column and a panel inside its safe margins")
+check(smallPanel.grid:IsA("UIListLayout") and smallPanel.main.Size.X.Offset <= 300 and smallPanel.root.Parent == w.screenGui, "a narrow window retains a bounded one-column floating list")
 w.main.AbsoluteSize, w.main.AbsolutePosition, w.elements.AbsoluteSize = oldSize, oldPosition, oldElementsSize
 multi:Close()
 multi.main.AbsoluteSize = Vector2.new(240, 70)

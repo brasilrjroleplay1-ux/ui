@@ -49,3 +49,6 @@ with tempfile.TemporaryDirectory() as folder:
     accounts=Path(folder)/'accounts.luau'
     accounts.write_text(prefix+(ROOT/'tests/account_storage_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(accounts)],'accounts')
+    dropdown_notifications=Path(folder)/'dropdown-notifications.luau'
+    dropdown_notifications.write_text(prefix+(ROOT/'tests/dropdown_notification_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(dropdown_notifications)],'dropdown-notifications')

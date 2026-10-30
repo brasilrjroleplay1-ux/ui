@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.8 · API Gen2
+# Exemplos da Conexão UI 3.9 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -51,7 +51,9 @@ local multi = tab:CreateDropdown({ name = "Painéis", flag = "paineis", multiSel
 multi:Set({ "Perfil", "Dados" })
 ```
 
-Ao clicar no dropdown, a Conexão abre o seletor na própria área de conteúdo, com a sidebar acessível: busca, cartões em duas colunas (uma no celular) e botões Padrão/Limpar. Dropdown múltiplo também tem Selecionar todos; essa ação seleciona a lista inteira, inclusive se houver filtro. Padrão restaura o `value` inicial definido pelo script. Seleção única volta à aba de origem ao escolher; seleção múltipla mantém o seletor aberto. Os valores são salvos automaticamente.
+Ao clicar, uma lista compacta abre ao lado direito do campo, sem trocar de aba nem expandir os outros controles. Cada opção tem um checkbox: no modo múltiplo, clicar marca e clicar novamente desmarca, mantendo a lista aberta. O modo único permite uma escolha e fecha ao selecionar. A busca filtra a lista; Padrão restaura o `value` inicial, Limpar desmarca tudo e Selecionar todos (múltiplo) inclui todas as opções, mesmo com filtro. Listas longas rolam internamente. Os valores continuam salvos automaticamente.
+
+A lista acompanha o campo quando a janela se move. Se faltar espaço à direita, ela abre à esquerda ou junto ao campo, limitada à área segura da tela. X, Escape, tocar fora, trocar de aba, ocultar/minimizar a janela ou remover o controle fecha a lista.
 
 ```lua
 multi:Open()  -- opcional; clicar no controle faz o mesmo
@@ -86,6 +88,47 @@ console:Append("Olá!")
 ```
 
 Grupos em linha recebem os componentes compactos compatíveis; grupos em coluna recebem também dropdowns, texto e seções. A API Gen2 oferece grupos aninhados.
+
+## Notificações opcionais nos controles
+
+`notification` fica desligado por padrão. Com `false`, não é preciso fornecer mensagem e o `callback` continua executando normalmente. Com `true`, forneça `notificationMessage`: texto fixo ou uma função que recebe os mesmos argumentos do callback.
+
+```lua
+tab:CreateButton({
+    name = "Executar", notification = true,
+    notificationTitle = "Pronto", notificationMessage = "Você clicou no botão!",
+    notificationType = "success", notificationDuration = 4,
+    callback = function() print("Minha ação") end,
+})
+tab:CreateToggle({
+    name = "Ativar recurso", flag = "recurso", value = false,
+    notification = true,
+    notificationMessage = function(ativo)
+        return ativo and "Recurso ativado!" or "Recurso desativado!"
+    end,
+    callback = function(ativo) print(ativo) end,
+})
+tab:CreateButton({ name = "Sem aviso", notification = false,
+    callback = function() print("Funciona sem mensagem") end,
+})
+```
+
+Também funciona em sliders, dropdowns, inputs, teclas, cores e controles em grupos. O título usa o nome do controle quando `notificationTitle` é omitido. `notificationType` e `notificationDuration` têm os mesmos valores de `Notify`. O callback é opcional. A notificação automática só é enviada depois de o callback terminar sem erro. Um texto vazio retornado pela função suprime o aviso daquela ação.
+
+```lua
+tab:CreateSlider({ name = "Volume", range = { 0, 100 }, value = 50,
+    format = "percent", notification = true,
+    notificationMessage = function(valor) return "Volume: " .. valor .. "%" end,
+})
+tab:CreateDropdown({ name = "Opções", options = { "A", "B", "C" },
+    multiSelect = true, value = {}, notification = true,
+    notificationMessage = function(valores)
+        return #valores == 0 and "Nenhuma seleção" or table.concat(valores, ", ")
+    end,
+})
+```
+
+O slider notifica na confirmação, incluindo edição do número, e não durante cada movimento do arraste. Inputs notificam ao confirmar; cores notificam cada alteração do callback, por isso prefira um botão de confirmação se quiser evitar avisos durante o ajuste. Restaurar configurações aplica os callbacks necessários, sem emitir esses avisos automáticos. `controle:Set(valor, true)` também os suprime. Uma chamada explícita a `window:Notify` dentro do callback continua independente de `notification = false`; use uma das duas formas para evitar avisos duplicados.
 
 ## Notificação, toast e popup
 
