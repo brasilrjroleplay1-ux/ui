@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.6 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.7 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -21,6 +21,7 @@ local Header = require(script.Features.Header)
 local Entrance = require(script.Features.Entrance)
 local Shell = require(script.Features.Shell)
 local Friends = require(script.Features.Friends)
+local SliderInput = require(script.Features.SliderInput)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
@@ -38,8 +39,9 @@ export type Window = Gen2.Window & {
 export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
+export type SliderProps = Gen2.SliderProps & { format: ("number" | "percent")?, editable: boolean? }
 
-local Library = { Version = "3.6.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.7.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -82,9 +84,11 @@ local function adaptHost(host)
         if method then
             host["Create" .. kind] = function(self, props)
                 local mapped = properties(props)
+                if kind == "Slider" then SliderInput.prepare(mapped) end
                 if kind == "ColorPicker" and mapped.color == nil and mapped.Color == nil then mapped.color = mapped.value or mapped.Value end
                 local control = method(self, mapped)
                 if control then
+                    if kind == "Slider" then SliderInput.attach(control, mapped) end
                     Controls.attach(control)
                     if kind == "Group" then adaptHost(control) end
                     if kind == "Dropdown" then DropdownPanel.attach(control, mapped) end

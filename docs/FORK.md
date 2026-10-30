@@ -40,4 +40,6 @@ Em 3.6.1, `Shell` restaura a lateral expandida com nomes das abas e cartão do j
 
 Em 3.6.2, `Header` acrescenta uma marca tipográfica para janelas chamadas Conexão Studio: peso Bold na família de fonte do tema, degradê discreto, linha de assinatura e selo STUDIO. O título original fica preservado; mudar seu texto troca para a apresentação de título personalizado. A versão usa uma apresentação própria sincronizada ao subtítulo, com contraste consistente nas rotas de abertura e restauração.
 
+Em 3.7.0, `SliderInput` acrescenta edição numérica no próprio valor, sem modificar o slider do vendor. Um TextBox substitui o mostrador enquanto há foco. A confirmação valida e limita o texto, usa a grade de incremento ancorada no mínimo e chama o `Set` nativo, preservando callbacks e persistência. Escape e texto inválido cancelam o rascunho. O odômetro usa uma camada própria para que seu UIListLayout não reposicione o editor. `ControlLayout` reserva espaço para o campo em layouts largos, estreitos e em colunas; grupos já criados também são percorridos. `format` e `editable` são propriedades da camada Conexão.
+
 Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e licença MPL-2.0. O arquivo de distribuição contém os avisos de copyright e o código legível.

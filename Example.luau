@@ -1,10 +1,10 @@
--- Exemplo de componentes da Conexão UI 3.3 usando a base Rayfield Gen2.
+-- Exemplo de componentes da Conexão UI 3.7 usando a base Rayfield Gen2.
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/ConexaoUI.luau"))()
 local previousDemo = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("ConexaoDemo")
 if previousDemo and previousDemo:IsA("ScreenGui") then previousDemo:Destroy() end
 local window = UI:CreateWindow({
     Id = "ConexaoComponents",
-    name = "CONEXÃO STUDIO", subtitle = "3.6.2", sidebarLayout = true,
+    name = "CONEXÃO STUDIO", subtitle = "3.7.0", sidebarLayout = true,
     theme = "conexao",
     configuration = { fileName = "conexao_componentes_v3" },
 })
@@ -14,7 +14,8 @@ local home = window:CreateTab({ name = "Início", icon = 93364949241311 })
 home:CreateText({ name = "Conexão UI · Gen2", text = "Esta versão usa a base real do Rayfield Gen2. O perfil e as configurações já vêm com a janela." })
 home:CreateSection({ name = "Controles" })
 home:CreateToggle({ name = "Ativar recurso", flag = "demo/ativo", value = true, callback = function(value) print("Ativo", value) end })
-home:CreateSlider({ name = "Intensidade", flag = "demo/intensidade", range = { 0, 100 }, increment = 1, value = 50, suffix = "%" })
+home:CreateSlider({ name = "Intensidade", description = "Clique no valor para digitar uma porcentagem.", flag = "demo/intensidade", range = { 0, 100 }, increment = 0.25, value = 50, format = "percent" })
+home:CreateSlider({ name = "Valor preciso", flag = "demo/precisao", range = { -100, 1000 }, increment = 0.01, value = 25.5, format = "number" })
 home:CreateDropdown({ name = "Modo", flag = "demo/modo", options = { "Padrão", "Criativo", "Compacto" }, value = "Padrão" })
 home:CreateDropdown({ name = "Painéis", flag = "demo/paineis", multiSelect = true, options = { "Perfil", "Atalhos", "Estatísticas", "Novidades" }, value = { "Perfil", "Atalhos" } })
 home:CreateDropdown({ name = "Locais", flag = "demo/locais", multiSelect = true, options = { "Floresta", "Templo", "Cosmos", "Oceano", "Neve", "Deserto", "Jardim", "Montanha", "Vulcão", "Selva", "Lago", "Praia" }, value = { "Floresta", "Oceano" } })

@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.3 · API Gen2
+# Exemplos da Conexão UI 3.7 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -21,9 +21,16 @@ end })
 ```lua
 local toggle = tab:CreateToggle({ name = "Ativar", flag = "ativo", value = false, callback = function(value) print(value) end })
 toggle:Set(true)
-local slider = tab:CreateSlider({ name = "Volume", flag = "volume", range = { 0, 100 }, increment = 5, value = 50, suffix = "%", callback = function(value, dragging) print(value, dragging) end })
+local slider = tab:CreateSlider({ name = "Volume", flag = "volume", range = { 0, 100 }, increment = 0.25, value = 50, format = "percent", callback = function(value, dragging) print(value, dragging) end })
 slider:Set(75)
+local preciso = tab:CreateSlider({ name = "Valor preciso", flag = "preciso", range = { -100, 1000 }, increment = 0.01, value = 25.5, format = "number" })
 ```
+
+Clique ou toque no valor para editar. Enter ou tocar fora confirma; Escape cancela. Ponto e vírgula decimal são aceitos, incluindo texto colado com o sufixo, como `73,5 %`. O valor é limitado pela `range` e alinhado ao `increment`. Para duas casas decimais, use `increment = 0.01`. Entradas vazias ou inválidas mantêm o valor anterior.
+
+O formato `percent` mostra o valor seguido de `%`; os limites, o callback e o arquivo salvo usam o número da `range`. Por exemplo, `75` representa `75 %` quando a faixa é `{ 0, 100 }`. `suffix` continua disponível para unidades próprias, como `ms`, quando `format` não é informado. `editable = false` desativa a digitação. Sliders `minimal = true` mantêm apenas o trilho.
+
+A confirmação chama o callback uma vez, com `dragging = false`, e usa o salvamento nativo. Durante a digitação, o texto é um rascunho; digitar o mesmo valor novamente não repete o callback. A edição também funciona em grupos e nos sliders incluídos em Configurações.
 
 ## Dropdown único e múltiplo
 

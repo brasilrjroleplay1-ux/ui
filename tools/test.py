@@ -37,3 +37,6 @@ with tempfile.TemporaryDirectory() as folder:
     navigation=Path(folder)/'navigation.luau'
     navigation.write_text(prefix+(ROOT/'tests/navigation_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(navigation)],'navigation')
+    slider_input=Path(folder)/'slider-input.luau'
+    slider_input.write_text(prefix+(ROOT/'tests/slider_input_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(slider_input)],'slider-input')

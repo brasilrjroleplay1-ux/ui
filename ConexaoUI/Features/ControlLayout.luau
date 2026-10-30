@@ -3,6 +3,7 @@
 -- Responsive presentation only. Gen2 continues to own values, callbacks and persistence.
 local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local textService = game:GetService("TextService")
+local SliderInput = require(script.Parent.SliderInput)
 local Controls = {}
 local heightCache, heightCount = {}, 0
 
@@ -99,21 +100,22 @@ local function slider(control, width)
         for _, value in ipairs({ control.range[1], control.range[2], control.value }) do
             valueWidth = math.max(valueWidth, metrics.textWidth(control.title.FontFace, 15, control:_format(value)) + 12)
         end
-        valueWidth = math.min(inner, valueWidth)
+        local valueHeight = control._valueInput and 30 or 18
+        valueWidth = math.min(inner, control._valueInput and math.max(64, valueWidth + 12) or valueWidth)
         local trackWidth = math.min(240, math.floor(width * 0.42))
         local column = width - trackWidth - 32 - inset * 2 - 16
         local wide = width >= 560 and titleWidth + icon <= column and valueWidth <= column
         local separate = not wide and width < 320
         local room = wide and column or (separate and inner or math.max(1, inner - valueWidth - 12))
         local titleHeight = textHeight(control.title, size, room - icon)
-        local heading = (wide or separate) and titleHeight + 4 + 18 or math.max(titleHeight, 18)
+        local heading = (wide or separate) and titleHeight + 4 + valueHeight or math.max(titleHeight, valueHeight)
         if not current(control, width) then return end
         -- Commit only after measurements finish: the viewport may change while fonts load.
         control.container.AnchorPoint = Vector2.new(0, 0)
         control.titleContainer.AnchorPoint, control.titleContainer.Position = Vector2.new(0, 0), UDim2.fromOffset(0, 0)
         control.titleContainer.Size = UDim2.fromOffset(room, titleHeight)
         control.valueHost.AutomaticSize, control.valueHost.ClipsDescendants = Enum.AutomaticSize.None, true
-        control.valueHost.AnchorPoint, control.valueHost.Size = Vector2.new(0, 0), UDim2.fromOffset(valueWidth, 18)
+        control.valueHost.AnchorPoint, control.valueHost.Size = Vector2.new(0, 0), UDim2.fromOffset(valueWidth, valueHeight)
         control.title.AutomaticSize = Enum.AutomaticSize.None
         control.title.TextSize, control.title.TextWrapped, control.title.TextTruncate = size, true, Enum.TextTruncate.None
         control.title.TextYAlignment = Enum.TextYAlignment.Center
@@ -177,6 +179,8 @@ end
 
 function Controls.attach(control)
     if not control or control._controlLayout then return end
+    if control.__type == "Group" then for _, element in ipairs(control.elements or {}) do Controls.attach(element) end return end
+    SliderInput.attach(control)
     if control.descriptor then Controls.attach(control.descriptor) end
     local kind = control.__type
     local descriptor = kind == "Descriptor"
