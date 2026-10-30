@@ -14,7 +14,7 @@ local dropdowns = window:CreateTab({ name = "Dropdowns", icon = 88479147175134 }
 local campos = window:CreateTab({ name = "Campos", icon = 100604009889706 })
 local avisos = window:CreateTab({ name = "Avisos", icon = 125823673784681 })
 local dados = window:CreateTab({ name = "Dados e grupos", icon = 84750991656135 })
-local selo = window:CreateTag({ text = "TESTES" })
+local selo -- etiquetas do topo só aparecem se o script criar uma explicitamente
 
 -- Os mostradores existem antes dos callbacks, inclusive durante a restauração dos valores.
 testes:CreateText({ name = "Teste sua library", text = "Clique no botão, mude o toggle e explore as abas. As ações aparecem em notificações e no console de Dados e grupos." })
@@ -232,7 +232,8 @@ dados:CreateButton({ name = "Limpar console", callback = function()
 end })
 dados:CreateButton({ name = "Atualizar selo do topo", callback = function()
     notificar("Selo atualizado", "O texto do selo no cabeçalho foi alterado.")
-    selo:SetText(tostring(interacoes) .. " AÇÕES")
+    local texto = tostring(interacoes) .. " AÇÕES"
+    if selo then selo:SetText(texto) else selo = window:CreateTag({ text = texto }) end
 end })
 dados:CreateSection({ name = "Grupos e colunas" })
 local linha = dados:CreateGroup()

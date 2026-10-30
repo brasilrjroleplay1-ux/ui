@@ -2,6 +2,8 @@
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
+O cabeçalho exibe CONEXÃO STUDIO com as duas palavras no mesmo tamanho. A etiqueta TESTES foi removida do topo; `CreateTag` permanece opcional e o botão de teste só cria uma etiqueta quando clicado.
+
 O exemplo completo abre a aba Testes e permite clicar nos controles para observar seus callbacks em notificações, na última ação e no console. Há abas para sliders, dropdowns, campos, avisos e dados/grupos. Para executá-lo diretamente, use `dist/Components.luau`. Configurações, perfil e salvamento continuam sendo fornecidos pela library; os controles de demonstração estão no script.
 
 ```lua

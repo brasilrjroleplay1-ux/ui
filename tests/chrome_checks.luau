@@ -19,6 +19,7 @@ local header = window.BrandHeader
 check(header.mark and #header.mark.links == 2 and header.mark.root.Parent == window.topContainer, "the header contains the shared vector signature")
 check(window.title.Text == "CONEXÃO STUDIO" and header.version.Text == UI.Version and window.title.FontFace == window.theme.TitleFont, "the wordmark retains the script title, version and themed title font")
 check(header.branded and header.wordmark.Visible and not window.title.Visible and header.wordmark.FontFace.Weight == Enum.FontWeight.Bold, "Conexão Studio receives a bold brand wordmark without rewriting the script title")
+check(header.wordmark.Text == "CONEXÃO STUDIO" and header.wordmark.TextScaled and header.wordmark.TextTruncate == Enum.TextTruncate.None, "the complete brand shares one font size and stays fitted without a tiny Studio badge")
 local statusTag = window:CreateTag({ text = "Conectado" })
 for _, width in ipairs({ 180, 220, 240, 319, 320, 379, 380, 426, 539, 540, 685, 1000 }) do
     window.main.AbsoluteSize = Vector2.new(width, 450)
@@ -29,7 +30,7 @@ for _, width in ipairs({ 180, 220, 240, 319, 320, 379, 380, 426, 539, 540, 685, 
     local title = inside(window.titleContainer, left.w, left.h, "title container fits brand cluster")
     inside(window.title, title.w, title.h, "window name remains bounded")
     if header.wordmark.Visible then inside(header.wordmark, title.w, title.h, "large brand name fits the header") inside(header.wordmarkRule, title.w, title.h, "signature line fits the header") end
-    if header.studioTag.Visible then inside(header.studioTag, title.w, title.h, "Studio signature fits beside the brand name") end
+    check(header.wordmark.Text == "CONEXÃO STUDIO" and header.wordmarkSize.MaxTextSize == header.wordmark.TextSize, "resizing retains both words in the same typography")
     if header.mark.root.Visible then inside(header.mark.root, left.w, left.h, "vector mark fits brand cluster") end
     if header.pill.Visible then inside(header.pill, title.w, title.h, "version capsule fits title container") end
     if header.caption.Visible then inside(header.caption, title.w, title.h, "signature caption fits title container") end
@@ -45,10 +46,10 @@ end
 statusTag:Remove()
 header:Layout()
 check(not header.tagSlot.Visible, "removing the final status tag clears its metadata slot")
-check(header.wordmark.TextSize == 23 and header.studioTag.Visible and header.versionDisplay.Text == UI.Version, "wide headers show the larger wordmark, Studio signature and readable version")
+check(header.wordmark.TextSize == 23 and header.wordmark.Text == "CONEXÃO STUDIO" and header.versionDisplay.Text == UI.Version, "wide headers show the complete larger wordmark and readable version")
 window.title.Text = "Outro projeto"
 window.title:GetPropertyChangedSignal("Text"):Fire()
-check(not header.branded and window.title.Visible and not header.wordmark.Visible and not header.studioTag.Visible, "a script can replace the branded title with its own name")
+check(not header.branded and window.title.Visible and not header.wordmark.Visible, "a script can replace the branded title with its own name")
 window.title.Text = "CONEXÃO STUDIO"
 window.title:GetPropertyChangedSignal("Text"):Fire()
 window:Hide()

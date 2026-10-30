@@ -1,6 +1,8 @@
-# Conexão UI 3.9.2 · Conexão Studio
+# Conexão UI 3.9.3 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.9.3**, o cabeçalho mostra **CONEXÃO STUDIO** como um único título em negrito: as duas palavras têm o mesmo tamanho e se ajustam juntas ao espaço. O exemplo de componentes não cria a etiqueta TESTES no topo; o teste de etiquetas só cria uma ao clicar no botão correspondente.
 
 Na **3.9.2**, o dropdown reserva uma coluna à direita **dentro da janela**. Os controles continuam à esquerda e recuperam a largura ao fechar. Janelas estreitas usam controles acima e opções abaixo, sempre dentro do painel. Busca, checkboxes e ações em lote continuam disponíveis com rolagem própria.
 

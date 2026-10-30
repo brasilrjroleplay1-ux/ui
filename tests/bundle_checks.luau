@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.9.2", "new entry point is bundled")
+check(UI.Version == "3.9.3", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -707,6 +707,7 @@ local ComponentsUI, componentsWindow = (function()
 return UI, window
 end)()
 check(componentsWindow and #componentsWindow.tabs >= 7 and componentsWindow.selectedTab.name == "Testes", "the interactive component example opens its test controls")
+check(#componentsWindow.tags == 0 and not componentsWindow.BrandHeader.tagSlot.Visible, "the example starts without a TESTES badge in the header")
 local function exerciseComponents(window)
     local function find(name, list)
         for _, element in ipairs(list or {}) do
