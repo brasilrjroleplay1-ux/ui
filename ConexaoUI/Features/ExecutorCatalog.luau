@@ -8,6 +8,8 @@ Catalog.entries = {
     { id = "xeno", name = "Xeno" },
     { id = "solara", name = "Solara" },
 }
+for _, entry in ipairs(Catalog.entries) do table.freeze(entry) end
+table.freeze(Catalog.entries)
 function Catalog.key(name) return string.lower(tostring(name or "")):gsub("[^%w]", "") end
 function Catalog.find(name)
     local key = Catalog.key(name)
@@ -16,4 +18,4 @@ function Catalog.find(name)
     end
     return nil
 end
-return Catalog
+return table.freeze(Catalog)

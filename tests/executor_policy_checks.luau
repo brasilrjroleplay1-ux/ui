@@ -27,4 +27,21 @@ check(not pcall(Policy.compile, { { name = "Cliente A", aliases = { "Cliente B" 
 check(not pcall(Policy.compile, { { name = "Cliente A", aliases = "Any" } }), "malformed aliases are rejected")
 check(not pcall(Policy.compile, { true }), "malformed entries are rejected")
 check(not pcall(Policy.compile, { { name = "   " } }), "blank entries are rejected")
+for _, name in ipairs({ "Cliente A\n", "Cliente A\t", "Cliente A\0", string.rep("A", 65) }) do
+    check(not Policy.check(identity(name), rules), "control characters and overlong names are denied")
+end
+check(not Policy.check({ name = "Cliente A", identified = true, environment = "Roblox", failure = "api" }, rules), "a partial identity cannot override a failed API")
+local agreed = identity("Cliente A")
+agreed.reports = { { name = "Cliente A" }, { name = "  CLIENTE A  " } }
+check(Policy.check(agreed, rules), "independent reports may agree after permitted normalization")
+agreed.reports[2].name = "Cliente B"
+local allowed, why = Policy.check(agreed, rules)
+check(not allowed and why == "conflicting", "different permitted names still form a conflicting identity")
+agreed.reports[2].name = "Unknown"
+check(not Policy.check(agreed, rules), "one unlisted report cannot be hidden behind a permitted one")
+agreed.reports = {}
+check(not Policy.check(agreed, rules), "an empty consensus is not an identity")
+check(not Policy.check({ name = "Unknown", identified = true, environment = "Roblox Studio" }, Policy.compile({}, { allowStudio = true })), "a reported executor cannot use the Studio development exception")
+check(not pcall(function() rules.names["unknown"] = "Unknown" end), "compiled names cannot be widened after construction")
+check(not pcall(function() rules.allowStudio = true end), "compiled development permissions are immutable")
 print("PASS: " .. count .. " executor-policy checks")

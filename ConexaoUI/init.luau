@@ -4,6 +4,8 @@
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
 local Gen2 = require(script.Gen2)
+local Privacy = require(script.Features.Privacy)
+Privacy.install()
 local DropdownPanel = require(script.Features.Dropdown)
 local Profile = require(script.Features.Profile)
 local Themes = require(script.Features.Themes)
@@ -44,7 +46,7 @@ export type SliderProps = Gen2.SliderProps & { format: ("number" | "percent")?, 
 export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.7.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.7.3", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)

@@ -5,6 +5,8 @@
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
 local Gen2 = require(script.Gen2)
+local Privacy = require(script.Features.Privacy)
+Privacy.install()
 local DropdownPanel = require(script.Features.Dropdown)
 local Profile = require(script.Features.Profile)
 local Themes = require(script.Features.Themes)
@@ -45,7 +47,7 @@ export type SliderProps = Gen2.SliderProps &amp; { format: ("number" | "percent"
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.7.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.7.3", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -21285,36 +21287,57 @@ for _, entry in ipairs(Catalog.entries) do table.insert(names, entry.name) end
 local denial = "Conexão Studio: executor não suportado. Permitidos: " .. table.concat(names, ", ") .. "."
 
 function Access.identify()
-    if game:GetService("RunService"):IsStudio() then
-        return { name = "Roblox Studio", environment = "Roblox Studio", identified = false }
+    local studio = game:GetService("RunService"):IsStudio()
+    local identity = { name = "Não identificado", environment = "Roblox", identified = false }
+    local scopes, seen = {}, {}
+    local function scope(value)
+        if type(value) == "table" and not seen[value] then seen[value] = true table.insert(scopes, value) end
     end
-    local env = _G
+    scope(_G)
+    scope(getfenv())
     if type(getgenv) == "function" then
         local ok, value = pcall(getgenv)
-        if ok and type(value) == "table" then env = value end
+        if not ok or type(value) ~= "table" then identity.failure = "environment" return identity end
+        scope(value)
     end
+    local functions, observed = {}, {}
     for _, name in ipairs({ "identifyexecutor", "getexecutorname" }) do
-        local fn = env[name] or getfenv()[name]
-        if type(fn) == "function" then
-            local ok, value, version = pcall(fn)
-            if ok and type(value) == "string" and value ~= "" then
-                return { name = value, version = type(version) == "string" and version or nil, environment = "Roblox", identified = true }
+        for _, env in ipairs(scopes) do
+            local ok, fn = pcall(function() return env[name] end)
+            if not ok or (fn ~= nil and type(fn) ~= "function") then identity.failure = "api" return identity end
+            if fn and not observed[fn] then
+                observed[fn] = true
+                table.insert(functions, fn)
             end
         end
     end
-    return { name = "Não identificado", environment = "Roblox", identified = false }
+    if #functions == 0 and studio then return { name = "Roblox Studio", environment = "Roblox Studio", identified = false } end
+    local reports = {}
+    for _, fn in ipairs(functions) do
+        local ok, name, version = pcall(fn)
+        if not ok or type(name) ~= "string" or name == "" then identity.failure = "api" return identity end
+        local safeVersion = type(version) == "string" and #version &lt;= 128 and not version:find("%c") and version or nil
+        table.insert(reports, { name = name, version = safeVersion })
+    end
+    if #reports &gt; 0 then
+        identity.name, identity.version, identity.identified, identity.reports = reports[1].name, reports[1].version, true, reports
+    end
+    return identity
 end
 
 function Access.requireSupported()
     local identity = Access.identify()
     local allowed, reason, canonical = Policy.check(identity, rules)
-    if not allowed then error(denial, 0) end
+    if not allowed then
+        local messages = { conflicting = "As APIs informaram executores diferentes.", identification_failed = "Não foi possível validar as APIs de identificação.", unidentified = "O cliente não forneceu identificação válida.", not_permitted = "O nome informado não está na lista permitida." }
+        error(denial .. " " .. (messages[reason] or "Identificação recusada."), 0)
+    end
     identity.reportedName, identity.name, identity.support = identity.name, canonical, reason
     return identity
 end
 
 function Access.names() return table.clone(names) end
-return Access
+return table.freeze(Access)
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">ExecutorCatalog</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Curated support list. Reported names do not establish binary integrity or safety.
@@ -21325,6 +21348,8 @@ Catalog.entries = {
     { id = "xeno", name = "Xeno" },
     { id = "solara", name = "Solara" },
 }
+for _, entry in ipairs(Catalog.entries) do table.freeze(entry) end
+table.freeze(Catalog.entries)
 function Catalog.key(name) return string.lower(tostring(name or "")):gsub("[^%w]", "") end
 function Catalog.find(name)
     local key = Catalog.key(name)
@@ -21333,15 +21358,15 @@ function Catalog.find(name)
     end
     return nil
 end
-return Catalog
+return table.freeze(Catalog)
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">ExecutorPolicy</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Explicit support policy. Reported names do not establish binary integrity or safety.
 local Policy = {}
 
 local function key(name)
-    if type(name) ~= "string" then return nil end
-    local normalized = string.lower(name):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", "")
+    if type(name) ~= "string" or #name &gt; 64 or name:find("%c") then return nil end
+    local normalized = string.lower(name):gsub(" +", " "):gsub("^ ", ""):gsub(" $", "")
     return normalized ~= "" and normalized or nil
 end
 
@@ -21364,21 +21389,34 @@ function Policy.compile(entries, options)
             for _, alias in ipairs(entry.aliases or {}) do add(alias, entry.name) end
         end
     end
-    return rules
+    table.freeze(rules.names)
+    return table.freeze(rules)
 end
 
 function Policy.check(identity, rules)
     assert(type(rules) == "table" and type(rules.names) == "table", "Compile the executor policy first")
     if type(identity) ~= "table" then return false, "unidentified" end
-    if identity.environment == "Roblox Studio" and rules.allowStudio then return true, "studio", "Roblox Studio" end
+    if identity.failure then return false, "identification_failed" end
+    if identity.environment == "Roblox Studio" and rules.allowStudio and identity.identified ~= true and identity.reports == nil then return true, "studio", "Roblox Studio" end
     local normalized = key(identity.name)
     if identity.identified ~= true or not normalized then return false, "unidentified" end
     local permitted = rules.names[normalized]
-    if permitted then return true, "permitted", permitted end
+    if permitted then
+        if identity.reports ~= nil then
+            if type(identity.reports) ~= "table" or #identity.reports == 0 then return false, "unidentified" end
+            for _, report in ipairs(identity.reports) do
+                local reported = type(report) == "table" and key(report.name)
+                local match = reported and rules.names[reported]
+                if not match then return false, "not_permitted" end
+                if match ~= permitted then return false, "conflicting" end
+            end
+        end
+        return true, "permitted", permitted
+    end
     return false, "not_permitted"
 end
 
-return Policy
+return table.freeze(Policy)
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Feedback</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Conexão's notification presentation. Native Notify/Toast properties remain accepted.
@@ -22084,6 +22122,42 @@ function Preferences.storage()
 end
 
 return Preferences
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Privacy</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Disable the optional analytics collector before native window construction can start it.
+local NativeWindow = require(script.Parent.Parent.Gen2.components.window)
+local Privacy = {}
+local installed = false
+function Privacy.install()
+    if installed then return end
+    installed = true
+    function NativeWindow:_siaStart()
+        self.settings.usageAnalytics = false
+        self._sia = nil
+    end
+    for _, name in ipairs({ "LoadSettings", "SaveSettings" }) do
+        local original = NativeWindow[name]
+        NativeWindow[name] = function(self, ...)
+            self.settings.usageAnalytics = false
+            local result = original(self, ...)
+            self.settings.usageAnalytics = false
+            return result
+        end
+    end
+    local build = NativeWindow._buildSettingsUI
+    function NativeWindow:_buildSettingsUI(...)
+        local tab, create = self.rfSettings, self.rfSettings.CreateToggle
+        function tab:CreateToggle(props)
+            if type(props) == "table" and (props.name or props.Name) == "Usage analytics" then return nil end
+            return create(self, props)
+        end
+        local ok, result = pcall(build, self, ...)
+        tab.CreateToggle = create
+        if not ok then error(result, 0) end
+        return result
+    end
+end
+return table.freeze(Privacy)
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Profile</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 local Surface = require(script.Parent.Surface)

@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.7.2", "new entry point is bundled")
+check(UI.Version == "3.7.3", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -38,12 +38,12 @@ for source, translated in pairs({
     ["Unlock cursor while open"] = "Liberar cursor com o menu aberto",
     ["Welcome toast"] = "Aviso de boas-vindas",
     ["Haptics"] = "Vibração ao tocar",
-    ["Usage analytics"] = "Estatísticas anônimas de uso",
     ["Show profile"] = "Mostrar meu perfil na lateral",
     ["Keep window on screen"] = "Manter a janela dentro da tela",
 }) do
     check(nativeControls[source] and nativeControls[source].title.Text == translated, "native setting is translated: " .. source)
 end
+check(not nativeControls["Usage analytics"], "disabled analytics cannot be re-enabled by a settings toggle")
 check(nativeControls["Haptics"].descriptor.titleLabel.Text:find("Vibração leve", 1, true), "settings descriptions are translated through the native locale bindings")
 local haptics = nativeControls["Haptics"]
 local previousHaptics = haptics.value
@@ -558,6 +558,8 @@ w:CloseProfile()
 
 local previousIdentify = _G.identifyexecutor
 _G.identifyexecutor = function() return "Test Executor", "1.2.3" end
+check(not pcall(UI.CreateWindow, UI, { Id = "DeniedStudioExecutor" }), "Studio cannot mask an explicitly unlisted executor report")
+_G.identifyexecutor = nil
 local ew = UI:CreateWindow({ Id = "ExecutorTest", name = "ExecutorTest", sidebarLayout = false })
 check(not ew.ProfileButton and ew.ExecutorInfo.name == "Roblox Studio" and ew.ExecutorInfo.support == "studio", "Studio remains available for development with the top-tab layout")
 ew:OpenHome()

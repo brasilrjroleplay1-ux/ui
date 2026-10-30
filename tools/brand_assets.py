@@ -73,6 +73,8 @@ local Catalog = {}
 Catalog.entries = {
 ROWS
 }
+for _, entry in ipairs(Catalog.entries) do table.freeze(entry) end
+table.freeze(Catalog.entries)
 function Catalog.key(name) return string.lower(tostring(name or "")):gsub("[^%w]", "") end
 function Catalog.find(name)
     local key = Catalog.key(name)
@@ -81,7 +83,7 @@ function Catalog.find(name)
     end
     return nil
 end
-return Catalog
+return table.freeze(Catalog)
 '''.replace('ROWS','\n'.join(rows))
     (ROOT/'ConexaoUI/Features/ExecutorCatalog.luau').write_text(catalog)
 if __name__=='__main__':generate()

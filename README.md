@@ -1,4 +1,4 @@
-# Conexão UI 3.7.2 · Conexão Studio
+# Conexão UI 3.7.3 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -27,6 +27,8 @@ Na Home, servidor e salvamento ficam à esquerda; executor e amigos ficam à dir
 O suporte está limitado a **Delta, Wave, Xeno e Solara**, com as quatro logos incluídas. Os demais nomes e clientes sem identificação são recusados antes da inicialização da UI. O **Roblox Studio** tem uma exceção explícita para desenvolvimento. [Política de suporte](docs/EXECUTORES.md) · [Origem das imagens](assets/README.md).
 
 Esta seleção usa nomes conhecidos como critério de suporte. Não foram verificados números de usuários nem auditados os programas instalados. O nome é informado pelo próprio cliente e pode ser falsificado; a checagem não comprova segurança, autenticidade ou integridade do executável.
+
+Na **3.7.3**, todas as APIs de identificação disponíveis precisam concordar com um nome permitido. Erros, respostas vazias, nomes com caracteres de controle e identificações conflitantes bloqueiam o carregamento antes da base visual e antes de cada nova janela. A política e o catálogo são imutáveis. A exceção do Studio não encobre um executor explicitamente identificado. A telemetria SIA permanece desativada, inclusive ao restaurar preferências antigas, e seu botão foi removido. Esses controles reduzem a exposição da library; não isolam nem verificam o aplicativo que a executa. [Limites e proteções](docs/SEGURANCA.md).
 
 Os exemplos de botões, campos, avisos e grupos estão separados em [dist/Components.luau](dist/Components.luau) e no [script completo](Example.luau). A library cria as configurações; as abas do seu projeto são criadas pelo seu script.
 
@@ -112,8 +114,9 @@ Os controles nativos agora vêm em português, mantendo seus valores salvos e ca
 | Liberar cursor com o menu aberto | Permite usar o mouse quando o jogo prende o cursor. |
 | Aviso de boas-vindas | Exibe o aviso inicial com seu nome. |
 | Vibração ao tocar | Ativa o retorno tátil em aparelhos compatíveis. |
-| Estatísticas anônimas de uso | Controla a telemetria da base Sirius/Gen2; vem desativada em uma instalação nova. |
 | Mostrar meu perfil na lateral | Mostra ou oculta foto e nome no rodapé. |
+
+A telemetria de uso da base fica desativada e não possui opção de ativação na UI. Preferências antigas não reativam a coleta.
 
 O idioma padrão é `pt-br`. O script pode usar `locale = "en"` ou fornecer `translations`/`translator` pela API Gen2. O tradutor do projeto e as traduções fornecidas em `CreateWindow` têm prioridade.
 
