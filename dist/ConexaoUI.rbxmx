@@ -62,7 +62,7 @@ export type SliderProps = Gen2.SliderProps &amp; ControlNotificationProps &amp; 
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.10.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.10.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -23316,8 +23316,8 @@ function Settings.attach(window)
     window:RefreshSizeStatus()
     if window.layout.mode == "sidebar" then
         window.SidebarIconsOnlyToggle = tab:CreateToggle({
-            name = "Mostrar apenas ícones nas abas", value = window.UIPreferences.sidebarIconsOnly == true, forgetState = true,
-            description = "Oculta os nomes e reduz a lateral. Desative para mostrar os nomes quando houver espaço na janela.",
+            name = "Navegação compacta", value = window.UIPreferences.sidebarIconsOnly == true, forgetState = true,
+            description = "Exibe apenas os ícones na barra lateral, ampliando a área de conteúdo.",
             callback = function(value) window:SetSidebarIconsOnly(value) end,
         })
     end

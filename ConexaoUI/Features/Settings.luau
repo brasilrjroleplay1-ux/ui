@@ -307,8 +307,8 @@ function Settings.attach(window)
     window:RefreshSizeStatus()
     if window.layout.mode == "sidebar" then
         window.SidebarIconsOnlyToggle = tab:CreateToggle({
-            name = "Mostrar apenas ícones nas abas", value = window.UIPreferences.sidebarIconsOnly == true, forgetState = true,
-            description = "Oculta os nomes e reduz a lateral. Desative para mostrar os nomes quando houver espaço na janela.",
+            name = "Navegação compacta", value = window.UIPreferences.sidebarIconsOnly == true, forgetState = true,
+            description = "Exibe apenas os ícones na barra lateral, ampliando a área de conteúdo.",
             callback = function(value) window:SetSidebarIconsOnly(value) end,
         })
     end

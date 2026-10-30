@@ -14,7 +14,7 @@ local tab = window:CreateTab({ name = "Principal", icon = 93364949241311 })
 
 ## Lateral com nomes ou somente ícones
 
-Em Configurações → Aparência, ative **Mostrar apenas ícones nas abas**. A lateral fica menor, oculta os nomes e libera espaço para os controles. Desative para voltar a mostrar os nomes quando a janela tiver espaço. Em janelas estreitas, o ajuste automático continua usando a lateral compacta.
+Em Configurações → Aparência, ative **Navegação compacta**. A lateral fica menor, oculta os nomes e libera espaço para os controles. Desative para voltar a mostrar os nomes quando a janela tiver espaço. Em janelas estreitas, o ajuste automático continua usando a lateral compacta.
 
 ```lua
 local window = UI:CreateWindow({

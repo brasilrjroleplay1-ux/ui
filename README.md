@@ -1,8 +1,10 @@
-# Conexão UI 3.10.0 · Conexão Studio
+# Conexão UI 3.10.1 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
-Na **3.10.0**, Configurações → Aparência inclui **Mostrar apenas ícones nas abas**. A lateral pode ficar compacta mesmo em janelas grandes, e a escolha é salva no perfil ativo. `sidebarIconsOnly = true` define o padrão inicial em `CreateWindow`; `window:SetSidebarIconsOnly(true/false)` altera e salva a preferência durante a execução.
+Na **3.10.1**, a opção da lateral se chama **Navegação compacta**, com a descrição: “Exibe apenas os ícones na barra lateral, ampliando a área de conteúdo.”
+
+Na **3.10.0**, Configurações → Aparência inclui **Navegação compacta**. A lateral pode ficar compacta mesmo em janelas grandes, e a escolha é salva no perfil ativo. `sidebarIconsOnly = true` define o padrão inicial em `CreateWindow`; `window:SetSidebarIconsOnly(true/false)` altera e salva a preferência durante a execução.
 
 Na **3.9.3**, o cabeçalho mostra **CONEXÃO STUDIO** como um único título em negrito: as duas palavras têm o mesmo tamanho e se ajustam juntas ao espaço. O exemplo de componentes não cria a etiqueta TESTES no topo; o teste de etiquetas só cria uma ao clicar no botão correspondente.
 
