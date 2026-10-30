@@ -117,16 +117,28 @@ local quiet = tab:CreateButton({ name = "Quiet", notification = false, callback 
 local start = #sent
 quiet.interact.MouseButton1Click:Fire()
 check(#sent == start and calls == 2, "false needs no message and preserves the callback")
-local noCallback = tab:CreateButton({ Name = "Pascal", Notification = true, NotificationMessage = "Sem callback" })
+local noCallback = tab:CreateButton({ Name = "Pascal", Notification = true, NotificationTitle = "Pascal", NotificationMessage = "Sem callback" })
 noCallback.interact.MouseButton1Click:Fire()
 check(sent[#sent].content == "Sem callback" and sent[#sent].title == "Pascal", "PascalCase options and message-only controls work")
 local ok = pcall(function() tab:CreateButton({ name = "Invalid", notification = true }) end)
-check(not ok, "true requires a message at creation")
-tab:CreateButton({ name = "No validation", notification = false, notificationMessage = false })
+check(not ok, "true requires an explicit non-empty title at creation")
+tab:CreateButton({ name = "No validation", notification = false, notificationTitle = false, notificationMessage = false })
+for _, invalidTitle in ipairs({ "", "   ", "\n\t", false, 123 }) do
+    local ok = pcall(function() tab:CreateButton({ name = "Invalid title", notification = true, notificationTitle = invalidTitle, notificationMessage = "Mensagem" }) end)
+    check(not ok, "blank or non-text notificationTitle is rejected even when a message is supplied")
+end
+for _, message in ipairs({ "", "Com mensagem" }) do
+    local onlyTitle = tab:CreateButton({ name = "Title only", notification = true, notificationTitle = "Concluído", notificationMessage = message })
+    start = #sent;onlyTitle.interact.MouseButton1Click:Fire()
+    check(#sent == start + 1 and sent[#sent].title == "Concluído" and sent[#sent].content == message, "a valid title allows an empty or populated message")
+end
+local omitted = tab:CreateButton({ name = "Omitted message", notification = true, notificationTitle = "Só o título" })
+start = #sent;omitted.interact.MouseButton1Click:Fire()
+check(#sent == start + 1 and sent[#sent].content == "", "omitting the message sends a title-only notification")
 button:Lock();start = #sent;button.interact.MouseButton1Click:Fire()
 check(#sent == start and calls == 2, "Lock blocks both callback and automatic message")
 button:Unlock()
-local toggle = tab:CreateToggle({ name = "Feature", flag = "notificationToggle", value = false, notification = true,
+local toggle = tab:CreateToggle({ name = "Feature", flag = "notificationToggle", value = false, notification = true, notificationTitle = "Teste",
     notificationMessage = function(state) observed = state return state and "Ativado" or "Desativado" end,
     callback = function() calls += 1 end })
 start = #sent;toggle.interact.MouseButton1Click:Fire()
@@ -139,36 +151,36 @@ w._loading = false
 check(calls == callCount + 1 and #sent == start, "restore applies callbacks without automatic messages")
 toggle:Set(false, true)
 check(calls == callCount + 1 and #sent == start, "silent Set skips both callback and message")
-local slider = tab:CreateSlider({ name = "Precision", range = { 0, 100 }, increment = 0.25, value = 20, notification = true,
+local slider = tab:CreateSlider({ name = "Precision", range = { 0, 100 }, increment = 0.25, value = 20, notification = true, notificationTitle = "Teste",
     notificationMessage = function(value, dragging) observed = { value, dragging } return tostring(value) .. "%" end })
 start = #sent;slider.callback(30, true)
 check(#sent == start, "slider previews do not flood notifications")
 slider:Set(73.5)
 check(#sent == start + 1 and observed[1] == 73.5 and observed[2] == false and sent[#sent].content == "73.5%", "committing a slider sends its exact value once")
-local choices = tab:CreateDropdown({ name = "Choices", flag = "choices", options = options, multiSelect = true, value = {}, notification = true,
+local choices = tab:CreateDropdown({ name = "Choices", flag = "choices", options = options, multiSelect = true, value = {}, notification = true, notificationTitle = "Teste",
     notificationMessage = function(values) return #values == 0 and "Vazio" or table.concat(values, ", ") end })
 choices:Open();p = choices.selectionPanel;p.items[2].hit.MouseButton1Click:Fire()
 check(sent[#sent].content == "Dois" and not p.closed, "checkbox clicks can notify without closing a multiple-choice list")
 choices:Close()
-local text = tab:CreateInput({ name = "Text", value = "", notification = true, notificationMessage = function(value) return "Texto: " .. value end })
+local text = tab:CreateInput({ name = "Text", value = "", notification = true, notificationTitle = "Teste", notificationMessage = function(value) return "Texto: " .. value end })
 text.input.Text = "Olá";text.input.FocusLost:Fire()
 check(sent[#sent].content == "Texto: Olá", "input commits supply their text to the message")
-local bind = tab:CreateKeybind({ name = "Key", value = Enum.KeyCode.F9, notification = true, notificationMessage = function(key) return key.Name end })
+local bind = tab:CreateKeybind({ name = "Key", value = Enum.KeyCode.F9, notification = true, notificationTitle = "Teste", notificationMessage = function(key) return key.Name end })
 input.InputBegan:Fire({ UserInputType = Enum.UserInputType.Keyboard, KeyCode = Enum.KeyCode.F9 }, false)
 check(sent[#sent].content == "F9", "key actions support optional messages")
-local color = tab:CreateColorPicker({ name = "Color", color = Color3.fromRGB(1, 2, 3), notification = true, notificationMessage = function(value) return value:ToHex() end })
+local color = tab:CreateColorPicker({ name = "Color", color = Color3.fromRGB(1, 2, 3), notification = true, notificationTitle = "Teste", notificationMessage = function(value) return value:ToHex() end })
 color:Set(Color3.fromRGB(4, 5, 6))
 check(sent[#sent].content:upper() == "040506", "color callbacks supply their selected color")
 local group = tab:CreateGroup({ direction = "column" })
-local nested = group:CreateButton({ name = "Nested", notification = true, notificationMessage = "No grupo" })
+local nested = group:CreateButton({ name = "Nested", notification = true, notificationTitle = "Teste", notificationMessage = "No grupo" })
 nested.interact.MouseButton1Click:Fire()
 check(sent[#sent].content == "No grupo", "nested groups expose the same notification options")
-local failing = tab:CreateButton({ name = "Failure", notification = true, notificationMessage = "Wrong success", callback = function() error("test failure") end })
+local failing = tab:CreateButton({ name = "Failure", notification = true, notificationTitle = "Teste", notificationMessage = "Wrong success", callback = function() error("test failure") end })
 start = #sent;failing.interact.MouseButton1Click:Fire()
 check(#sent == start and failing.title.Text == failing.name, "failed actions retain native error guards without misleading automatic messages")
-local suppress = tab:CreateButton({ name = "Conditional", notification = true, notificationMessage = function() return "" end })
-suppress.interact.MouseButton1Click:Fire()
-check(#sent == start, "an empty message-function result suppresses that event")
+local titleOnly = tab:CreateButton({ name = "Conditional", notification = true, notificationTitle = "Teste", notificationMessage = function() return "" end })
+titleOnly.interact.MouseButton1Click:Fire()
+check(#sent == start + 1 and sent[#sent].title == "Teste" and sent[#sent].content == "", "an empty function result sends a title-only notification")
 multi:Set({ "Dois", "Cinco" });toggle:Set(true);check(w:Save(), "checkboxes still use native persistence")
 choices:Open();p = choices.selectionPanel;w:Hide()
 check(p.closed and not w._conexaoPanel, "Hide dismisses the list")
@@ -178,8 +190,8 @@ local restored = UI:CreateWindow({ Id = "Dropdown390", name = "Dropdown test", c
 local restoredMessages = 0
 restored.Notify = function() restoredMessages += 1 end
 local restoredTab = restored:CreateTab({ name = "Options" })
-local restoredMulti = restoredTab:CreateDropdown({ name = "Marque opções", flag = "multi", options = options, multiSelect = true, value = {}, notification = true, notificationMessage = "Não deve aparecer" })
-local restoredToggle = restoredTab:CreateToggle({ name = "Feature", flag = "notificationToggle", value = false, notification = true, notificationMessage = "Não deve aparecer" })
+local restoredMulti = restoredTab:CreateDropdown({ name = "Marque opções", flag = "multi", options = options, multiSelect = true, value = {}, notification = true, notificationTitle = "Teste", notificationMessage = "Não deve aparecer" })
+local restoredToggle = restoredTab:CreateToggle({ name = "Feature", flag = "notificationToggle", value = false, notification = true, notificationTitle = "Teste", notificationMessage = "Não deve aparecer" })
 check(#restoredMulti.value == 2 and restoredMulti.value[1] == "Dois" and restoredMulti.value[2] == "Cinco" and restoredToggle.value, "reexecution restores each checkbox and toggle")
 check(restoredMessages == 0, "late-created controls never announce restored choices")
 restoredMulti:Open();p = restoredMulti.selectionPanel

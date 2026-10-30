@@ -91,7 +91,7 @@ Grupos em linha recebem os componentes compactos compatíveis; grupos em coluna 
 
 ## Notificações opcionais nos controles
 
-`notification` fica desligado por padrão. Com `false`, não é preciso fornecer mensagem e o `callback` continua executando normalmente. Com `true`, forneça `notificationMessage`: texto fixo ou uma função que recebe os mesmos argumentos do callback.
+`notification` fica desligado por padrão. Com `false`, não é preciso fornecer título nem mensagem e o `callback` continua executando normalmente. Com `true`, `notificationTitle` é obrigatório e precisa conter texto: título ausente, vazio ou só com espaços gera um erro. `notificationMessage` é opcional; pode ficar `""`, ser omitido ou ser uma função que recebe os mesmos argumentos do callback.
 
 ```lua
 tab:CreateButton({
@@ -102,7 +102,7 @@ tab:CreateButton({
 })
 tab:CreateToggle({
     name = "Ativar recurso", flag = "recurso", value = false,
-    notification = true,
+    notification = true, notificationTitle = "Recurso",
     notificationMessage = function(ativo)
         return ativo and "Recurso ativado!" or "Recurso desativado!"
     end,
@@ -113,19 +113,28 @@ tab:CreateButton({ name = "Sem aviso", notification = false,
 })
 ```
 
-Também funciona em sliders, dropdowns, inputs, teclas, cores e controles em grupos. O título usa o nome do controle quando `notificationTitle` é omitido. `notificationType` e `notificationDuration` têm os mesmos valores de `Notify`. O callback é opcional. A notificação automática só é enviada depois de o callback terminar sem erro. Um texto vazio retornado pela função suprime o aviso daquela ação.
+Também funciona em sliders, dropdowns, inputs, teclas, cores e controles em grupos. Defina o título explicitamente em `notificationTitle`; o nome do controle não é usado como substituto. `notificationType` e `notificationDuration` têm os mesmos valores de `Notify`. O callback é opcional. A notificação automática só é enviada depois de o callback terminar sem erro. Uma mensagem vazia, inclusive retornada pela função, mostra a notificação apenas com o título.
 
 ```lua
 tab:CreateSlider({ name = "Volume", range = { 0, 100 }, value = 50,
-    format = "percent", notification = true,
+    format = "percent", notification = true, notificationTitle = "Volume alterado",
     notificationMessage = function(valor) return "Volume: " .. valor .. "%" end,
 })
 tab:CreateDropdown({ name = "Opções", options = { "A", "B", "C" },
-    multiSelect = true, value = {}, notification = true,
+    multiSelect = true, value = {}, notification = true, notificationTitle = "Seleção alterada",
     notificationMessage = function(valores)
         return #valores == 0 and "Nenhuma seleção" or table.concat(valores, ", ")
     end,
 })
+```
+
+Para mostrar apenas o título:
+
+```lua
+tab:CreateButton({ name = "Concluir", notification = true,
+    notificationTitle = "Ação concluída", notificationMessage = "",
+})
+-- Também pode omitir notificationMessage.
 ```
 
 O slider notifica na confirmação, incluindo edição do número, e não durante cada movimento do arraste. Inputs notificam ao confirmar; cores notificam cada alteração do callback, por isso prefira um botão de confirmação se quiser evitar avisos durante o ajuste. Restaurar configurações aplica os callbacks necessários, sem emitir esses avisos automáticos. `controle:Set(valor, true)` também os suprime. Uma chamada explícita a `window:Notify` dentro do callback continua independente de `notification = false`; use uma das duas formas para evitar avisos duplicados.
@@ -140,6 +149,8 @@ window:Popup({ title = "Continuar?", content = "Escolha uma ação.", options = 
     { text = "Continuar", style = "primary", callback = function() print("Confirmado") end },
 } })
 ```
+
+`window:Notify` também exige `title` preenchido. `content` pode ser `""` ou omitido para mostrar só o título.
 
 `Notify` aparece no canto inferior direito; `Toast` é um aviso compacto centralizado, com `position = "Top"` ou `"Bottom"`. Os dois incluem ícone, botão de fechar e barra de tempo restante. `type` aceita `info` (padrão e cor do tema), `success`, `warning` e `error`. `icon` continua aceitando um ID numérico ou URI para usar seu próprio ícone. O toast também aceita `avatar`, `minWidth` e `subtitleAbove`.
 

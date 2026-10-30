@@ -64,7 +64,12 @@ local ativacao = testes:CreateToggle({
     notificationMessage = function(ativo) return ativo and "Você ativou o toggle." or "Você desativou o toggle." end,
     callback = function(ativo) registrar("Toggle alterado", ativo and "Você ativou o toggle." or "Você desativou o toggle.") end,
 })
--- false dispensa notificationMessage; o callback continua funcionando normalmente.
+-- Mensagem vazia é válida: este botão mostra apenas o título.
+testes:CreateButton({ name = "Notificação só com título", notification = true,
+    notificationTitle = "Ação concluída", notificationMessage = "",
+    callback = function() registrar("Ação concluída", "Aviso apenas com título.") end,
+})
+-- false dispensa título e mensagem; o callback continua funcionando normalmente.
 testes:CreateButton({ name = "Botão sem notificação", notification = false,
     callback = function() registrar("Sem notificação", "O callback foi executado sem criar um aviso.") end,
 })
@@ -128,12 +133,12 @@ local opcoes = { "Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5"
 dropdowns:CreateText({ name = "Uma ou várias escolhas", text = "A lista abre ao lado do campo, sem trocar de aba. Marque ou desmarque os checkboxes; teste a busca, Padrão, Limpar e Selecionar todos." })
 dropdowns:CreateDropdown({
     name = "Escolha única", flag = "demo/unica", options = opcoes, value = "Opção 1", multiSelect = false,
-    notification = true, notificationMessage = textoDaSelecao,
+    notification = true, notificationTitle = "Escolha única", notificationMessage = textoDaSelecao,
     callback = function(escolha) registrar("Escolha única", textoDaSelecao(escolha)) end,
 })
 local multiplo = dropdowns:CreateDropdown({
     name = "Escolha múltipla", flag = "demo/multipla", options = opcoes, value = { "Opção 1" }, multiSelect = true,
-    notification = true, notificationMessage = textoDaSelecao,
+    notification = true, notificationTitle = "Escolha múltipla", notificationMessage = textoDaSelecao,
     callback = function(escolhas) registrar("Escolha múltipla", textoDaSelecao(escolhas)) end,
 })
 local listaLonga = {}

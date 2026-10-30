@@ -20,6 +20,17 @@ local manager = w.Feedback
 for _, m in ipairs(table.clone(manager.messages)) do m:_destroy() end
 local function tick(dt) run.Heartbeat:Fire(dt) end
 local function clear() for _, m in ipairs(table.clone(manager.messages)) do m:_destroy() end end
+local previousInstances, previousConnections = #w.instances, #w.connections
+for _, props in ipairs({ {}, { content = "Message only" }, { title = "" }, { title = "  \n\t" }, { title = false }, { title = 42 }, { Title = "" } }) do
+    local ok = pcall(function() w:Notify(props) end)
+    check(not ok, "Notify rejects a missing, blank or non-text title")
+end
+check(#w.instances == previousInstances and #w.connections == previousConnections and #manager.messages == 0, "invalid notification titles create no UI or listeners")
+for _, props in ipairs({ { title = "Só título" }, { title = "Só título", content = "" }, { Title = "Só título", Content = "" } }) do
+    local message = w:Notify(props)
+    check(message.title == "Só título" and message.content == "" and not message.descriptionLabel, "an omitted or empty message renders a title-only card without a description")
+    message:_destroy()
+end
 local n = w:Notify({ title = "Escolhas salvas", content = "Pode continuar de onde parou.", type = "success", duration = 4 })
 check(n.__type == "Notification" and n.caption.Text == "CONCLUÍDO" and n.state == "entering" and n.titleLabel.FontFace.Weight == Enum.FontWeight.Bold, "Notify presents the new semantic card and bold heading")
 check(n.main.Parent == w.notifications and n.progress.Size.X.Scale == 1 and n.closeButton and n.iconPlate, "the card includes a separate icon plate, dismiss button and duration bar")

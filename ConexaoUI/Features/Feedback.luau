@@ -113,7 +113,7 @@ local function make(manager, properties, kind, stack)
     local flavor = tostring(prop(properties, "type") or "info"):lower()
     if not captions[flavor] then flavor = "info" end
     local self = setmetatable({ manager = manager, window = window, stack = stack, kind = kind, __type = kind,
-        title = tostring(prop(properties, "title") or (kind == "Notification" and "Notificação" or "")),
+        title = tostring(prop(properties, "title") or ""),
         content = tostring(prop(properties, kind == "Toast" and "subtitle" or "content") or ""),
         icon = prop(properties, "icon"), avatar = prop(properties, "avatar"), flavor = flavor,
         minWidth = finite(prop(properties, "minWidth")) and prop(properties, "minWidth") or 150,
@@ -290,6 +290,9 @@ function Feedback.attach(window)
     end
     function window:Notify(props)
         if self.unloaded or self.Feedback.destroyed then return end
+        props = type(props) == "table" and props or {}
+        local title = prop(props, "title")
+        assert(type(title) == "string" and title:match("%S"), "Notify requires a non-empty title")
         local stack = self.Feedback:Stack("Notification", false)
         return make(self.Feedback, props, "Notification", stack)
     end

@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.9.0", "new entry point is bundled")
+check(UI.Version == "3.9.1", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -749,6 +749,8 @@ local function exerciseComponents(window)
     check(toggle.value and last().content == "Você ativou o toggle.", "turning the example toggle on produces the matching notification")
     toggle.interact.MouseButton1Click:Fire()
     check(not toggle.value and last().content == "Você desativou o toggle.", "turning the toggle off produces different feedback")
+    click("Notificação só com título")
+    check(last().title == "Ação concluída" and last().content == "" and not last().descriptionLabel, "the interactive example demonstrates a title-only notification")
     click("Bloquear o botão de teste")
     local blocked = counter.value
     click("Testar botão")

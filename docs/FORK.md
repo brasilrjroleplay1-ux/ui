@@ -54,3 +54,5 @@ Consulte [NOTICE.md](../NOTICE.md) e [LICENSE](../LICENSE) para créditos e lice
 
 
 Em 3.9.0, `DropdownPopover` ancora a lista à direita do controle e usa a área segura do viewport para reposicioná-la quando necessário. Não há troca de aba, bloqueador de tela ou mudança no layout da página. Linhas com checkbox preservam os valores, callbacks e persistência nativos. A superfície acompanha movimento e rolagem e libera seus listeners ao fechar. `ControlNotifications` adiciona `notification`/`notificationMessage` aos controles interativos sem alterar seus callbacks, guards e salvamento. As mensagens são opt-in, ignoram restauração e previews de sliders. O vendor permanece inalterado nesta versão.
+
+Em 3.9.1, `ControlNotifications` exige um `notificationTitle` explícito e não vazio quando ativado, permitindo mensagem vazia ou omitida. Uma função de mensagem pode retornar `""` para exibir apenas o título. `Feedback.Notify` valida `title` antes de alocar qualquer UI, também aceitando `content` vazio ou ausente. Os exemplos e a documentação incluem notificações apenas com título.

@@ -1,8 +1,10 @@
-# Conexão UI 3.9.0 · Conexão Studio
+# Conexão UI 3.9.1 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns ancorados ao campo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
-Na **3.9.0**, o dropdown abre uma lista compacta ao lado direito do campo, com checkboxes, busca e rolagem. A aba original continua visível. Se faltar espaço, a lista se reposiciona dentro da tela. Controles podem usar `notification = true` com `notificationMessage` fixo ou uma função; `false` (padrão) dispensa a mensagem. [Exemplos](docs/EXEMPLOS.md#notificações-opcionais-nos-controles).
+Na **3.9.1**, notificações exigem um título preenchido (`notificationTitle` nos controles ou `title` em `Notify`). A mensagem é opcional: vazia ou omitida, o aviso mostra apenas o título. Com `notification = false`, nenhum dos dois é necessário.
+
+Na **3.9.0**, o dropdown abre uma lista compacta ao lado direito do campo, com checkboxes, busca e rolagem. A aba original continua visível. Se faltar espaço, a lista se reposiciona dentro da tela. Controles podem usar `notification = true` com `notificationTitle` preenchido e `notificationMessage` opcional, fixo ou uma função; `false` (padrão) dispensa a mensagem. [Exemplos](docs/EXEMPLOS.md#notificações-opcionais-nos-controles).
 
 Na **3.8.0**, Configurações se divide em **Aparência, Temas, Salvamento e Controles**. O salvamento separa os dados pelo ID da conta Roblox e pelo projeto: escolhas dos controles, tema, transparência, tamanho, preferências da janela e presets nomeados. Outra conta começa com seus próprios valores. O compartilhamento fica desligado por padrão e cada conta precisa ativá-lo em Salvamento; a mudança vale na próxima execução. Arquivos antigos sem dono identificado são preservados e não são importados automaticamente. [Como funciona](docs/CONFIGURACOES.md).
 
@@ -70,7 +72,7 @@ tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "A", "B", "C" }, 
 - **Início** mostra saudação, servidor, executor, amigos e salvamento. **Meu perfil**, aberto pelo cartão do jogador, mostra foto, nome, @usuário, ID, executor, versão e ambiente. São páginas independentes dentro do painel. A sessão mostra jogadores, capacidade, FPS, ping e tempo no painel. As contagens de amigos vêm das APIs do Roblox, com cache de um minuto enquanto a Home está aberta. Métricas indisponíveis aparecem como `—`.
 - Página **Configurações** pronta e visível na sidebar: transparência, tamanho manual/automático, salvamento/restauração, temas com prévias, atalhos e opções nativas com nomes e descrições em português. A engrenagem continua abrindo essa mesma página.
 - Dropdown ancorado ao lado direito do campo, com checkboxes, busca, rolagem, Padrão, Limpar e Selecionar todos. A seleção múltipla permanece aberta; a única fecha ao escolher. X, Escape, toque fora ou outra aba encerram a lista. Ela se reposiciona para caber na tela.
-- Notificações opcionais por controle: `notification = true` e `notificationMessage = "Sua mensagem"` (ou função). Desligadas por padrão; callbacks e salvamento continuam funcionando.
+- Notificações opcionais por controle: `notification = true`, `notificationTitle = "Seu título"` e `notificationMessage` opcional (texto ou função). Desligadas por padrão; callbacks e salvamento continuam funcionando.
 - Salvamento e carregamento automáticos habilitados por padrão, incluindo toggles, sliders, dropdowns únicos/múltiplos, inputs, teclas e cores. Use `flag` estável e único por controle.
 - **60 temas com paletas distintas:** 54 da Conexão e seis clássicos da base. A galeria inclui busca e filtros por família, com temas claros, escuros e neon. As prévias usam as mesmas cores aplicadas à janela.
 - Busca, notificações, toasts, popups, grupos, estatísticas, progresso e console da base oficial.
