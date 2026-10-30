@@ -1,4 +1,4 @@
-# Conexão UI 3.5.3 · Conexão Studio
+# Conexão UI 3.5.4 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável e seletores de opções/temas dentro do painel. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
 
@@ -10,7 +10,9 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/
 
 A demo abre em **Início**, com perfil, cliente, conta e cartões da sessão. Usa o tema `conexao`. **Configurações** continua pronta na sidebar, com transparência, tamanho, salvamento e temas. O cartão com avatar/nome no rodapé também abre o painel inicial.
 
-A abertura mostra **Conexão Studio**, com marca em vetores e texto local. Os créditos da base permanecem no código e no repositório. O nome da sua janela continua personalizável em `CreateWindow`.
+A **3.5.4** traz uma marca vetorial compartilhada entre a abertura e o topo da janela, título com a fonte de destaque do tema, selo de versão e botões com bordas e fundos próprios. O nome, subtítulo e ícone da sua janela continuam personalizáveis em `CreateWindow`.
+
+A abertura de **Conexão Studio** monta os elos da marca, faz uma passagem de luz pelo cartão e avança o indicador pelas etapas de construção da interface. O cartão sai antes da entrada da janela, que expande, revela o cabeçalho e depois o conteúdo. A entrada da janela termina em cerca de 0,76 s; ao reabrir, continua usando a restauração nativa. O cartão se ajusta à largura e à altura da tela. Fechar ou descarregar durante a sequência cancela a abertura e remove suas conexões. Os créditos da base permanecem no código e no repositório.
 
 Na **3.5.3**, a Home segue a organização da referência da [Luna Interface Suite](https://github.com/Nebula-Softworks/Luna-Interface-Suite): uma faixa de boas-vindas com avatar e nome, sessão à esquerda e cartões de cliente e conta à direita. Os atalhos duplicados de Configurações, Temas e Copiar servidor foram removidos. Os cartões usam fundos discretos ligados ao tema, com valores destacados e logos que acompanham os temas claros e escuros. A implementação é da Conexão sobre a base Gen2; não carrega código da Luna. O avatar continua em **420 × 420 px**. Abaixo de 420 px de largura de conteúdo, os cartões passam para uma coluna e usam a rolagem do próprio painel.
 

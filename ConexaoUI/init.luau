@@ -17,6 +17,8 @@ local Localization = require(script.Features.Localization)
 local Session = require(script.Features.Session)
 local BrandIcon = require(script.Features.BrandIcon)
 local Controls = require(script.Features.ControlLayout)
+local Header = require(script.Features.Header)
+local Entrance = require(script.Features.Entrance)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any) -> (),
@@ -33,7 +35,7 @@ export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boole
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.5.3", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.5.4", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -122,7 +124,11 @@ function Library:CreateWindow(options)
     if p.rememberTheme ~= false and type(requestedTheme) ~= "table" and Themes.entry(preferences.theme) then themeId = preferences.theme end
     p.theme = Themes.resolve(themeId) or requestedTheme
     p.configuration = cfg
-    p.startup = Startup.new
+    local introduction
+    p.startup = function()
+        introduction = Startup.new(p.theme, self.Version)
+        return introduction
+    end
     local id = tostring(p.Id or p.name)
     if windows[id] and not windows[id].unloaded then windows[id]:Unload() end
     local window = Gen2:CreateWindow(p)
@@ -132,6 +138,9 @@ function Library:CreateWindow(options)
     window.UIPreferences, window._preferencesDir, window._preferencesPath = preferences, preferencesDir, preferencesPath
     window.ThemeId = themeId
     window.screenGui.Name = "ConexaoUI3_" .. id
+    -- Install the first-open hooks before adapters that may yield while measuring fonts.
+    Header.attach(window, self.Version)
+    Entrance.attach(window)
     local createTab = window.CreateTab
     function window:CreateTab(props, icon)
         if type(props) == "string" then props = { name = props, icon = icon } end
@@ -166,6 +175,8 @@ function Library:CreateWindow(options)
     Settings.attach(window)
     Session.attach(window)
     Scrolling.attachWindow(window)
+    window.Introduction = introduction
+    if introduction then introduction:Ready() end
     if window.searchAction then
         local search = window.searchAction.callback
         window.searchAction.callback = function(...)
@@ -181,6 +192,7 @@ function Library:CreateWindow(options)
     local unload = window.Unload
     function window:Unload()
         if self.unloaded then return end
+        if introduction then introduction:Cancel() end
         if self._conexaoPanel then self._conexaoPanel:Close() end
         if self.configuration.autoSave and (not self.configuration.autoLoad or self._autoLoaded) then pcall(self.Save, self) end
         unload(self)

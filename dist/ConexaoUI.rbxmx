@@ -18,6 +18,8 @@ local Localization = require(script.Features.Localization)
 local Session = require(script.Features.Session)
 local BrandIcon = require(script.Features.BrandIcon)
 local Controls = require(script.Features.ControlLayout)
+local Header = require(script.Features.Header)
+local Entrance = require(script.Features.Entrance)
 
 export type Window = Gen2.Window &amp; {
     OpenSettings: (self: any) -&gt; (),
@@ -34,7 +36,7 @@ export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: b
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 
-local Library = { Version = "3.5.3", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.5.4", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -123,7 +125,11 @@ function Library:CreateWindow(options)
     if p.rememberTheme ~= false and type(requestedTheme) ~= "table" and Themes.entry(preferences.theme) then themeId = preferences.theme end
     p.theme = Themes.resolve(themeId) or requestedTheme
     p.configuration = cfg
-    p.startup = Startup.new
+    local introduction
+    p.startup = function()
+        introduction = Startup.new(p.theme, self.Version)
+        return introduction
+    end
     local id = tostring(p.Id or p.name)
     if windows[id] and not windows[id].unloaded then windows[id]:Unload() end
     local window = Gen2:CreateWindow(p)
@@ -133,6 +139,9 @@ function Library:CreateWindow(options)
     window.UIPreferences, window._preferencesDir, window._preferencesPath = preferences, preferencesDir, preferencesPath
     window.ThemeId = themeId
     window.screenGui.Name = "ConexaoUI3_" .. id
+    -- Install the first-open hooks before adapters that may yield while measuring fonts.
+    Header.attach(window, self.Version)
+    Entrance.attach(window)
     local createTab = window.CreateTab
     function window:CreateTab(props, icon)
         if type(props) == "string" then props = { name = props, icon = icon } end
@@ -167,6 +176,8 @@ function Library:CreateWindow(options)
     Settings.attach(window)
     Session.attach(window)
     Scrolling.attachWindow(window)
+    window.Introduction = introduction
+    if introduction then introduction:Ready() end
     if window.searchAction then
         local search = window.searchAction.callback
         window.searchAction.callback = function(...)
@@ -182,6 +193,7 @@ function Library:CreateWindow(options)
     local unload = window.Unload
     function window:Unload()
         if self.unloaded then return end
+        if introduction then introduction:Cancel() end
         if self._conexaoPanel then self._conexaoPanel:Close() end
         if self.configuration.autoSave and (not self.configuration.autoLoad or self._autoLoaded) then pcall(self.Save, self) end
         unload(self)
@@ -20393,6 +20405,60 @@ function BrandIcon.new(window, parent, name, props, track, white)
 end
 
 return BrandIcon
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">BrandMark</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- The same vector signature is used in the launcher and window header.
+local tweenService = game:GetService("TweenService")
+local Brand = {}
+
+function Brand.new(create, parent, size, theme)
+    theme = theme or {}
+    local accent = theme.AccentColor or Color3.fromRGB(154, 104, 255)
+    local gradient = theme.SliderProgress or ColorSequence.new(accent, Color3.fromRGB(75, 173, 255))
+    local function ink(color)
+        return color.R * 0.299 + color.G * 0.587 + color.B * 0.114 &gt; 0.52 and Color3.fromRGB(18, 19, 28) or Color3.new(1, 1, 1)
+    end
+    local self = { targets = {}, links = {} }
+    local function track(node, property, value) table.insert(self.targets, { node = node, property = property, value = value }) end
+    self.root = create("Frame", { Name = "ConexaoMark", Parent = parent, Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1, ZIndex = 5 })
+    self.plate = create("Frame", {
+        Name = "SignaturePlate", Parent = self.root, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 5,
+    })
+    create("UICorner", { Parent = self.plate, CornerRadius = UDim.new(0.28, 0) })
+    self.gradient = create("UIGradient", { Parent = self.plate, Rotation = 35, Color = gradient }, { Color = "SliderProgress" })
+    local rim = create("UIStroke", { Parent = self.plate, Thickness = 1, Color = Color3.new(1, 1, 1), Transparency = 1 })
+    track(self.plate, "BackgroundTransparency", 0)
+    track(rim, "Transparency", 0.72)
+    for index, position in ipairs({ Vector2.new(0.37, 0.41), Vector2.new(0.63, 0.59) }) do
+        local link = create("Frame", {
+            Name = "Link" .. index, Parent = self.plate, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(position.X, position.Y),
+            Size = UDim2.fromScale(0.38, 0.53), Rotation = -32, BackgroundTransparency = 1, ZIndex = 6,
+        })
+        create("UICorner", { Parent = link, CornerRadius = UDim.new(0.4, 0) })
+        local stroke = create("UIStroke", { Parent = link, Thickness = math.max(2, size * 0.055), Color = ink(accent), Transparency = 1 }, { Color = { "AccentColor", ink } })
+        track(stroke, "Transparency", 0)
+        table.insert(self.links, { node = link, position = link.Position })
+    end
+    function self:SetShown(shown, info, assemble)
+        for _, target in ipairs(self.targets) do
+            local props = { [target.property] = shown and target.value or 1 }
+            if info then tweenService:Create(target.node, info, props):Play()
+            else target.node[target.property] = props[target.property] end
+        end
+        if shown and assemble then
+            for index, link in ipairs(self.links) do
+                local direction = index == 1 and -1 or 1
+                link.node.Position = link.position + UDim2.fromScale(direction * 0.14, -direction * 0.1)
+                link.node.Rotation = -32 + direction * 18
+                tweenService:Create(link.node, info or TweenInfo.new(0.4), { Position = link.position, Rotation = -32 }):Play()
+            end
+        end
+    end
+    return self
+end
+
+return Brand
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">ControlLayout</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Responsive presentation only. Gen2 continues to own values, callbacks and persistence.
@@ -20840,6 +20906,72 @@ function Dropdown.attach(control, props)
 end
 
 return Dropdown
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Entrance</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- The native Show path still owns configuration loading, cursor and restore behavior.
+-- First-open choreography uses the Gen2 surface, navigation and element reveal helpers.
+-- Those helpers and the welcome toast originate in Rayfield Gen2 (c) 2026 Corridon Capital.
+local variables = require(script.Parent.Parent.Gen2.utility.variables)
+local chrome = require(script.Parent.Parent.Gen2.components.chrome)
+local locale = require(script.Parent.Parent.Gen2.utility.locale)
+local Entrance = {}
+
+function Entrance.attach(window)
+    function window:_firstShow()
+        local token = (self._entranceToken or 0) + 1
+        self._entranceToken = token
+        local function live() return not self.unloaded and not self.hidden and self._entranceToken == token end
+        local function after(delay, callback) task.delay(delay, function() if live() then callback() end end) end
+        local fade = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local target = self.main.Position
+        if self.BrandHeader then self.BrandHeader:Layout() end
+        self:_setContentVisible(false)
+        self.topbar.Visible, self.drag.drag.Visible, self.main.Visible = false, false, true
+        self.main.Size = UDim2.fromOffset(math.floor(self.size.X.Offset * 0.92), math.floor(self.size.Y.Offset * 0.9))
+        self.main.Position, self.main.BackgroundTransparency = target + UDim2.fromOffset(0, 14), 1
+        variables.tweenService:Create(self.main, TweenInfo.new(0.58, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out), { Size = self.size, Position = target, BackgroundTransparency = 0 }):Play()
+        after(0.12, function()
+            self.topbar.Visible = true
+            self:_fadeSurfaces(true, fade)
+            if self.BrandHeader then self.BrandHeader:SetShown(true, fade, true) end
+            if self.title then variables.tweenService:Create(self.title, fade, { TextTransparency = 0 }):Play() end
+            if self.subtitle then variables.tweenService:Create(self.subtitle, fade, { TextTransparency = 0.18 }):Play() end
+            if self.topbarIcon then variables.tweenService:Create(self.topbarIcon, fade, { ImageTransparency = 0 }):Play() end
+            for _, action in ipairs(self.actionContainer:GetChildren()) do
+                if action:IsA("Frame") and action:FindFirstChild("ImageLabel") then variables.tweenService:Create(action.ImageLabel, fade, { ImageTransparency = 0.35 }):Play() end
+            end
+            if self.settingsAction and self.selectedTab == self.rfSettings then self.settingsAction.iconLabel.ImageTransparency = 0.2 end
+            for _, tag in ipairs(self.tags) do tag:_setShown(true, fade) end
+        end)
+        after(0.24, function()
+            self:_setContentVisible(true)
+            self:_setTabSectionsVisible(true)
+            self:_setTabSectionsShown(true, fade)
+            for _, tab in ipairs(self.tabs) do
+                if not tab.neglectSelector then
+                    tab.topbarItem.Visible = true
+                    tab:_applyVisual(self.selectedTab == tab and "selected" or "unselected", fade)
+                    tab:_spinGradients()
+                end
+            end
+            self:_revealElements(0.035, 0.45)
+        end)
+        after(0.76, function()
+            self.animating, self._revealing = false, false
+            self:_applyWindowSize()
+            self:_syncDragBar()
+            self.drag.drag.Visible = true
+            variables.tweenService:Create(self.drag.dragCosmetic, fade, { Size = UDim2.fromOffset(100, 4), BackgroundTransparency = 0.7 }):Play()
+            if self.BrandHeader then self.BrandHeader:Layout() end
+            local player = variables.localPlayer
+            if player and self.settings.welcomeToast and chrome.isNewUser() then
+                self:Toast({ title = player.DisplayName, subtitle = locale.resolve("Signed in as"), subtitleAbove = true, avatar = player.UserId, minWidth = 220 })
+            end
+        end)
+    end
+end
+
+return Entrance
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">ExecutorAccess</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Support selection only: the host controls its reported name and cannot be audited here.
@@ -20946,6 +21078,155 @@ function Policy.check(identity, rules)
 end
 
 return Policy
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Header</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+local Brand = require(script.Parent.BrandMark)
+local tweenService = game:GetService("TweenService")
+local Header = {}
+
+function Header.attach(window, version)
+    local self = { targets = {}, actions = {} }
+    window.BrandHeader = self
+    local function create(class, props, themed) return window:Create(class, props, themed) end
+    local function track(node, property, value) table.insert(self.targets, { node = node, property = property, value = value }) end
+    -- Preserve native layouts as owned descendants, without letting them reposition the wordmark.
+    local storage = create("Frame", { Name = "HeaderLayoutStorage", Parent = window.topbar, Visible = false, BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 0) })
+    for _, layout in ipairs({ window.topContainerLayout, window.titleContainerLayout }) do
+        local holder = create("Frame", { Parent = storage, Visible = false, BackgroundTransparency = 1, Size = UDim2.fromOffset(0, 0) })
+        layout.Parent = holder
+    end
+    self.root = window.topContainer
+    self.root.Name, self.root.AutomaticSize = "ConexaoHeader", Enum.AutomaticSize.None
+    window.titleContainer.AutomaticSize, window.titleContainer.AnchorPoint = Enum.AutomaticSize.None, Vector2.new(0, 0)
+    self.mark = not window.topbarIcon and Brand.new(create, self.root, 40, window.theme) or nil
+    if window.title then
+        window.title.AutomaticSize, window.title.TextWrapped = Enum.AutomaticSize.None, false
+        window.title.TextTruncate = Enum.TextTruncate.AtEnd
+        window.title.Position, window.title.Size = UDim2.fromOffset(0, 0), UDim2.new(1, 0, 0, 25)
+        window.title.FontFace = window.theme.TitleFont
+        window.themeProperties[window.title].FontFace = "TitleFont"
+    end
+    self.pill = create("Frame", {
+        Name = "VersionPill", Parent = window.titleContainer, Position = UDim2.fromOffset(0, 28), Size = UDim2.fromOffset(56, 18),
+        BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4,
+    }, { BackgroundColor3 = "StatBackground" })
+    create("UICorner", { Parent = self.pill, CornerRadius = UDim.new(0, 6) })
+    local pillRim = create("UIStroke", { Parent = self.pill, Thickness = 1, Transparency = 1 }, { Color = "SurfaceStroke" })
+    track(self.pill, "BackgroundTransparency", 0.12)
+    track(pillRim, "Transparency", 0.7)
+    self.version = window.subtitle or create("TextLabel", {
+        Name = "Version", Text = version, Parent = self.pill, BackgroundTransparency = 1, TextTransparency = 1,
+    }, { FontFace = "Font", TextColor3 = "TitlingColor" })
+    self.version.Parent, self.version.AutomaticSize = self.pill, Enum.AutomaticSize.None
+    self.version.AnchorPoint, self.version.Position, self.version.Size = Vector2.new(0, 0), UDim2.fromOffset(6, 0), UDim2.new(1, -12, 1, 0)
+    self.version.TextSize, self.version.TextWrapped, self.version.TextTruncate = 10, false, Enum.TextTruncate.AtEnd
+    self.version.TextXAlignment = Enum.TextXAlignment.Center
+    if not window.subtitle then track(self.version, "TextTransparency", 0.18) end
+    self.caption = create("TextLabel", {
+        Name = "BrandCaption", Parent = window.titleContainer, Text = "UI LIBRARY", TextSize = 9, BackgroundTransparency = 1,
+        TextTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4,
+    }, { FontFace = "TitleFont", TextColor3 = "TitlingColor" })
+    track(self.caption, "TextTransparency", 0.38)
+    -- Script-created tags share the metadata row; a long row scrolls instead of covering the name.
+    self.tagSlot = create("ScrollingFrame", {
+        Name = "HeaderTags", Parent = window.titleContainer, BackgroundTransparency = 1, BorderSizePixel = 0,
+        ScrollBarThickness = 0, CanvasSize = UDim2.fromOffset(0, 0), AutomaticCanvasSize = Enum.AutomaticSize.X,
+        ScrollingDirection = Enum.ScrollingDirection.X, ClipsDescendants = true, Active = true, ScrollingEnabled = true, Visible = false,
+    })
+    window.tagContainer.Parent, window.tagContainer.AnchorPoint = self.tagSlot, Vector2.new(0, 0)
+    window.tagContainer.Position = UDim2.fromOffset(0, 0)
+    create("UIScale", { Parent = window.tagContainer, Scale = 0.75 })
+    self.separator = create("Frame", {
+        Name = "HeaderAccent", Parent = window.topbar, Position = UDim2.new(0, 18, 1, -1), Size = UDim2.new(1, -36, 0, 1),
+        BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+    })
+    create("UIGradient", {
+        Parent = self.separator, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.18, 0.1), NumberSequenceKeypoint.new(0.8, 0.3), NumberSequenceKeypoint.new(1, 1) }),
+    }, { Color = "SliderProgress" })
+    track(self.separator, "BackgroundTransparency", 0.55)
+    for _, node in ipairs(window.actionContainer:GetChildren()) do
+        if node:IsA("Frame") and node:FindFirstChild("ImageLabel") then
+            window.themeProperties[node] = window.themeProperties[node] or {}
+            window.themeProperties[node].BackgroundColor3 = "StatBackground"
+            node.BackgroundColor3 = window.theme.StatBackground
+            create("UICorner", { Parent = node, CornerRadius = UDim.new(0, 9) })
+            local rim = create("UIStroke", { Parent = node, Thickness = 1, Transparency = 1 }, { Color = "SurfaceStroke" })
+            track(node, "BackgroundTransparency", 0.45)
+            track(rim, "Transparency", 0.86)
+            table.insert(self.actions, node)
+            window:Connect(node.MouseEnter, function()
+                if window:_interactive() then tweenService:Create(node, TweenInfo.new(0.15), { BackgroundTransparency = 0.05 }):Play() end
+            end)
+            window:Connect(node.MouseLeave, function()
+                tweenService:Create(node, TweenInfo.new(0.15), { BackgroundTransparency = window.hidden and 1 or 0.45 }):Play()
+            end)
+        end
+    end
+    window.actionContainer.AutomaticSize = Enum.AutomaticSize.None
+    function self:Layout()
+        if window.unloaded then return end
+        local width = window.main.AbsoluteSize.X
+        if width &lt;= 0 or window.animating or window._revealing then width = window.size.X.Offset end
+        local compact, tiny = width &lt; 540, width &lt; 380
+        local slot, padding, gap = compact and 26 or 30, tiny and 12 or 18, tiny and 10 or 16
+        local actionGap = 5
+        if width &lt; 240 then slot, padding, gap, actionGap = 22, 8, 8, 4 end
+        window.actionsListLayout.Padding = UDim.new(0, actionGap)
+        local actionsWidth = #self.actions * slot + math.max(0, #self.actions - 1) * actionGap
+        local available = math.max(1, width - padding * 2 - gap - actionsWidth)
+        window.actionContainer.Position, window.actionContainer.Size = UDim2.new(1, -padding, 0.5, 0), UDim2.fromOffset(actionsWidth, slot)
+        for _, node in ipairs(self.actions) do node.Size = UDim2.fromOffset(slot, slot) end
+        self.root.Position, self.root.Size = UDim2.new(0, padding, 0.5, 0), UDim2.fromOffset(available, 46)
+        local iconSize = tiny and 30 or 40
+        local icon = self.mark and self.mark.root or window.topbarIcon
+        icon.Visible = available &gt;= 76
+        icon.AnchorPoint, icon.Position, icon.Size = Vector2.new(0, 0.5), UDim2.fromScale(0, 0.5), UDim2.fromOffset(iconSize, iconSize)
+        local textLeft = icon.Visible and iconSize + (tiny and 8 or 12) or 0
+        local textWidth = math.max(1, available - textLeft)
+        window.titleContainer.Position, window.titleContainer.Size = UDim2.fromOffset(textLeft, 0), UDim2.fromOffset(textWidth, 46)
+        if window.title then window.title.TextSize = tiny and 15 or (compact and 18 or 21) end
+        -- A bounded capsule needs no yielding font request during a resize. Longer subtitles truncate.
+        local pillWidth = math.min(textWidth, math.clamp((utf8.len(self.version.Text) or #self.version.Text) * 6 + 14, 38, 130))
+        self.pill.Visible = textWidth &gt;= 38
+        self.pill.Size = UDim2.fromOffset(pillWidth, 18)
+        local hasTags = false
+        for _, child in ipairs(window.tagContainer:GetChildren()) do if child:IsA("Frame") and child.Name == "Tag" then hasTags = true break end end
+        self.tagSlot.Visible = hasTags and textWidth - pillWidth &gt;= 48
+        self.tagSlot.Position, self.tagSlot.Size = UDim2.fromOffset(pillWidth + 10, 28), UDim2.fromOffset(math.max(1, textWidth - pillWidth - 10), 18)
+        self.caption.Visible = not hasTags and textWidth - pillWidth &gt;= 88
+        self.caption.Position, self.caption.Size = UDim2.fromOffset(pillWidth + 10, 28), UDim2.fromOffset(math.max(1, textWidth - pillWidth - 10), 18)
+    end
+    function self:SetShown(shown, info, assemble)
+        for _, target in ipairs(self.targets) do
+            local props = { [target.property] = shown and target.value or 1 }
+            if info then tweenService:Create(target.node, info, props):Play()
+            else target.node[target.property] = props[target.property] end
+        end
+        if self.mark then self.mark:SetShown(shown, info, assemble) end
+    end
+    local fade = window._fadeSurfaces
+    function window:_fadeSurfaces(shown, info)
+        fade(self, shown, info)
+        self.BrandHeader:SetShown(shown or (self.minimised and not self.hidden), info)
+    end
+    window:Connect(window.main:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
+    window:Connect(self.version:GetPropertyChangedSignal("Text"), function() self:Layout() end)
+    local createTag = window.CreateTag
+    function window:CreateTag(...)
+        local tag = createTag(self, ...)
+        self.BrandHeader:Layout()
+        local remove = tag.Remove
+        function tag:Remove(...)
+            remove(self, ...)
+            window.BrandHeader:Layout()
+        end
+        return tag
+    end
+    self:Layout()
+    self:SetShown(not window.hidden)
+end
+
+return Header
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Localization</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Translate through Gen2's public locale API; preserve control names, flags and callbacks.
@@ -21985,52 +22266,142 @@ return Settings
 -- SPDX-License-Identifier: MPL-2.0
 local variables = require(script.Parent.Parent.Gen2.utility.variables)
 local constants = require(script.Parent.Parent.Gen2.utility.constants)
+local Brand = require(script.Parent.BrandMark)
 local Startup = {}
+local tweenService = game:GetService("TweenService")
 
-function Startup.new()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "ConexaoStudioStartup"
-    gui.IgnoreGuiInset, gui.ResetOnSpawn = true, false
-    gui.DisplayOrder = constants.displayOrder.banner
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    local panel = Instance.new("Frame")
-    panel.Name, panel.Parent = "Brand", gui
-    panel.AnchorPoint, panel.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5)
-    panel.Size, panel.BackgroundColor3, panel.BorderSizePixel = UDim2.fromOffset(356, 100), Color3.fromRGB(16, 14, 27), 0
-    local corner = Instance.new("UICorner") corner.CornerRadius, corner.Parent = UDim.new(0, 18), panel
-    local edge = Instance.new("UIStroke") edge.Color, edge.Transparency, edge.Parent = Color3.fromRGB(154, 104, 255), 0.4, panel
-    for index = 1, 2 do
-        local mark = Instance.new("Frame")
-        mark.Size, mark.Position, mark.Rotation = UDim2.fromOffset(24, 24), UDim2.fromOffset(25 + (index - 1) * 12, 29 + (index - 1) * 12), 45
-        mark.BackgroundTransparency, mark.Parent = 1, panel
-        local rim = Instance.new("UIStroke") rim.Thickness, rim.Color, rim.Parent = 3, Color3.fromRGB(173, 126, 255), mark
-        local radius = Instance.new("UICorner") radius.CornerRadius, radius.Parent = UDim.new(0, 6), mark
+function Startup.new(theme, version)
+    theme = type(theme) == "table" and theme or {}
+    local accent = theme.AccentColor or Color3.fromRGB(154, 104, 255)
+    local base = theme.StatBackground or Color3.fromRGB(19, 18, 30)
+    local ink = theme.ContentColor or Color3.new(1, 1, 1)
+    local self = { stage = 0, closed = false, finishing = false, connections = {}, tweens = {}, targets = {} }
+    local function create(class, props)
+        local node = Instance.new(class)
+        for key, value in pairs(props or {}) do node[key] = value end
+        return node
     end
-    local title = Instance.new("TextLabel")
-    title.Name, title.Parent = "Title", panel
-    title.BackgroundTransparency, title.Position, title.Size = 1, UDim2.fromOffset(86, 20), UDim2.new(1, -102, 0, 30)
-    title.Text, title.TextSize, title.TextColor3 = "Conexão Studio", 23, Color3.new(1, 1, 1)
-    title.TextXAlignment, title.FontFace = Enum.TextXAlignment.Left, Font.fromEnum(Enum.Font.GothamBold)
-    local subtitle = Instance.new("TextLabel")
-    subtitle.Parent, subtitle.BackgroundTransparency = panel, 1
-    subtitle.Position, subtitle.Size = UDim2.fromOffset(86, 51), UDim2.new(1, -102, 0, 20)
-    subtitle.Text, subtitle.TextSize, subtitle.TextColor3 = "Carregando interface", 12, Color3.fromRGB(184, 177, 205)
-    subtitle.TextXAlignment, subtitle.FontFace = Enum.TextXAlignment.Left, Font.fromEnum(Enum.Font.Gotham)
-    local track = Instance.new("Frame")
-    track.Parent, track.Position, track.Size = panel, UDim2.new(0, 18, 1, -12), UDim2.new(1, -36, 0, 3)
-    track.BackgroundColor3, track.BorderSizePixel = Color3.fromRGB(47, 37, 68), 0
-    local progress = Instance.new("Frame")
-    progress.Parent, progress.Size, progress.BorderSizePixel = track, UDim2.fromScale(0, 1), 0
-    progress.BackgroundColor3 = Color3.fromRGB(173, 111, 255)
-    gui.Parent = variables.guiContainer
-    local camera = workspace.CurrentCamera
-    local viewport = camera and camera.ViewportSize
-    if not viewport or viewport.X &lt; 100 then viewport = gui.AbsoluteSize end
-    if not viewport or viewport.X &lt; 100 then viewport = Vector2.new(360, 640) end
-    local scale = Instance.new("UIScale")
-    scale.Parent, scale.Scale = panel, viewport and math.min(1, math.max(0.3, (viewport.X - 24) / 356)) or 1
-    game:GetService("TweenService"):Create(progress, TweenInfo.new(0.45), { Size = UDim2.fromScale(1, 1) }):Play()
-    return gui
+    local function track(node, property, value) table.insert(self.targets, { node = node, property = property, value = value }) end
+    local function tween(node, duration, props, easing)
+        if self.closed then return end
+        local animation = tweenService:Create(node, TweenInfo.new(duration, easing or Enum.EasingStyle.Quint, Enum.EasingDirection.Out), props)
+        table.insert(self.tweens, animation)
+        animation:Play()
+    end
+    local function text(name, value, x, y, width, size, bold)
+        local node = create("TextLabel", {
+            Name = name, Parent = self.panel, BackgroundTransparency = 1, TextTransparency = 1,
+            Text = value, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(width, size + 8),
+            FontFace = Font.fromEnum(bold and Enum.Font.GothamBold or Enum.Font.Gotham), TextSize = size,
+            TextColor3 = ink, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
+        })
+        track(node, "TextTransparency", 0)
+        return node
+    end
+    self.gui = create("ScreenGui", {
+        Name = "ConexaoStudioStartup", IgnoreGuiInset = true, ResetOnSpawn = false,
+        DisplayOrder = constants.displayOrder.banner, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    })
+    self.panel = create("Frame", {
+        Name = "Brand", Parent = self.gui, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 12),
+        Size = UDim2.fromOffset(420, 212), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+    })
+    create("UICorner", { Parent = self.panel, CornerRadius = UDim.new(0, 22) })
+    create("UIGradient", { Parent = self.panel, Rotation = 25, Color = ColorSequence.new(base, base:Lerp(accent, 0.16)) })
+    local edge = create("UIStroke", { Parent = self.panel, Thickness = 1, Color = accent, Transparency = 1 })
+    track(self.panel, "BackgroundTransparency", 0)
+    track(edge, "Transparency", 0.4)
+    self.scale = create("UIScale", { Parent = self.panel, Scale = 0.92 })
+    text("Eyebrow", "CONEXÃO / INTERFACE", 28, 14, 280, 9, true)
+    self.version = text("Version", "v" .. tostring(version or "3.5"), 334, 14, 58, 10, false)
+    self.version.TextXAlignment = Enum.TextXAlignment.Right
+    self.mark = Brand.new(create, self.panel, 64, theme)
+    self.mark.root.Position = UDim2.fromOffset(28, 52)
+    self.title = text("Title", "Conexão Studio", 110, 52, 282, 26, true)
+    self.subtitle = text("Subtitle", "Sua interface, do seu jeito.", 112, 89, 280, 12, false)
+    for _, target in ipairs(self.targets) do
+        if target.node == self.subtitle or target.node == self.version then target.value = 0.28 end
+    end
+    local divider = create("Frame", { Parent = self.panel, Position = UDim2.fromOffset(28, 132), Size = UDim2.fromOffset(364, 1), BackgroundColor3 = ink, BackgroundTransparency = 1, BorderSizePixel = 0 })
+    track(divider, "BackgroundTransparency", 0.9)
+    self.status = text("Status", "Preparando interface", 28, 145, 320, 12, false)
+    self.percent = text("ProgressText", "12%", 352, 145, 40, 12, true)
+    self.percent.TextXAlignment = Enum.TextXAlignment.Right
+    self.track = create("Frame", { Name = "ProgressTrack", Parent = self.panel, Position = UDim2.fromOffset(28, 176), Size = UDim2.fromOffset(364, 4), BackgroundColor3 = ink, BackgroundTransparency = 1, BorderSizePixel = 0 })
+    create("UICorner", { Parent = self.track, CornerRadius = UDim.new(1, 0) })
+    track(self.track, "BackgroundTransparency", 0.88)
+    self.progress = create("Frame", { Name = "ProgressFill", Parent = self.track, Size = UDim2.fromScale(0.12, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0 })
+    create("UICorner", { Parent = self.progress, CornerRadius = UDim.new(1, 0) })
+    create("UIGradient", { Parent = self.progress, Color = theme.SliderProgress or ColorSequence.new(accent, Color3.fromRGB(75, 173, 255)) })
+    track(self.progress, "BackgroundTransparency", 0)
+    self.phase = text("Phase", "INICIANDO", 28, 187, 364, 9, true)
+    for _, target in ipairs(self.targets) do if target.node == self.phase then target.value = 0.42 end end
+    -- The sweep stays inside a padded clipping area, clear of the panel's rounded corners.
+    local sweepClip = create("Frame", { Parent = self.panel, Position = UDim2.fromOffset(16, 30), Size = UDim2.fromOffset(388, 100), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 7 })
+    self.sweep = create("Frame", { Name = "LightSweep", Parent = sweepClip, Size = UDim2.new(0, 84, 1, 0), Position = UDim2.fromScale(-0.3, 0), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, Rotation = 18, ZIndex = 7 })
+    create("UIGradient", { Parent = self.sweep, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.88), NumberSequenceKeypoint.new(1, 1) }) })
+    function self:Layout()
+        if self.closed then return end
+        local camera = workspace.CurrentCamera
+        local viewport = camera and camera.ViewportSize
+        if not viewport or viewport.X &lt; 100 or viewport.Y &lt; 100 then viewport = self.gui.AbsoluteSize end
+        if not viewport or viewport.X &lt; 100 or viewport.Y &lt; 100 then viewport = Vector2.new(360, 640) end
+        self.fit = math.min(1, math.max(0.1, (viewport.X - 28) / 420), math.max(0.1, (viewport.Y - 28) / 212))
+        self.scale.Scale = self.fit
+    end
+    local function cleanup()
+        for _, connection in ipairs(self.connections) do connection:Disconnect() end
+        table.clear(self.connections)
+        for _, animation in ipairs(self.tweens) do animation:Cancel() end
+        table.clear(self.tweens)
+    end
+    function self:Cancel()
+        if self.closed then return end
+        self.closed = true
+        cleanup()
+        self.gui:Destroy()
+    end
+    function self:Advance(stage, amount, status)
+        if self.closed or stage &lt;= self.stage then return end
+        self.stage = stage
+        self.status.Text, self.percent.Text = status, string.format("%d%%", math.floor(amount * 100 + 0.5))
+        tween(self.progress, 0.22, { Size = UDim2.fromScale(amount, 1) })
+    end
+    function self:Ready() self:Advance(2, 0.78, "Ajustando a janela") end
+    -- Gen2 calls this once construction has finished, before showing the window.
+    function self:Destroy()
+        if self.closed or self.finishing then return end
+        self.finishing = true
+        self:Advance(3, 1, "Tudo pronto")
+        self.phase.Text = "INTERFACE PRONTA"
+        task.delay(0.1, function()
+            if self.closed then return end
+            for _, target in ipairs(self.targets) do tween(target.node, 0.22, { [target.property] = 1 }) end
+            self.mark:SetShown(false, TweenInfo.new(0.22))
+            tween(self.panel, 0.24, { Position = UDim2.new(0.5, 0, 0.5, -10) })
+            tween(self.scale, 0.24, { Scale = self.fit * 1.025 })
+            task.delay(0.26, function() self:Cancel() end)
+        end)
+    end
+    table.insert(self.connections, self.gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() self:Layout() end))
+    table.insert(self.connections, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function() self:Layout() end))
+    table.insert(self.connections, self.gui.Destroying:Connect(function()
+        if not self.closed then self.closed = true cleanup() end
+    end))
+    self.gui.Parent = variables.guiContainer
+    self:Layout()
+    self.scale.Scale = self.fit * 0.92
+    tween(self.scale, 0.4, { Scale = self.fit }, Enum.EasingStyle.Back)
+    tween(self.panel, 0.35, { Position = UDim2.fromScale(0.5, 0.5) })
+    for _, target in ipairs(self.targets) do tween(target.node, 0.32, { [target.property] = target.value }) end
+    self.mark:SetShown(true, TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), true)
+    task.delay(0.14, function()
+        if self.closed or self.finishing then return end
+        self:Advance(1, 0.36, "Construindo a interface")
+        self.sweep.BackgroundTransparency = 0
+        tween(self.sweep, 0.55, { Position = UDim2.fromScale(1.2, 0) })
+    end)
+    return self
 end
 
 return Startup

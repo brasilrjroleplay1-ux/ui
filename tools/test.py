@@ -28,3 +28,6 @@ with tempfile.TemporaryDirectory() as folder:
     layout=Path(folder)/'control-layout.luau'
     layout.write_text(prefix+(ROOT/'tests/control_layout_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(layout)],'control-layout')
+    chrome=Path(folder)/'chrome.luau'
+    chrome.write_text(prefix+(ROOT/'tests/chrome_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(chrome)],'chrome')
