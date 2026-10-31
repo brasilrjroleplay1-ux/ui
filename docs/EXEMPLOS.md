@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.11 · API Gen2
+# Exemplos da Conexão UI 3.12 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -177,6 +177,16 @@ window:Popup({ title = "Continuar?", content = "Escolha uma ação.", options = 
 
 `duration` usa segundos; quando omitido, o tempo é calculado pelo tamanho do texto, entre 3 e 9 segundos. Passar o mouse pausa o contador. É possível fechar pelo X, tocar em um aviso curto ou usar `aviso:Close()`. Textos que excedem a altura disponível usam rolagem interna e são fechados pelo X. Cada pilha mantém até seis avisos e retira os mais antigos quando falta espaço na tela. Avisos ativos mudam de cor com o tema e são liberados ao descarregar a janela.
 
+## Desempenho
+
+A categoria Desempenho já vem pronta; o script não precisa criar os controles. As setas dos cartões Gráficos e Taxa de quadros abrem ou recolhem seus conteúdos. Em janelas largas, ficam lado a lado; em janelas estreitas, ficam empilhados.
+
+```lua
+window:OpenSettings("performance")
+```
+
+O limite de FPS aceita arraste e digitação de 30 a 360, e é aplicado na confirmação. Sem uma função `setfpscap`/`set_fps_cap`, o controle fica bloqueado com uma explicação. O contador usa as métricas de `GetSessionStats`. Os ajustes gráficos são locais, reversíveis e restaurados ao descarregar a janela. Veja [Desempenho](DESEMPENHO.md) para os modos e as dependências do cliente.
+
 ## Atualizar tema, navegar e encerrar
 
 ```lua
@@ -195,7 +205,7 @@ Eles já existem depois de `CreateWindow`. Não é necessário recriar a aba nem
 
 ```lua
 window:OpenSettings()
-window:OpenSettings("saving") -- appearance, themes, saving ou controls
+window:OpenSettings("saving") -- appearance, themes, saving, controls ou performance
 window:OpenHome() -- painel de conta, cliente e sessão
 window:OpenProfile() -- página Meu perfil: identidade, executor, versão e ambiente
 window:CloseProfile() -- volta à aba que estava aberta
@@ -204,7 +214,7 @@ window:OpenThemes()
 
 Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual, ajuste automático e a escolha de exibir só os ícones nas abas. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
-As categorias são Aparência, Temas, Salvamento e Controles. Elas mantêm os controles nativos na mesma página e ocultam também suas descrições quando estão inativas. As categorias usam ícones, texto maior e um indicador de seleção. Em áreas largas ficam em uma linha; em áreas médias, em duas linhas; nas mais estreitas, a barra permite rolagem horizontal e mantém a categoria ativa visível.
+As categorias são Aparência, Temas, Salvamento, Controles e Desempenho. Elas mantêm os controles nativos na mesma página e ocultam também suas descrições quando estão inativas. As categorias usam ícones, texto maior e um indicador de seleção. Em áreas largas ficam em uma linha; em áreas médias, em uma grade; nas mais estreitas, a barra permite rolagem horizontal e mantém a categoria ativa visível.
 
 Os arquivos são individuais por ID da conta, inclusive presets nomeados e preferências da janela. Ativar Compartilhar entre contas em Salvamento seleciona um perfil compartilhado para a próxima execução. Cada conta precisa ativar sua própria opção; voltar ao modo individual restaura o perfil privado preservado. Um perfil compartilhado novo começa com os valores iniciais do script, sem copiar automaticamente o perfil privado. Os arquivos antigos sem conta identificada permanecem no disco e não são carregados automaticamente.
 

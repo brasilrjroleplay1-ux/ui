@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.11 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.12 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -62,7 +62,7 @@ export type SliderProps = Gen2.SliderProps &amp; ControlNotificationProps &amp; 
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.11.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.12.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -215,8 +215,8 @@ function Library:CreateWindow(options)
     Profile.attach(window, executorInfo, self.Version)
     Responsive.attach(window)
     Appearance.attach(window)
-    Settings.attach(window)
     Session.attach(window)
+    Settings.attach(window)
     Friends.attach(window)
     Scrolling.attachWindow(window)
     window.Introduction = introduction
@@ -20653,6 +20653,10 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         for _, at in ipairs({ { 5, 5 }, { 13, 5 }, { 5, 13 }, { 13, 13 } }) do part(at[1], at[2], 5, 5, 0, true) end
     elseif symbol == "saving" then
         part(9, 9, 14, 14, 0, true);part(9, 4, 6, 4, 0, true);part(9, 12, 8, 5, 0, true)
+    elseif symbol == "graphics" then
+        part(9, 9, 15, 10, 0, true);part(9, 9, 4, 4, 0, true)
+    elseif symbol == "performance" then
+        part(9, 9, 14, 14, 0, true);line(10, 8, 8, -45);part(9, 10, 3, 3)
     else
         part(9, 9, 16, 12, 0, true)
         for _, at in ipairs({ { 5, 7 }, { 9, 7 }, { 13, 7 }, { 5, 11 } }) do part(at[1], at[2], 2, 2) end
@@ -20987,6 +20991,82 @@ function Brand.new(create, parent, size, theme)
 end
 
 return Brand
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Collapsible</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+local Buttons = require(script.Parent.ActionButton)
+local tweenService = game:GetService("TweenService")
+local Card = {}
+function Card.attach(group, title, icon, collapsed, onChange)
+    local window = group.window
+    local self = { group = group, collapsed = collapsed == true, shown = not window.hidden, height = 58 }
+    group.Card = self
+    group.name = title
+    group.main.AutomaticSize, group.main.ClipsDescendants = Enum.AutomaticSize.None, true
+    group.main.BackgroundColor3 = Color3.new(1, 1, 1)
+    window:Create("UICorner", { Parent = group.main, CornerRadius = UDim.new(0, 13) })
+    window:Create("UIGradient", { Parent = group.main, Rotation = 90 }, { Color = "ElementGradient" })
+    self.rim = window:Create("UIStroke", { Parent = group.main, Thickness = 1, Transparency = 0.45 }, { Color = "SurfaceStroke" })
+    local body = window:Create("Frame", { Name = "CardContents", Parent = group.main, BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1, 0, 0, 0), Visible = not self.collapsed })
+    self.body, group.tabPage = body, body
+    group.layout.Parent = body
+    self.header = Buttons.new(window, group, group.main, title, icon, "tab", 12)
+    self.header.label.TextTruncate = Enum.TextTruncate.AtEnd
+    self.arrow = window:Create("TextLabel", { Name = "Expand", Parent = self.header.button, Text = "›", TextSize = 28,
+        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(24, 28), BackgroundTransparency = 1, ZIndex = 17,
+    }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
+    local show, refresh = group._setShown, group._refreshTheme
+    function self:Layout(animate)
+        if window.unloaded or not group.main.Parent then return end
+        local width = group.main.AbsoluteSize.X
+        if width &lt;= 0 then return end
+        self.lastWidth = width
+        self.header.button.Size = UDim2.new(1, 0, 0, 58)
+        self.header:Layout(width - 32, 58)
+        self.header.active = false
+        self.header:SetShown(self.shown, false)
+        local content = group.layout.AbsoluteContentSize
+        local bodyHeight = typeof(content) == "Vector2" and math.max(0, content.Y) or 0
+        body.Size = UDim2.new(1, 0, 0, bodyHeight)
+        body.Visible = not self.collapsed
+        local height = self.collapsed and 58 or 74 + bodyHeight
+        self.height = height
+        local target = UDim2.new(group.main.Size.X.Scale, group.main.Size.X.Offset, 0, height)
+        if self.tween then self.tween:Cancel() self.tween = nil end
+        if animate then
+            self.tween = tweenService:Create(group.main, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = target })
+            self.tween:Play()
+            tweenService:Create(self.arrow, TweenInfo.new(0.2), { Rotation = self.collapsed and 0 or 90 }):Play()
+        else group.main.Size = target self.arrow.Rotation = self.collapsed and 0 or 90 end
+        if self.onLayout then self.onLayout() end
+    end
+    function self:SetCollapsed(value)
+        self.collapsed = value == true
+        if self.collapsed and window._conexaoPanel then window._conexaoPanel:Close() end
+        show(group, self.shown and not self.collapsed, false)
+        self:Layout(true)
+        if onChange then onChange(self.collapsed) end
+    end
+    function group:_setShown(shown, animate)
+        self.Card.shown = shown
+        show(self, shown and not self.Card.collapsed, animate)
+        self.Card.header:SetShown(shown, animate)
+        window:_reveal(self.main, { BackgroundTransparency = shown and 0.06 or 1 }, animate)
+        window:_reveal(self.Card.rim, { Transparency = shown and 0.45 or 1 }, animate)
+        window:_reveal(self.Card.arrow, { TextTransparency = shown and 0.1 or 1 }, animate)
+    end
+    function group:_refreshTheme()
+        refresh(self)
+        self.Card.header:Paint(false)
+    end
+    window:ConnectFor(group, self.header.button.MouseButton1Click, function() if window:_interactive() then self:SetCollapsed(not self.collapsed) end end)
+    window:ConnectFor(group, group.layout:GetPropertyChangedSignal("AbsoluteContentSize"), function() self:Layout(false) end)
+    window:ConnectFor(group, group.main:GetPropertyChangedSignal("AbsoluteSize"), function()
+        if group.main.AbsoluteSize.X ~= self.lastWidth then self:Layout(false) end
+    end)
+    self:Layout(false)
+    return self
+end
+return Card
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">ControlLayout</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 -- Responsive presentation only. Gen2 continues to own values, callbacks and persistence.
@@ -22517,6 +22597,347 @@ function Localization.configure(properties)
 end
 
 return Localization
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Performance</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+local Runtime = require(script.Parent.PerformanceRuntime)
+local Card = require(script.Parent.Collapsible)
+local Preferences = require(script.Parent.Preferences)
+local Performance = {}
+function Performance.attach(window, tab)
+    local engine = Runtime.new(window)
+    local self = { engine = engine, controls = {}, restoring = true }
+    window.Performance = self
+    local saved = table.clone(window.UIPreferences.performance or {})
+    local restore = window.configuration.autoLoad == true
+    local defaults = table.clone(engine.state)
+    local function save(force)
+        if self.restoring or window.unloaded or (not force and not window.configuration.autoSave) then return true end
+        local state = table.clone(engine.state)
+        -- Merely opening the UI must not turn the slider's default into an FPS override.
+        if not engine.capChanged then state.fpsCap = nil end
+        state.graphicsCollapsed, state.frameCollapsed = self.graphics.collapsed, self.frames.collapsed
+        window.UIPreferences.performance = state
+        return Preferences.save(window)
+    end
+    local function change(key, value)
+        local previous = engine.state[key]
+        local ok, reason = engine:Set(key, value)
+        if not ok then
+            engine.state[key] = previous
+            if self.Sync then self:Sync()
+            elseif self.controls[key] then self.controls[key]:Set(previous, true) end
+            if not self.restoring then window:Toast({ title = "Ajuste indisponível", subtitle = reason, type = "warning" }) end
+            return
+        end
+        save(false)
+    end
+    local row = tab:CreateGroup()
+    self.row = row
+    row.name = "Otimização de desempenho"
+    -- Keep the native group as the owner; only its two-card positioning is customized.
+    local storage = window:Create("Frame", { Parent = row.main, Name = "PreservedPerformanceLayout", Visible = false, BackgroundTransparency = 1 })
+    row.layout.Parent = storage
+    row.main.AutomaticSize = Enum.AutomaticSize.None
+    local graphics = row:CreateGroup({ direction = "column" })
+    local frames = row:CreateGroup({ direction = "column" })
+    self.graphics = Card.attach(graphics, "GRÁFICOS", "graphics", saved.graphicsCollapsed ~= false, function() save(false) end)
+    self.frames = Card.attach(frames, "TAXA DE QUADROS", "performance", saved.frameCollapsed == true, function() save(false) end)
+    local function initial(key) return restore and saved[key] ~= nil and saved[key] or defaults[key] end
+    local function toggle(host, key, name)
+        local c = host:CreateToggle({ name = name, value = false, forgetState = true, callback = function(value) change(key, value) end })
+        self.controls[key] = c
+        return c
+    end
+    toggle(graphics, "lowGraphics", "Gráficos reduzidos")
+    self.controls.mode = graphics:CreateDropdown({ name = "Modo de otimização", options = { "Leve", "Equilibrado", "Máximo" }, value = initial("mode"), forgetState = true,
+        callback = function(value) change("mode", value) end })
+    local rendering = toggle(graphics, "disable3D", "Desativar renderização 3D")
+    if not engine.render then rendering:Lock("O cliente não oferece controle da renderização 3D.") end
+    self.controls.background = graphics:CreateDropdown({ name = "Cor de fundo", options = { "Preto", "Grafite", "Branco" }, value = initial("background"), forgetState = true,
+        description = "Usada quando a renderização 3D estiver desativada.", callback = function(value) change("background", value) end })
+    toggle(graphics, "hideUI", "Ocultar interface do jogo")
+    local fps = frames:CreateSlider({ name = "Limite de FPS", range = { 30, 360 }, increment = 1, value = initial("fpsCap"), suffix = " FPS", format = "number", forgetState = true,
+        description = "Limita os quadros; o resultado depende do aparelho e do jogo.",
+        callback = function(value, dragging) if not dragging then change("fpsCap", value) end end })
+    self.controls.fpsCap = fps
+    if not engine.setCap then fps:Lock("Este executor não oferece controle do limite de FPS.") end
+    toggle(frames, "showStats", "Mostrar FPS e ping")
+    frames:CreateButton({ name = "Restaurar desempenho", callback = function() engine:Restore() save(true) end })
+    function self:Sync()
+        for key, control in pairs(self.controls) do control:Set(engine.state[key], true) end
+    end
+    engine.onRestore = function() self:Sync() end
+    local layoutBusy = false
+    function row:Layout()
+        if layoutBusy or window.unloaded or not self.main.Parent then return end
+        layoutBusy = true
+        local width = self.main.AbsoluteSize.X
+        if width &gt; 0 then
+            local columns = width &gt;= 640
+            local cardWidth = columns and (width - 12) / 2 or width
+            graphics.main.Position, graphics.main.Size = UDim2.fromOffset(0, 0), UDim2.fromOffset(cardWidth, window.Performance.graphics.height)
+            frames.main.Position = UDim2.fromOffset(columns and cardWidth + 12 or 0, columns and 0 or window.Performance.graphics.height + 12)
+            frames.main.Size = UDim2.fromOffset(cardWidth, window.Performance.frames.height)
+            local height = columns and math.max(window.Performance.graphics.height, window.Performance.frames.height) or window.Performance.graphics.height + window.Performance.frames.height + 12
+            self.main.Size = UDim2.new(1, -20, 0, height)
+        end
+        layoutBusy = false
+    end
+    self.graphics.onLayout, self.frames.onLayout = function() row:Layout() end, function() row:Layout() end
+    window:ConnectFor(row, row.main:GetPropertyChangedSignal("AbsoluteSize"), function() row:Layout() end)
+    row:Layout()
+    self.graphics:Layout(false);self.frames:Layout(false)
+    if restore then
+        for _, key in ipairs({ "mode", "background", "fpsCap", "lowGraphics", "showStats", "hideUI", "disable3D" }) do
+            if saved[key] ~= nil and (saved[key] ~= engine.state[key] or key == "fpsCap") then
+                if not self.controls[key].locked then change(key, saved[key]) end
+            end
+        end
+    end
+    self:Sync()
+    self.restoring = false
+    row:_setShown(not window.hidden, false)
+    local previousSave = window.Save
+    function window:Save(...)
+        local prefsOK = save(true)
+        local result = previousSave(self, ...)
+        return result and prefsOK
+    end
+    window.SaveConfig = window.Save
+    local unload = window.Unload
+    function window:Unload(...)
+        engine:Destroy()
+        return unload(self, ...)
+    end
+    return row
+end
+return Performance
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">PerformanceRuntime</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Client-only, reversible changes. No world instances are destroyed and no remote code is loaded.
+local Runtime = {}
+local active
+local function finite(n) return type(n) == "number" and n == n and math.abs(n) &lt; math.huge end
+local function read(object, key)
+    local ok, value = pcall(function() return object[key] end)
+    return ok, value
+end
+local function write(object, key, value) return pcall(function() object[key] = value end) end
+local function api(name)
+    local scopes = { getfenv(), _G }
+    if type(getgenv) == "function" then local ok, env = pcall(getgenv) if ok and type(env) == "table" then table.insert(scopes, env) end end
+    for _, scope in ipairs(scopes) do local ok, fn = pcall(function() return scope[name] end) if ok and type(fn) == "function" then return fn end end
+end
+local function records() return setmetatable({}, { __mode = "k" }) end
+local function patch(store, object, key, value)
+    local ok, before = read(object, key)
+    if not ok or before == nil then return false end
+    if not write(object, key, value) then return false end
+    store[object] = store[object] or {}
+    if not store[object][key] then store[object][key] = { before = before, applied = value }
+    else store[object][key].applied = value end
+    return true
+end
+local function restore(store)
+    for object, fields in pairs(store) do
+        for key, saved in pairs(fields) do
+            local ok, current = read(object, key)
+            if ok and current == saved.applied then write(object, key, saved.before) end
+        end
+    end
+    table.clear(store)
+end
+local function is(object, class) local ok, value = pcall(object.IsA, object, class) return ok and value end
+local function descendants(root) local ok, values = pcall(root.GetDescendants, root) return ok and values or {} end
+function Runtime.new(window)
+    local run, lighting, players = game:GetService("RunService"), game:GetService("Lighting"), game:GetService("Players")
+    local guiOK, playerGui = pcall(function() return players.LocalPlayer:FindFirstChild("PlayerGui") end)
+    if not guiOK then playerGui = nil end
+    -- Some hosts expose PlayerGui directly before FindFirstChild is usable.
+    if not playerGui then local ok, value = pcall(function() return players.LocalPlayer.PlayerGui end) if ok then playerGui = value end end
+    local self = { window = window, connections = {}, graphics = records(), interfaces = records(), queue = {}, next = 1,
+        guiConnections = {}, watched = records(),
+        state = { lowGraphics = false, mode = "Equilibrado", disable3D = false, background = "Preto", hideUI = false, showStats = false }, closed = false }
+    self.setCap, self.getCap = api("setfpscap") or api("set_fps_cap"), api("getfpscap") or api("get_fps_cap")
+    if self.getCap then local ok, value = pcall(self.getCap) if ok and finite(value) and value &gt;= 0 then self.originalCap = value end end
+    if active and active.capChanged then self.originalCap = active.originalCap or 60 end
+    self.state.fpsCap = math.clamp(math.floor(self.originalCap and self.originalCap &gt; 0 and self.originalCap or 60), 30, 360)
+    self.quality = nil
+    if type(UserSettings) == "function" then
+        local ok, value = pcall(function() return UserSettings():GetService("UserGameSettings") end)
+        if ok then self.quality = value end
+    end
+    local ok, method = read(run, "Set3dRenderingEnabled")
+    self.render = ok and type(method) == "function" and method or nil
+    local getterOK, getter = read(run, "Is3dRenderingEnabled")
+    if getterOK and type(getter) == "function" then
+        local got, enabled = pcall(getter, run)
+        if got and type(enabled) == "boolean" then self.originalRender = enabled end
+    end
+    if self.originalRender == nil then self.originalRender = true end
+    if active and active.renderChanged then self.originalRender = active.originalRender end
+    local colors = { Preto = Color3.fromRGB(0, 0, 0), Grafite = Color3.fromRGB(18, 20, 26), Branco = Color3.new(1, 1, 1) }
+    self.backdrop = window:Create("Frame", { Name = "PerformanceBackdrop", Parent = window.screenGui, Size = UDim2.fromScale(1, 1), BackgroundColor3 = colors.Preto,
+        Visible = false, BorderSizePixel = 0, ZIndex = 0, Active = false })
+    self.stats = window:Create("TextLabel", { Name = "PerformanceStats", Parent = window.screenGui, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8),
+        Size = UDim2.fromOffset(190, 30), Text = "— FPS  ·  — ms", TextSize = 13, BackgroundTransparency = 0.15, BorderSizePixel = 0,
+        Visible = false, Active = false, ZIndex = 4500,
+    }, { BackgroundColor3 = "StatBackground", TextColor3 = "ContentColor", FontFace = "TitleFont" })
+    window:Create("UICorner", { Parent = self.stats, CornerRadius = UDim.new(0, 9) })
+    window:Create("UIStroke", { Parent = self.stats, Thickness = 1, Transparency = 0.6 }, { Color = "AccentStroke" })
+    function self:Acquire()
+        if active and active ~= self then active:Restore() end
+        active = self
+    end
+    function self:GraphicsNode(object)
+        if self.closed or not self.state.lowGraphics then return end
+        local parentOK, parent = read(object, "Parent")
+        if parentOK and parent == nil then return end
+        if is(object, "PostEffect") then patch(self.graphics, object, "Enabled", false) end
+        if self.state.mode ~= "Leve" then
+            for _, class in ipairs({ "ParticleEmitter", "Trail", "Beam", "Fire", "Smoke", "Sparkles" }) do
+                if is(object, class) then patch(self.graphics, object, "Enabled", false) break end
+            end
+        end
+        if self.state.mode == "Máximo" then
+            if is(object, "BasePart") then
+                patch(self.graphics, object, "CastShadow", false)
+                patch(self.graphics, object, "Reflectance", 0)
+            elseif is(object, "Decal") or is(object, "Texture") then patch(self.graphics, object, "Transparency", 1) end
+        end
+    end
+    function self:QueueGraphics()
+        self.queue, self.next = {}, 1
+        if not self.state.lowGraphics then return end
+        for _, root in ipairs({ workspace, lighting }) do for _, node in ipairs(descendants(root)) do table.insert(self.queue, node) end end
+    end
+    function self:SetLowGraphics(enabled)
+        restore(self.graphics)
+        self.state.lowGraphics, self.queue, self.next = false, {}, 1
+        if not enabled then return true end
+        self:Acquire()
+        local applied = patch(self.graphics, lighting, "GlobalShadows", false)
+        if self.quality then applied = patch(self.graphics, self.quality, "SavedQualityLevel", Enum.SavedQualitySetting.QualityLevel1) or applied end
+        if not applied then return false, "Este cliente não permite ajustar a qualidade gráfica." end
+        self.state.lowGraphics = true
+        if self.state.mode ~= "Leve" then
+            patch(self.graphics, lighting, "EnvironmentDiffuseScale", 0)
+            patch(self.graphics, lighting, "EnvironmentSpecularScale", 0)
+            local terrain = workspace:FindFirstChildOfClass("Terrain")
+            if terrain then
+                patch(self.graphics, terrain, "WaterWaveSize", 0)
+                patch(self.graphics, terrain, "WaterWaveSpeed", 0)
+                patch(self.graphics, terrain, "WaterReflectance", 0)
+            end
+        end
+        self:QueueGraphics()
+        return true
+    end
+    function self:HideGui(node)
+        if is(node, "ScreenGui") and node ~= window.screenGui and not tostring(node.Name):match("^ConexaoUI3_") then
+            patch(self.interfaces, node, "Enabled", false)
+            if not self.watched[node] then
+                self.watched[node] = true
+                local connections = {}
+                table.insert(connections, window:ConnectFor(self, node:GetPropertyChangedSignal("Enabled"), function()
+                    if self.state.hideUI and node.Enabled ~= false then patch(self.interfaces, node, "Enabled", false) end
+                end))
+                table.insert(connections, window:ConnectFor(self, node.Destroying, function()
+                    window:DisconnectMany(self, connections)
+                    for _, connection in ipairs(connections) do local at = table.find(self.guiConnections, connection) if at then table.remove(self.guiConnections, at) end end
+                end))
+                for _, connection in ipairs(connections) do table.insert(self.guiConnections, connection) end
+            end
+        end
+    end
+    function self:RestoreInterfaces()
+        self.state.hideUI = false
+        window:DisconnectMany(self, table.clone(self.guiConnections))
+        table.clear(self.guiConnections);table.clear(self.watched)
+        restore(self.interfaces)
+    end
+    function self:SetHideUI(enabled)
+        if enabled and not playerGui then return false, "A interface deste jogo ainda não está disponível." end
+        self:RestoreInterfaces()
+        self.state.hideUI = enabled
+        if enabled then self:Acquire() for _, node in ipairs(descendants(playerGui)) do self:HideGui(node) end end
+        return true
+    end
+    function self:SetRendering(disabled)
+        if not self.render then return false, "Este cliente não oferece controle da renderização 3D." end
+        self:Acquire()
+        local success, result = pcall(self.render, run, if disabled then false else self.originalRender)
+        if not success or result == false then return false, "O cliente recusou a alteração da renderização 3D." end
+        self.state.disable3D, self.renderChanged = disabled, disabled
+        self.backdrop.Visible = disabled
+        return true
+    end
+    function self:SetCap(value)
+        if not self.setCap then return false, "Este executor não oferece controle do limite de FPS." end
+        if not finite(value) or value &lt; 30 or value &gt; 360 then return false, "Escolha um limite entre 30 e 360 FPS." end
+        self:Acquire()
+        local success, result = pcall(self.setCap, math.floor(value))
+        if not success or result == false then return false, "O executor recusou o limite de FPS." end
+        self.state.fpsCap, self.capChanged = math.floor(value), true
+        return true
+    end
+    function self:Set(key, value)
+        if self.closed or window.unloaded then return false, "Janela encerrada." end
+        if key == "lowGraphics" then return self:SetLowGraphics(value == true)
+        elseif key == "hideUI" then return self:SetHideUI(value == true)
+        elseif key == "disable3D" then return self:SetRendering(value == true)
+        elseif key == "fpsCap" then return self:SetCap(value)
+        elseif key == "mode" then
+            if not ({ Leve = true, Equilibrado = true, ["Máximo"] = true })[value] then return false, "Modo inválido." end
+            self.state.mode = value
+            if self.state.lowGraphics then return self:SetLowGraphics(true) end
+        elseif key == "background" then
+            if not colors[value] then return false, "Cor inválida." end
+            self.state.background, self.backdrop.BackgroundColor3 = value, colors[value]
+        elseif key == "showStats" then self.state.showStats, self.stats.Visible = value == true, value == true
+        else return false, "Opção inválida." end
+        return true
+    end
+    function self:Restore()
+        restore(self.graphics);self:RestoreInterfaces()
+        self.queue, self.next = {}, 1
+        if self.renderChanged and self.render then pcall(self.render, run, self.originalRender) end
+        if self.capChanged and self.setCap then pcall(self.setCap, self.originalCap or 60) end
+        self.renderChanged, self.capChanged = false, false
+        self.state.fpsCap = math.clamp(math.floor(self.originalCap and self.originalCap &gt; 0 and self.originalCap or 60), 30, 360)
+        self.state.lowGraphics, self.state.disable3D, self.state.hideUI, self.state.showStats = false, false, false, false
+        self.backdrop.Visible, self.stats.Visible = false, false
+        if active == self then active = nil end
+        if self.onRestore then pcall(self.onRestore) end
+    end
+    function self:Destroy() if self.closed then return end self:Restore() self.closed = true end
+    local function added(signal, callback) if signal and type(signal.Connect) == "function" then window:ConnectFor(self, signal, callback) end end
+    added(workspace.DescendantAdded, function(node) if self.state.lowGraphics then table.insert(self.queue, node) end end)
+    added(lighting.DescendantAdded, function(node) if self.state.lowGraphics then table.insert(self.queue, node) end end)
+    if playerGui then added(playerGui.DescendantAdded, function(node) if self.state.hideUI then self:HideGui(node) end end) end
+    local elapsed = 0
+    window:ConnectFor(self, run.Heartbeat, function(delta)
+        if self.closed or window.unloaded then return end
+        local started, count = os.clock(), 0
+        while self.next &lt;= #self.queue and count &lt; 120 and os.clock() - started &lt; 0.003 do
+            local node = self.queue[self.next];self.next += 1;count += 1
+            self:GraphicsNode(node)
+        end
+        if self.next &gt; #self.queue then self.queue, self.next = {}, 1 end
+        if finite(delta) and delta &gt;= 0 then elapsed += delta end
+        if self.state.showStats and elapsed &gt;= 0.5 then
+            elapsed = 0
+            local stats = window.GetSessionStats and window:GetSessionStats()
+            self.stats.Text = stats and (stats.fpsText .. " FPS  ·  " .. stats.pingText) or "— FPS  ·  — ms"
+            local okInset, inset = pcall(function() return game:GetService("GuiService"):GetGuiInset() end)
+            self.stats.Position = UDim2.new(0.5, 0, 0, okInset and inset.Y + 8 or 8)
+            local view = window.screenGui.AbsoluteSize
+            self.stats.Size = UDim2.fromOffset(math.min(190, math.max(1, view.X - 16)), 30)
+        end
+    end)
+    return self
+end
+return Runtime
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Preferences</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 local utility = script.Parent.Parent.Gen2.utility
@@ -22540,7 +22961,17 @@ function Preferences.load(configuration, name)
     if type(data.autoLoad) == "boolean" then state.autoLoad = data.autoLoad end
     if type(data.autoSize) == "boolean" then state.autoSize = data.autoSize end
     if type(data.sidebarIconsOnly) == "boolean" then state.sidebarIconsOnly = data.sidebarIconsOnly end
-    if ({ appearance = true, themes = true, saving = true, controls = true })[data.settingsCategory] then state.settingsCategory = data.settingsCategory end
+    if ({ appearance = true, themes = true, saving = true, controls = true, performance = true })[data.settingsCategory] then state.settingsCategory = data.settingsCategory end
+    if type(data.performance) == "table" then
+        local p, clean = data.performance, {}
+        for _, key in ipairs({ "lowGraphics", "disable3D", "hideUI", "showStats", "graphicsCollapsed", "frameCollapsed" }) do
+            if type(p[key]) == "boolean" then clean[key] = p[key] end
+        end
+        if type(p.fpsCap) == "number" and p.fpsCap == p.fpsCap and p.fpsCap &gt;= 30 and p.fpsCap &lt;= 360 then clean.fpsCap = math.floor(p.fpsCap) end
+        if ({ Leve = true, Equilibrado = true, ["Máximo"] = true })[p.mode] then clean.mode = p.mode end
+        if ({ Preto = true, Grafite = true, Branco = true })[p.background] then clean.background = p.background end
+        state.performance = clean
+    end
     for _, key in ipairs({ "sizePercent", "transparency" }) do
         if type(data[key]) == "number" and data[key] == data[key] then state[key] = math.clamp(data[key], 0, 100) end
     end
@@ -23177,6 +23608,7 @@ local selector = require(script.Parent.Parent.Gen2.components.tabSelector)
 local constants = require(script.Parent.Parent.Gen2.utility.constants)
 local Scrolling = require(script.Parent.Scrolling)
 local Navigation = require(script.Parent.SettingsNavigation)
+local Performance = require(script.Parent.Performance)
 local Settings = {}
 
 -- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
@@ -23540,6 +23972,7 @@ function Settings.attach(window)
     membership[profileButton] = "controls"
     window.ThemeGallery = gallery(window, tab)
     membership[window.ThemeGallery] = "themes"
+    membership[Performance.attach(window, tab)] = "performance"
     local added = {}
     for index = first, #tab.elements do table.insert(added, tab.elements[index]) end
     for index, element in ipairs(added) do tab:_moveElement(element, index) end
@@ -23560,11 +23993,13 @@ return Settings
 local Preferences = require(script.Parent.Preferences)
 local Buttons = require(script.Parent.ActionButton)
 local Navigation = {}
-local definitions = { { "appearance", "Aparência", 132 }, { "themes", "Temas", 108 }, { "saving", "Salvamento", 146 }, { "controls", "Controles", 128 } }
+local definitions = { { "appearance", "Aparência", 132 }, { "themes", "Temas", 108 }, { "saving", "Salvamento", 146 }, { "controls", "Controles", 128 }, { "performance", "Desempenho", 156 } }
 function Navigation.attach(window, membership)
     local tab = window.SettingsTab
     local self = { window = window, tab = tab, name = "Categorias", __type = "SettingsNavigation", buttons = {}, membership = membership, connections = {}, shown = not window.hidden }
     window.SettingsNavigation = self
+    self.rowMinimum = 16 + (#definitions - 1) * 8
+    for _, definition in ipairs(definitions) do self.rowMinimum += definition[3] end
     local function create(class, props, theme) return window:Create(class, props, theme) end
     self.main = create("Frame", { Name = "SettingsCategories", Parent = tab.tabPage, Size = UDim2.new(1, -24, 0, 66), BackgroundTransparency = 1, BorderSizePixel = 0 })
     self.scroller = create("ScrollingFrame", { Parent = self.main, Name = "CategoryBar", BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1),
@@ -23584,18 +24019,21 @@ function Navigation.attach(window, membership)
         local width = self.scroller.AbsoluteWindowSize.X
         if width &lt;= 0 then width = self.main.AbsoluteSize.X end
         if width &lt;= 0 then return end
-        self.mode = width &gt;= 560 and "row" or (width &gt;= 300 and "grid" or "scroll")
-        local height = self.mode == "grid" and 124 or 66
+        self.mode = width &gt;= self.rowMinimum and "row" or (width &gt;= 300 and "grid" or "scroll")
+        local columns = width &gt;= 540 and 3 or 2
+        local rows = self.mode == "grid" and math.ceil(#definitions / columns) or 1
+        local height = rows * 50 + (rows - 1) * 8 + 16
         local size = UDim2.new(1, -24, 0, height)
         if self.main.Size ~= size then self.main.Size = size end
         local x, total = 8, width
         for index, definition in ipairs(definitions) do
             local item = self.buttons[definition[1]]
             local buttonWidth, y = item.minimum, 8
-            if self.mode == "row" then buttonWidth += (width - 554) / 4
+            if self.mode == "row" then buttonWidth += (width - self.rowMinimum) / #definitions
             elseif self.mode == "grid" then
-                buttonWidth = (width - 24) / 2
-                x, y = 8 + ((index - 1) % 2) * (buttonWidth + 8), index &gt; 2 and 66 or 8
+                buttonWidth = (width - 16 - (columns - 1) * 8) / columns
+                x, y = 8 + ((index - 1) % columns) * (buttonWidth + 8), 8 + math.floor((index - 1) / columns) * 58
+                if columns == 2 and index == #definitions and #definitions % 2 == 1 then buttonWidth = width - 16 end
             end
             item.offset = x
             item.button.Position, item.button.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(buttonWidth, 50)
@@ -23926,7 +24364,7 @@ function Startup.new(theme, version)
     track(edge, "Transparency", 0.4)
     self.scale = create("UIScale", { Parent = self.panel, Scale = 0.92 })
     text("Eyebrow", "CONEXÃO / INTERFACE", 28, 14, 280, 9, true)
-    self.version = text("Version", "v" .. tostring(version or "3.11"), 334, 14, 58, 10, false)
+    self.version = text("Version", "v" .. tostring(version or "3.12"), 334, 14, 58, 10, false)
     self.version.TextXAlignment = Enum.TextXAlignment.Right
     self.mark = Brand.new(create, self.panel, 64, theme)
     self.mark.root.Position = UDim2.fromOffset(28, 52)

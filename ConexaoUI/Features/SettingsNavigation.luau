@@ -4,11 +4,13 @@
 local Preferences = require(script.Parent.Preferences)
 local Buttons = require(script.Parent.ActionButton)
 local Navigation = {}
-local definitions = { { "appearance", "Aparência", 132 }, { "themes", "Temas", 108 }, { "saving", "Salvamento", 146 }, { "controls", "Controles", 128 } }
+local definitions = { { "appearance", "Aparência", 132 }, { "themes", "Temas", 108 }, { "saving", "Salvamento", 146 }, { "controls", "Controles", 128 }, { "performance", "Desempenho", 156 } }
 function Navigation.attach(window, membership)
     local tab = window.SettingsTab
     local self = { window = window, tab = tab, name = "Categorias", __type = "SettingsNavigation", buttons = {}, membership = membership, connections = {}, shown = not window.hidden }
     window.SettingsNavigation = self
+    self.rowMinimum = 16 + (#definitions - 1) * 8
+    for _, definition in ipairs(definitions) do self.rowMinimum += definition[3] end
     local function create(class, props, theme) return window:Create(class, props, theme) end
     self.main = create("Frame", { Name = "SettingsCategories", Parent = tab.tabPage, Size = UDim2.new(1, -24, 0, 66), BackgroundTransparency = 1, BorderSizePixel = 0 })
     self.scroller = create("ScrollingFrame", { Parent = self.main, Name = "CategoryBar", BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1),
@@ -28,18 +30,21 @@ function Navigation.attach(window, membership)
         local width = self.scroller.AbsoluteWindowSize.X
         if width <= 0 then width = self.main.AbsoluteSize.X end
         if width <= 0 then return end
-        self.mode = width >= 560 and "row" or (width >= 300 and "grid" or "scroll")
-        local height = self.mode == "grid" and 124 or 66
+        self.mode = width >= self.rowMinimum and "row" or (width >= 300 and "grid" or "scroll")
+        local columns = width >= 540 and 3 or 2
+        local rows = self.mode == "grid" and math.ceil(#definitions / columns) or 1
+        local height = rows * 50 + (rows - 1) * 8 + 16
         local size = UDim2.new(1, -24, 0, height)
         if self.main.Size ~= size then self.main.Size = size end
         local x, total = 8, width
         for index, definition in ipairs(definitions) do
             local item = self.buttons[definition[1]]
             local buttonWidth, y = item.minimum, 8
-            if self.mode == "row" then buttonWidth += (width - 554) / 4
+            if self.mode == "row" then buttonWidth += (width - self.rowMinimum) / #definitions
             elseif self.mode == "grid" then
-                buttonWidth = (width - 24) / 2
-                x, y = 8 + ((index - 1) % 2) * (buttonWidth + 8), index > 2 and 66 or 8
+                buttonWidth = (width - 16 - (columns - 1) * 8) / columns
+                x, y = 8 + ((index - 1) % columns) * (buttonWidth + 8), 8 + math.floor((index - 1) / columns) * 58
+                if columns == 2 and index == #definitions and #definitions % 2 == 1 then buttonWidth = width - 16 end
             end
             item.offset = x
             item.button.Position, item.button.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(buttonWidth, 50)

@@ -7,6 +7,7 @@ local selector = require(script.Parent.Parent.Gen2.components.tabSelector)
 local constants = require(script.Parent.Parent.Gen2.utility.constants)
 local Scrolling = require(script.Parent.Scrolling)
 local Navigation = require(script.Parent.SettingsNavigation)
+local Performance = require(script.Parent.Performance)
 local Settings = {}
 
 -- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
@@ -370,6 +371,7 @@ function Settings.attach(window)
     membership[profileButton] = "controls"
     window.ThemeGallery = gallery(window, tab)
     membership[window.ThemeGallery] = "themes"
+    membership[Performance.attach(window, tab)] = "performance"
     local added = {}
     for index = first, #tab.elements do table.insert(added, tab.elements[index]) end
     for index, element in ipairs(added) do tab:_moveElement(element, index) end

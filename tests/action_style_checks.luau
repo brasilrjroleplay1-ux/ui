@@ -35,7 +35,7 @@ for _, width in ipairs({ 160, 240, 299, 300, 420, 559, 560, 720 }) do
         table.insert(roots, at)
     end
     for i = 1, #roots do for j = i + 1, #roots do check(apart(roots[i], roots[j]), "category tiles never overlap") end end
-    check(nav.mode == (width >= 560 and "row" or (width >= 300 and "grid" or "scroll")), "the category strip changes layout without shrinking its labels")
+    check(nav.mode == (width >= nav.rowMinimum and "row" or (width >= 300 and "grid" or "scroll")), "the category strip changes layout without shrinking its labels")
     nav.buttons.controls.button.MouseButton1Click:Fire()
     check(nav.active == "controls" and nav.buttons.controls.view.indicator.BackgroundTransparency == 0 and nav.buttons.appearance.view.indicator.BackgroundTransparency == 1, "actual clicks update both the active category and its indicator")
     if width < 300 then

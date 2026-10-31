@@ -55,6 +55,10 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         for _, at in ipairs({ { 5, 5 }, { 13, 5 }, { 5, 13 }, { 13, 13 } }) do part(at[1], at[2], 5, 5, 0, true) end
     elseif symbol == "saving" then
         part(9, 9, 14, 14, 0, true);part(9, 4, 6, 4, 0, true);part(9, 12, 8, 5, 0, true)
+    elseif symbol == "graphics" then
+        part(9, 9, 15, 10, 0, true);part(9, 9, 4, 4, 0, true)
+    elseif symbol == "performance" then
+        part(9, 9, 14, 14, 0, true);line(10, 8, 8, -45);part(9, 10, 3, 3)
     else
         part(9, 9, 16, 12, 0, true)
         for _, at in ipairs({ { 5, 7 }, { 9, 7 }, { 13, 7 }, { 5, 11 } }) do part(at[1], at[2], 2, 2) end
