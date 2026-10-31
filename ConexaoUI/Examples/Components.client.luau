@@ -1,4 +1,4 @@
--- Teste completo da Conexão UI 3.9. Os controles deste arquivo pertencem ao script.
+-- Teste completo da Conexão UI 3.13. Os controles deste arquivo pertencem ao script.
 local UI = require(game:GetService("ReplicatedStorage"):WaitForChild("ConexaoUI"))
 local window = UI:CreateWindow({
     Id = "ConexaoDemo3", -- substitui a janela da demo inicial ao executar este exemplo
@@ -130,7 +130,20 @@ sliders:CreateSlider({ minimal = true, flag = "demo/compacto", range = { 0, 100 
 
 -- DROPDOWNS: false permite uma escolha; true permite várias, inclusive todas.
 local opcoes = { "Opção 1", "Opção 2", "Opção 3", "Opção 4", "Opção 5" }
-dropdowns:CreateText({ name = "Uma ou várias escolhas", text = "As opções dividem o painel por dentro: controles à esquerda, checkboxes à direita. Em janelas estreitas, ficam abaixo. Fechar devolve o espaço à aba." })
+dropdowns:CreateText({ name = "Uma ou várias escolhas", text = "Os cartões abrem dentro do painel, com a marcação à direita. Escolha uma permite só um valor; Escolha várias permite marcar e desmarcar qualquer quantidade. Os exemplos abaixo mostram os dois modos." })
+-- Exemplos visuais: uma prioridade ou qualquer combinação de raridades.
+dropdowns:CreateDropdown({
+    name = "Prioridade", flag = "demo/referencia_prioridade", multiSelect = false,
+    options = { "Maior valor", "Menor valor", "Maior raridade", "Maior nível", "Maior tamanho", "Mais próximo" },
+    value = "Maior valor",
+    callback = function(escolha) notificar("Prioridade", escolha) end,
+})
+local raridades = { "Divino", "Eterno", "Secreto", "Cósmico", "Mítico", "Lendário", "Épico", "Raro", "Incomum", "Comum" }
+dropdowns:CreateDropdown({
+    name = "Raridades", flag = "demo/referencia_raridades", multiSelect = true,
+    options = raridades, value = table.clone(raridades),
+    callback = function(escolhas) notificar("Raridades", textoDaSelecao(escolhas)) end,
+})
 dropdowns:CreateDropdown({
     name = "Escolha única", flag = "demo/unica", options = opcoes, value = "Opção 1", multiSelect = false,
     notification = true, notificationTitle = "Escolha única", notificationMessage = textoDaSelecao,

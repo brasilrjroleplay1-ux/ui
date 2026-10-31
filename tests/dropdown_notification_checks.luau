@@ -46,13 +46,15 @@ local tabCount = #w.tabs
 local pageChildren = #w.elements:GetChildren()
 multi.interact.MouseButton1Click:Fire()
 local p = multi.selectionPanel
-check(p.mode == "right" and rect(p.main).width <= 300, "a regular window reserves a bounded options column on the inside right")
+check(p.mode == "right" and rect(p.main).width <= 440, "a regular window reserves a bounded options column on the inside right")
 check(#w.tabs == tabCount and w.selectedTab == tab and p.main.Parent == w.main and not p.scrim, "the options are a child of the main panel, with no replacement tab or fullscreen blocker")
 check(#w.elements:GetChildren() == pageChildren, "the options never become a child page of the native UIPageLayout")
 insideContent(p)
 check(w.elements.Size ~= originalElementsSize and w.elements.Position ~= originalElementsPosition and w.size == UDim2.fromOffset(800, 600), "opening divides content without resizing the actual window")
 check(multi.panel.Visible == false and multi.main.Size.Y.Offset <= 70, "the dropdown's own row stays collapsed")
-check(p.grid:IsA("UIListLayout") and #p.items == 5 and p.items[1].checkbox.Size.X.Offset == 20, "each vertical option row has an explicit checkbox")
+check(p.grid:IsA("UIGridLayout") and p.columns == 2 and #p.items == 5 and p.grid.CellSize.Y.Offset >= 44, "the options use two columns of touch-sized cards when they fit")
+check(p.items[1].checkbox.AnchorPoint.X == 1 and p.items[1].label.Position.X.Offset == 14, "selection marks are on the right of the option title")
+check(p.subtitle.Text:find("Escolha várias", 1, true) and #p.actions == 3, "multiple selection is clearly labelled and exposes all bulk actions")
 check(p.items[1].marker.Text == "✓" and p.items[2].marker.Text == "", "initial choices have checked and unchecked boxes")
 local before = callbackCount
 p.items[2].hit.MouseButton1Click:Fire()
@@ -84,13 +86,16 @@ p.search.Text = "";p.search:GetPropertyChangedSignal("Text"):Fire()
 local position = p.main.Position
 w.main.AbsolutePosition = Vector2.new(180, 90);heartbeat()
 check(p.main.Parent == w.main and p.main.Position == position, "the options move with the parent window without screen-relative positioning")
-local accent = p.items[1].checkbox.BackgroundColor3
+local accent = p.items[1].frame.BackgroundColor3
 w:ChangeTheme("porcelana")
-check(p.items[1].checkbox.BackgroundColor3 ~= accent and p.items[1].label.TextColor3 == w.theme.ContentColor, "open checkboxes follow light/dark theme changes")
+check(p.items[1].frame.BackgroundColor3 ~= accent and p.items[1].label.TextColor3 == w.theme.ContentColor, "open option cards follow light/dark theme changes")
 for _, size in ipairs({ Vector2.new(685, 450), Vector2.new(1024, 720), Vector2.new(480, 320), Vector2.new(320, 480), Vector2.new(240, 320), Vector2.new(320, 260) }) do
     w.size, w.main.AbsoluteSize = UDim2.fromOffset(size.X, size.Y), size
     w:_applyRailWidth();heartbeat()
     insideContent(p)
+    check(p.columns == (p.main.Size.X.Offset - 32 >= 272 and 2 or 1), "resizing switches between one and two columns based on available card width")
+    check(p.grid.CellSize.X.Offset * p.columns + 8 * (p.columns - 1) <= p.main.Size.X.Offset - 32, "option cards fit their list without a horizontal scrollbar")
+    check(p.grid.CellSize.X.Offset - 54 > 0 and p.grid.CellSize.Y.Offset == 56, "option titles retain their own space beside the check mark")
     check(not p.closed and p.main.Parent == w.main, "resizing never detaches or closes the internal pane")
     local split = w.elements.Size
     for _ = 1, 5 do w:_applyRailWidth() end
@@ -123,8 +128,14 @@ multi:Unlock();multi:Open();p = multi.selectionPanel;w:ToggleMinimise()
 check(p.closed and not w._conexaoPanel and w.elements.Size == originalElementsSize, "minimising restores the full content geometry")
 w:ToggleMinimise()
 local single = tab:CreateDropdown({ name = "Uma", options = options, value = "Um", multiSelect = false })
-single:Open();p = single.selectionPanel;p.items[4].hit.MouseButton1Click:Fire()
+single:Open();p = single.selectionPanel
+check(p.subtitle.Text == "Escolha uma" and #p.actions == 0 and not p.footer.Visible and not p.footerDivider.Visible, "single choice has its own label and no bulk-action footer")
+p.items[4].hit.MouseButton1Click:Fire()
 check(single:GetValue() == "Quatro" and p.closed and w.selectedTab == tab and w.elements.Size == originalElementsSize, "single choice commits and restores full width without tab navigation")
+single:Open();p = single.selectionPanel
+check(p.items[4].marker.Text == "✓" and p.items[1].marker.Text == "", "reopening a single-choice picker marks only the current choice")
+p.items[2].hit.MouseButton1Click:Fire()
+check(single:GetValue() == "Dois" and #single.value == 1, "choosing a new single option replaces the previous value")
 local connections, instances = #w.connections, #w.instances
 for _ = 1, 10 do multi:Open();multi:Close() end
 check(#w.connections == connections and #w.instances == instances and w._applyRailWidth == originalWidth, "reopening leaks no rows, frames, listeners or layout wrappers")

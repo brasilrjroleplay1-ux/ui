@@ -60,15 +60,17 @@ function Pane.new(window, control)
         Name = "OptionsBody", Parent = self.viewport, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 4011,
     })
     self.title = Surface.label(window, self.body, control.name, {
-        Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -60, 0, 22), TextSize = 15,
+        Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -66, 0, 22), TextSize = 17,
         TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
     })
+    window.themeProperties[self.title].FontFace = { "TitleFont", function(font) return Font.new(font.Family, Enum.FontWeight.SemiBold, font.Style) end }
+    self.title.FontFace = window.themeProperties[self.title].FontFace[2](window.theme.TitleFont)
     self.subtitle = Surface.label(window, self.body, "", {
-        Position = UDim2.fromOffset(14, 36), Size = UDim2.new(1, -28, 0, 18), TextSize = 11, TextTransparency = 0.25,
+        Position = UDim2.fromOffset(16, 37), Size = UDim2.new(1, -32, 0, 18), TextSize = 12, TextTransparency = 0.25,
         TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
     })
     self.closeButton = Surface.button(window, self.body, "×", {
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(32, 32), TextSize = 20,
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 12), Size = UDim2.fromOffset(36, 36), TextSize = 22,
     })
     self.content = window:Create("Frame", {
         Parent = self.body, BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 62),
@@ -99,7 +101,8 @@ function Pane.new(window, control)
         local paneWidth, paneHeight, x, y, reserveX, reserveY
         if width >= 420 then
             self.mode = "right"
-            paneWidth, paneHeight = math.min(300, math.floor(width * 0.46)), math.max(1, height - 16)
+            -- Leave a usable controls column while allowing two option cards per row.
+            paneWidth, paneHeight = math.min(440, math.floor(width * 0.55), width - 198), math.max(1, height - 16)
             x, y = left + width - paneWidth - 8, top + 8
             reserveX, reserveY = paneWidth + 18, 0
         else
@@ -118,23 +121,30 @@ function Pane.new(window, control)
         local footerWidth = math.max(1, paneWidth - 24)
         local stacked = footerWidth < 180
         local count = #(self.actionViews or {})
-        local rows = stacked and count or (count > 2 and 2 or 1)
-        local footerHeight = math.max(44, rows * 44 + math.max(0, rows - 1) * 8)
-        local bodyHeight = math.max(footerHeight + 174, paneHeight)
+        local inline = count == 3 and footerWidth >= 368
+        local rows = count == 0 and 0 or (inline and 1 or (stacked and count or (count > 2 and 2 or 1)))
+        local footerHeight = rows * 44 + math.max(0, rows - 1) * 8
+        local bodyHeight = math.max(count == 0 and 194 or footerHeight + 204, paneHeight)
+        self.footerMode = count == 0 and "none" or (inline and "inline" or (stacked and "stacked" or "split"))
+        self.footer.Visible, self.footerDivider.Visible = count > 0, count > 0
         assign(self.body, "Size", UDim2.new(1, 0, 0, bodyHeight))
         assign(self.footer, "Position", UDim2.fromOffset(12, bodyHeight - footerHeight - 12))
         assign(self.footer, "Size", UDim2.fromOffset(footerWidth, footerHeight))
         assign(self.footerDivider, "Position", UDim2.fromOffset(12, bodyHeight - footerHeight - 24))
-        assign(self.content, "Size", UDim2.new(1, -24, 0, bodyHeight - footerHeight - 86))
+        assign(self.content, "Size", UDim2.new(1, -24, 0, bodyHeight - (count == 0 and 74 or footerHeight + 86)))
         for index, view in ipairs(self.actionViews or {}) do
             local width, x, y = footerWidth, 0, (index - 1) * 52
-            if not stacked then
+            if inline then
+                local secondary = math.floor((footerWidth - 16) * 0.25)
+                width, x, y = index == 3 and footerWidth - secondary * 2 - 16 or secondary, (index - 1) * (secondary + 8), 0
+            elseif not stacked then
                 width, x, y = index == 3 and footerWidth or (footerWidth - 8) / 2, index == 2 and (footerWidth + 8) / 2 or 0, index == 3 and 52 or 0
             end
             assign(view.button, "Position", UDim2.fromOffset(x, y))
             assign(view.button, "Size", UDim2.fromOffset(width, 44))
             view:Layout(width, 44)
         end
+        if self.LayoutOptions then self:LayoutOptions(paneWidth - 24) end
         assign(self.viewport, "CanvasSize", UDim2.fromOffset(0, bodyHeight))
         assign(self.viewport, "CanvasPosition", Vector2.new(0, math.clamp(self.viewport.CanvasPosition.Y, 0, bodyHeight - paneHeight)))
         self.viewport.ScrollingEnabled = bodyHeight > paneHeight

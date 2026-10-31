@@ -74,13 +74,15 @@ local function inspectFooter()
     for i = 1, #areas do for j = i + 1, #areas do check(apart(areas[i], areas[j]), "dropdown footer buttons never collide") end end
     local listBottom = picker.content.Position.Y.Offset + picker.content.Size.Y.Offset
     check(listBottom + 12 <= picker.footer.Position.Y.Offset and picker.body.Size.Y.Offset - picker.footer.Size.Y.Offset - 130 >= 44, "option rows keep their own viewport above the action footer")
-    if fw >= 180 then
+    if fw >= 368 then
+        check(areas[1].y == areas[2].y and areas[2].y == areas[3].y and picker.footerMode == "inline", "wide footers align all three actions in one row")
+    elseif fw >= 180 then
         check(areas[1].y == areas[2].y and areas[3].y >= areas[1].y + areas[1].h + 8 and areas[3].w == fw, "primary Select all spans a separate row below Default and Clear")
     else
         check(areas[2].y > areas[1].y and areas[3].y > areas[2].y, "very narrow footers stack their actions without squeezing the labels")
     end
 end
-for _, size in ipairs({ Vector2.new(824, 498), Vector2.new(685, 450), Vector2.new(320, 480), Vector2.new(240, 320), Vector2.new(320, 260) }) do
+for _, size in ipairs({ Vector2.new(1100, 600), Vector2.new(824, 498), Vector2.new(685, 450), Vector2.new(320, 480), Vector2.new(240, 320), Vector2.new(320, 260) }) do
     w.size, w.main.AbsoluteSize = UDim2.fromOffset(size.X, size.Y), size
     w:_applyRailWidth();picker:Layout();inspectFooter()
 end
@@ -106,6 +108,11 @@ for _, theme in ipairs(UI.Themes) do
         check(contrast(primary.label.TextColor3, point.Value) >= 4.5, "primary action text stays readable across every palette: " .. theme.id)
     end
     check(primary.label.FontFace.Family == w.theme.TitleFont.Family and selected.label.FontFace.Family == w.theme.TitleFont.Family, "both button groups follow the current font")
+    for _, item in ipairs({ picker.items[1], picker.items[2] }) do
+        local text = item.label.TextColor3:Lerp(item.frame.BackgroundColor3, item.label.TextTransparency)
+        check(contrast(text, item.frame.BackgroundColor3) >= 4.5, "selected and unselected card titles stay readable in " .. theme.id)
+    end
+    check(contrast(picker.items[1].marker.TextColor3, picker.items[1].frame.BackgroundColor3) >= 3, "the right-hand selection mark stays visible in " .. theme.id)
 end
 
 -- Optional internal rendering input. This is real geometry/theme data, not a Roblox screenshot.

@@ -1,6 +1,8 @@
-# Conexão UI 3.12.1 · Conexão Studio
+# Conexão UI 3.13.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.13.0**, os dropdowns usam cartões em duas colunas quando há espaço, com marcação à direita e os modos **Escolha uma** e **Escolha várias**. O modo único substitui a seleção anterior e fecha; o múltiplo permite marcar/desmarcar e oferece Padrão, Limpar e Selecionar todos. O painel continua dentro da janela. O [exemplo completo](Example.luau) inclui Prioridade e Raridades para testar os dois modos.
 
 Na **3.12.1**, os botões criados com `CreateButton` exibem uma seta de ação em um indicador à direita. Ela acompanha o tema, destaca o foco e responde ao toque. O texto reserva espaço para o indicador, inclusive em janelas pequenas e grupos de botões.
 

@@ -16,6 +16,9 @@ local function ink(color)
     local dark, light = Color3.new(0, 0, 0), Color3.new(1, 1, 1)
     return contrast(color, dark) >= contrast(color, light) and dark or light
 end
+function Buttons.readableColor(preferred, background)
+    return contrast(preferred, background) >= 4.5 and preferred or ink(background)
+end
 function Buttons.new(window, owner, parent, title, symbol, variant, z)
     z = z or 10
     local self = { window = window, owner = owner, shown = true, active = false, hovered = false, pressed = false, variant = variant or "secondary", glyph = {} }

@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.12.1", "new entry point is bundled")
+check(UI.Version == "3.13.0", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -289,7 +289,7 @@ local oldSize, oldPosition, oldElementsSize = w.main.AbsoluteSize, w.main.Absolu
 w.main.AbsoluteSize, w.main.AbsolutePosition = Vector2.new(320, 480), Vector2.new(0, 0)
 w.elements.AbsoluteSize = Vector2.new(256, 416)
 smallPanel:Layout()
-check(smallPanel.grid:IsA("UIListLayout") and smallPanel.main.Size.X.Offset <= 300 and smallPanel.root.Parent == w.main, "a narrow window keeps the options in an internal one-column pane")
+check(smallPanel.grid:IsA("UIGridLayout") and smallPanel.columns == 1 and smallPanel.main.Size.X.Offset <= 300 and smallPanel.root.Parent == w.main, "a narrow window keeps the options in an internal one-column pane")
 w.main.AbsoluteSize, w.main.AbsolutePosition, w.elements.AbsoluteSize = oldSize, oldPosition, oldElementsSize
 multi:Close()
 multi.main.AbsoluteSize = Vector2.new(240, 70)

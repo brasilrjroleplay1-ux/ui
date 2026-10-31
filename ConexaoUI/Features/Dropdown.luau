@@ -68,44 +68,63 @@ function Dropdown.attach(control, props)
             if self.chevron.Parent then self.chevron.Rotation = 180 end
         end
         picker.search = w:Create("TextBox", {
-            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 34),
+            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 40),
             Text = "", PlaceholderText = "Buscar opção...", ClearTextOnFocus = false,
             TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0,
             BackgroundTransparency = 0.88, ZIndex = 4016,
         }, { TextColor3 = "ContentColor", FontFace = "Font", BackgroundColor3 = "AccentColor", PlaceholderColor3 = "PlaceholderColor" })
         Surface.round(w, picker.search, 11)
-        w:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+        w:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 36), PaddingRight = UDim.new(0, 12) })
+        w:Create("UIStroke", { Parent = picker.search, Thickness = 1, Transparency = 0.72 }, { Color = "SurfaceStroke" })
+        local searchIcon = w:Create("Frame", { Name = "SearchIcon", Parent = picker.content, Position = UDim2.fromOffset(13, 13), Size = UDim2.fromOffset(11, 11), BackgroundTransparency = 1, ZIndex = 4017 })
+        Surface.round(w, searchIcon, 20)
+        w:Create("UIStroke", { Parent = searchIcon, Thickness = 1.5, Transparency = 0.3 }, { Color = "ContentColor" })
+        w:Create("Frame", { Parent = searchIcon, Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(6, 1.5), Rotation = 45, BorderSizePixel = 0, BackgroundTransparency = 0.3, ZIndex = 4017 }, { BackgroundColor3 = "ContentColor" })
         picker.list = w:Create("ScrollingFrame", {
-            Parent = picker.content, Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 1, -44),
+            Parent = picker.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
             BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
             AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
             ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 4012,
         }, { ScrollBarImageColor3 = "AccentColor" })
-        picker.grid = w:Create("UIListLayout", {
-            Parent = picker.list, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder,
+        picker.grid = w:Create("UIGridLayout", {
+            Parent = picker.list, CellPadding = UDim2.fromOffset(8, 8), CellSize = UDim2.fromOffset(140, 56),
+            FillDirectionMaxCells = 2, SortOrder = Enum.SortOrder.LayoutOrder,
         })
         Scrolling.frame(w, picker, picker.list, picker.grid)
         w:Create("UIPadding", { Parent = picker.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
         picker.empty = Surface.label(w, picker.content, "Nenhuma opção encontrada", {
-            Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 0, 40), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
+            Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 0, 56), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         })
         picker.items, picker.optionConnections = {}, {}
+        function picker:LayoutOptions(width)
+            local inner = math.max(1, width - 8)
+            local columns = inner >= 272 and 2 or 1
+            local cellSize = UDim2.fromOffset(math.floor((inner - (columns - 1) * 8) / columns), 56)
+            if self.grid.CellSize ~= cellSize then self.grid.CellSize = cellSize end
+            self.grid.FillDirectionMaxCells, self.columns = columns, columns
+        end
+        function picker:PaintItem(item)
+            local chosen = table.find(control.value, item.name) ~= nil
+            local accent, base = w.theme.AccentColor, w.theme.NeutralButton
+            item.frame.BackgroundColor3 = base:Lerp(accent, chosen and 0.25 or (item.hovered and 0.1 or 0.025))
+            item.stroke.Color = chosen and w.theme.AccentStroke or w.theme.SurfaceStroke
+            item.stroke.Transparency = chosen and 0.08 or (item.hovered and 0.25 or 0.6)
+            item.frame.BackgroundTransparency = 0
+            item.marker.Text = chosen and "✓" or ""
+            item.label.TextColor3 = Buttons.readableColor(w.theme.ContentColor, item.frame.BackgroundColor3)
+            item.marker.TextColor3 = item.label.TextColor3
+            item.label.TextTransparency = 0
+        end
         function picker:Sync()
             if self.closed then return end
             local query, count = string.lower(self.search.Text), 0
             for _, item in ipairs(self.items) do
-                local chosen = table.find(control.value, item.name) ~= nil
                 item.frame.Visible = query == "" or string.find(string.lower(item.name), query, 1, true) ~= nil
                 if item.frame.Visible then count += 1 end
-                item.frame.BackgroundTransparency = chosen and 0.65 or 0.95
-                item.stroke.Transparency = chosen and 0.15 or 0.7
-                item.marker.Text = chosen and "✓" or ""
-                item.checkbox.BackgroundTransparency = chosen and 0 or 1
-                item.checkStroke.Transparency = chosen and 0.1 or 0.55
-                item.label.TextTransparency = chosen and 0 or 0.15
+                self:PaintItem(item)
             end
             self.empty.Visible = count == 0
-            self.subtitle.Text = control.multiSelect and (tostring(#control.value) .. " selecionadas · " .. tostring(count) .. " opções") or "Escolha uma opção"
+            self.subtitle.Text = control.multiSelect and ("Escolha várias · " .. tostring(#control.value) .. " selecionadas") or "Escolha uma"
         end
         function picker:Rebuild()
             if self.closed then return end
@@ -117,33 +136,43 @@ function Dropdown.attach(control, props)
             self.items = {}
             for index, name in ipairs(control.options) do
                 local frame = w:Create("Frame", {
-                    Name = name, Parent = self.list, Size = UDim2.new(1, -8, 0, 40), BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
-                }, { BackgroundColor3 = "AccentColor" })
-                Surface.round(w, frame, 12)
-                local stroke = w:Create("UIStroke", { Parent = frame, Thickness = 1 }, { Color = "AccentStroke" })
-                local label = Surface.label(w, frame, name, {
-                    Position = UDim2.fromOffset(44, 4), Size = UDim2.new(1, -56, 1, -8), TextSize = 13,
-                    TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
+                    Name = name, Parent = self.list, Size = UDim2.new(1, -8, 0, 56), BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
                 })
+                Surface.round(w, frame, 12)
+                local stroke = w:Create("UIStroke", { Parent = frame, Thickness = 1 })
+                local label = Surface.label(w, frame, name, {
+                    Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -54, 1, -16), TextSize = 14,
+                    TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd,
+                })
+                w.themeProperties[label].FontFace = { "Font", function(font) return Font.new(font.Family, Enum.FontWeight.SemiBold, font.Style) end }
+                -- State colours are painted together, so a theme tween cannot overwrite contrast.
+                w.themeProperties[label].TextColor3 = nil
+                label.FontFace = w.themeProperties[label].FontFace[2](w.theme.Font)
                 local checkbox = w:Create("Frame", {
-                    Name = "Checkbox", Parent = frame, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0),
-                    Size = UDim2.fromOffset(20, 20), BorderSizePixel = 0, ZIndex = 4014,
-                }, { BackgroundColor3 = "AccentColor" })
-                Surface.round(w, checkbox, 5)
-                local checkStroke = w:Create("UIStroke", { Parent = checkbox, Thickness = 1 }, { Color = "AccentStroke" })
+                    Name = "SelectionMark", Parent = frame, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
+                    Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4014,
+                })
                 local marker = Surface.label(w, checkbox, "", {
                     Size = UDim2.fromScale(1, 1), TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4015,
                 })
-                w.themeProperties[marker].TextColor3 = { "AccentColor", function(c)
-                    return (c.R * 0.299 + c.G * 0.587 + c.B * 0.114) > 0.58 and Color3.fromRGB(12, 17, 25) or Color3.new(1, 1, 1)
-                end }
-                marker.TextColor3 = w.themeProperties[marker].TextColor3[2](w.theme.AccentColor)
+                w.themeProperties[marker].TextColor3 = nil
                 local hit = w:Create("TextButton", {
                     Parent = frame, Text = "", BackgroundTransparency = 1, AutoButtonColor = false,
                     Size = UDim2.fromScale(1, 1), ZIndex = 4017,
                 })
-                local item = { name = name, frame = frame, label = label, marker = marker, checkbox = checkbox, checkStroke = checkStroke, stroke = stroke, hit = hit }
+                local item = { name = name, frame = frame, label = label, marker = marker, checkbox = checkbox, stroke = stroke, hit = hit }
                 table.insert(self.items, item)
+                local function hover(value)
+                    if self.closed then return end
+                    item.hovered = value and not control.locked
+                    self:PaintItem(item)
+                end
+                for _, signal in ipairs({ hit.MouseEnter, hit.SelectionGained }) do
+                    table.insert(self.optionConnections, self:Connect(signal, function() hover(true) end))
+                end
+                for _, signal in ipairs({ hit.MouseLeave, hit.SelectionLost }) do
+                    table.insert(self.optionConnections, self:Connect(signal, function() hover(false) end))
+                end
                 table.insert(self.optionConnections, self:Connect(hit.MouseButton1Click, function()
                     if control.locked then return end
                     if control.multiSelect then
@@ -164,10 +193,10 @@ function Dropdown.attach(control, props)
             picker.list.CanvasPosition = Vector2.new(0, 0)
             picker:Sync()
         end)
-        local actions = {
+        local actions = self.multiSelect and {
             { "Padrão", function() control:Set(table.clone(default)) end },
             { "Limpar", function() control:Set({}) end },
-        }
+        } or {}
         if self.multiSelect then table.insert(actions, { "Selecionar todos", function() control:Set(table.clone(control.options)) end }) end
         picker.actions, picker.actionViews = {}, {}
         for index, action in ipairs(actions) do
@@ -178,6 +207,7 @@ function Dropdown.attach(control, props)
         end
         function picker:RefreshTheme()
             for _, view in ipairs(self.actionViews) do view:Paint(false) end
+            self:Sync()
         end
         picker:Layout()
         picker:Rebuild()

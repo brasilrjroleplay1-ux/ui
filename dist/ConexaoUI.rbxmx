@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.12 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.13 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -62,7 +62,7 @@ export type SliderProps = Gen2.SliderProps &amp; ControlNotificationProps &amp; 
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.12.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.13.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -20614,6 +20614,9 @@ local function ink(color)
     local dark, light = Color3.new(0, 0, 0), Color3.new(1, 1, 1)
     return contrast(color, dark) &gt;= contrast(color, light) and dark or light
 end
+function Buttons.readableColor(preferred, background)
+    return contrast(preferred, background) &gt;= 4.5 and preferred or ink(background)
+end
 function Buttons.new(window, owner, parent, title, symbol, variant, z)
     z = z or 10
     local self = { window = window, owner = owner, shown = true, active = false, hovered = false, pressed = false, variant = variant or "secondary", glyph = {} }
@@ -21528,44 +21531,63 @@ function Dropdown.attach(control, props)
             if self.chevron.Parent then self.chevron.Rotation = 180 end
         end
         picker.search = w:Create("TextBox", {
-            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 34),
+            Name = "Filter", Parent = picker.content, Size = UDim2.new(1, 0, 0, 40),
             Text = "", PlaceholderText = "Buscar opção...", ClearTextOnFocus = false,
             TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, BorderSizePixel = 0,
             BackgroundTransparency = 0.88, ZIndex = 4016,
         }, { TextColor3 = "ContentColor", FontFace = "Font", BackgroundColor3 = "AccentColor", PlaceholderColor3 = "PlaceholderColor" })
         Surface.round(w, picker.search, 11)
-        w:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) })
+        w:Create("UIPadding", { Parent = picker.search, PaddingLeft = UDim.new(0, 36), PaddingRight = UDim.new(0, 12) })
+        w:Create("UIStroke", { Parent = picker.search, Thickness = 1, Transparency = 0.72 }, { Color = "SurfaceStroke" })
+        local searchIcon = w:Create("Frame", { Name = "SearchIcon", Parent = picker.content, Position = UDim2.fromOffset(13, 13), Size = UDim2.fromOffset(11, 11), BackgroundTransparency = 1, ZIndex = 4017 })
+        Surface.round(w, searchIcon, 20)
+        w:Create("UIStroke", { Parent = searchIcon, Thickness = 1.5, Transparency = 0.3 }, { Color = "ContentColor" })
+        w:Create("Frame", { Parent = searchIcon, Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(6, 1.5), Rotation = 45, BorderSizePixel = 0, BackgroundTransparency = 0.3, ZIndex = 4017 }, { BackgroundColor3 = "ContentColor" })
         picker.list = w:Create("ScrollingFrame", {
-            Parent = picker.content, Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 1, -44),
+            Parent = picker.content, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -52),
             BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
             AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(),
             ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 4012,
         }, { ScrollBarImageColor3 = "AccentColor" })
-        picker.grid = w:Create("UIListLayout", {
-            Parent = picker.list, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder,
+        picker.grid = w:Create("UIGridLayout", {
+            Parent = picker.list, CellPadding = UDim2.fromOffset(8, 8), CellSize = UDim2.fromOffset(140, 56),
+            FillDirectionMaxCells = 2, SortOrder = Enum.SortOrder.LayoutOrder,
         })
         Scrolling.frame(w, picker, picker.list, picker.grid)
         w:Create("UIPadding", { Parent = picker.list, PaddingLeft = UDim.new(0, 2), PaddingTop = UDim.new(0, 2), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 4) })
         picker.empty = Surface.label(w, picker.content, "Nenhuma opção encontrada", {
-            Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 0, 40), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
+            Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 0, 56), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Visible = false,
         })
         picker.items, picker.optionConnections = {}, {}
+        function picker:LayoutOptions(width)
+            local inner = math.max(1, width - 8)
+            local columns = inner &gt;= 272 and 2 or 1
+            local cellSize = UDim2.fromOffset(math.floor((inner - (columns - 1) * 8) / columns), 56)
+            if self.grid.CellSize ~= cellSize then self.grid.CellSize = cellSize end
+            self.grid.FillDirectionMaxCells, self.columns = columns, columns
+        end
+        function picker:PaintItem(item)
+            local chosen = table.find(control.value, item.name) ~= nil
+            local accent, base = w.theme.AccentColor, w.theme.NeutralButton
+            item.frame.BackgroundColor3 = base:Lerp(accent, chosen and 0.25 or (item.hovered and 0.1 or 0.025))
+            item.stroke.Color = chosen and w.theme.AccentStroke or w.theme.SurfaceStroke
+            item.stroke.Transparency = chosen and 0.08 or (item.hovered and 0.25 or 0.6)
+            item.frame.BackgroundTransparency = 0
+            item.marker.Text = chosen and "✓" or ""
+            item.label.TextColor3 = Buttons.readableColor(w.theme.ContentColor, item.frame.BackgroundColor3)
+            item.marker.TextColor3 = item.label.TextColor3
+            item.label.TextTransparency = 0
+        end
         function picker:Sync()
             if self.closed then return end
             local query, count = string.lower(self.search.Text), 0
             for _, item in ipairs(self.items) do
-                local chosen = table.find(control.value, item.name) ~= nil
                 item.frame.Visible = query == "" or string.find(string.lower(item.name), query, 1, true) ~= nil
                 if item.frame.Visible then count += 1 end
-                item.frame.BackgroundTransparency = chosen and 0.65 or 0.95
-                item.stroke.Transparency = chosen and 0.15 or 0.7
-                item.marker.Text = chosen and "✓" or ""
-                item.checkbox.BackgroundTransparency = chosen and 0 or 1
-                item.checkStroke.Transparency = chosen and 0.1 or 0.55
-                item.label.TextTransparency = chosen and 0 or 0.15
+                self:PaintItem(item)
             end
             self.empty.Visible = count == 0
-            self.subtitle.Text = control.multiSelect and (tostring(#control.value) .. " selecionadas · " .. tostring(count) .. " opções") or "Escolha uma opção"
+            self.subtitle.Text = control.multiSelect and ("Escolha várias · " .. tostring(#control.value) .. " selecionadas") or "Escolha uma"
         end
         function picker:Rebuild()
             if self.closed then return end
@@ -21577,33 +21599,43 @@ function Dropdown.attach(control, props)
             self.items = {}
             for index, name in ipairs(control.options) do
                 local frame = w:Create("Frame", {
-                    Name = name, Parent = self.list, Size = UDim2.new(1, -8, 0, 40), BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
-                }, { BackgroundColor3 = "AccentColor" })
-                Surface.round(w, frame, 12)
-                local stroke = w:Create("UIStroke", { Parent = frame, Thickness = 1 }, { Color = "AccentStroke" })
-                local label = Surface.label(w, frame, name, {
-                    Position = UDim2.fromOffset(44, 4), Size = UDim2.new(1, -56, 1, -8), TextSize = 13,
-                    TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
+                    Name = name, Parent = self.list, Size = UDim2.new(1, -8, 0, 56), BorderSizePixel = 0, LayoutOrder = index, ZIndex = 4013,
                 })
+                Surface.round(w, frame, 12)
+                local stroke = w:Create("UIStroke", { Parent = frame, Thickness = 1 })
+                local label = Surface.label(w, frame, name, {
+                    Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -54, 1, -16), TextSize = 14,
+                    TextWrapped = true, TextTruncate = Enum.TextTruncate.AtEnd,
+                })
+                w.themeProperties[label].FontFace = { "Font", function(font) return Font.new(font.Family, Enum.FontWeight.SemiBold, font.Style) end }
+                -- State colours are painted together, so a theme tween cannot overwrite contrast.
+                w.themeProperties[label].TextColor3 = nil
+                label.FontFace = w.themeProperties[label].FontFace[2](w.theme.Font)
                 local checkbox = w:Create("Frame", {
-                    Name = "Checkbox", Parent = frame, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0),
-                    Size = UDim2.fromOffset(20, 20), BorderSizePixel = 0, ZIndex = 4014,
-                }, { BackgroundColor3 = "AccentColor" })
-                Surface.round(w, checkbox, 5)
-                local checkStroke = w:Create("UIStroke", { Parent = checkbox, Thickness = 1 }, { Color = "AccentStroke" })
+                    Name = "SelectionMark", Parent = frame, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
+                    Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4014,
+                })
                 local marker = Surface.label(w, checkbox, "", {
                     Size = UDim2.fromScale(1, 1), TextSize = 17, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 4015,
                 })
-                w.themeProperties[marker].TextColor3 = { "AccentColor", function(c)
-                    return (c.R * 0.299 + c.G * 0.587 + c.B * 0.114) &gt; 0.58 and Color3.fromRGB(12, 17, 25) or Color3.new(1, 1, 1)
-                end }
-                marker.TextColor3 = w.themeProperties[marker].TextColor3[2](w.theme.AccentColor)
+                w.themeProperties[marker].TextColor3 = nil
                 local hit = w:Create("TextButton", {
                     Parent = frame, Text = "", BackgroundTransparency = 1, AutoButtonColor = false,
                     Size = UDim2.fromScale(1, 1), ZIndex = 4017,
                 })
-                local item = { name = name, frame = frame, label = label, marker = marker, checkbox = checkbox, checkStroke = checkStroke, stroke = stroke, hit = hit }
+                local item = { name = name, frame = frame, label = label, marker = marker, checkbox = checkbox, stroke = stroke, hit = hit }
                 table.insert(self.items, item)
+                local function hover(value)
+                    if self.closed then return end
+                    item.hovered = value and not control.locked
+                    self:PaintItem(item)
+                end
+                for _, signal in ipairs({ hit.MouseEnter, hit.SelectionGained }) do
+                    table.insert(self.optionConnections, self:Connect(signal, function() hover(true) end))
+                end
+                for _, signal in ipairs({ hit.MouseLeave, hit.SelectionLost }) do
+                    table.insert(self.optionConnections, self:Connect(signal, function() hover(false) end))
+                end
                 table.insert(self.optionConnections, self:Connect(hit.MouseButton1Click, function()
                     if control.locked then return end
                     if control.multiSelect then
@@ -21624,10 +21656,10 @@ function Dropdown.attach(control, props)
             picker.list.CanvasPosition = Vector2.new(0, 0)
             picker:Sync()
         end)
-        local actions = {
+        local actions = self.multiSelect and {
             { "Padrão", function() control:Set(table.clone(default)) end },
             { "Limpar", function() control:Set({}) end },
-        }
+        } or {}
         if self.multiSelect then table.insert(actions, { "Selecionar todos", function() control:Set(table.clone(control.options)) end }) end
         picker.actions, picker.actionViews = {}, {}
         for index, action in ipairs(actions) do
@@ -21638,6 +21670,7 @@ function Dropdown.attach(control, props)
         end
         function picker:RefreshTheme()
             for _, view in ipairs(self.actionViews) do view:Paint(false) end
+            self:Sync()
         end
         picker:Layout()
         picker:Rebuild()
@@ -21726,15 +21759,17 @@ function Pane.new(window, control)
         Name = "OptionsBody", Parent = self.viewport, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 4011,
     })
     self.title = Surface.label(window, self.body, control.name, {
-        Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -60, 0, 22), TextSize = 15,
+        Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -66, 0, 22), TextSize = 17,
         TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
     })
+    window.themeProperties[self.title].FontFace = { "TitleFont", function(font) return Font.new(font.Family, Enum.FontWeight.SemiBold, font.Style) end }
+    self.title.FontFace = window.themeProperties[self.title].FontFace[2](window.theme.TitleFont)
     self.subtitle = Surface.label(window, self.body, "", {
-        Position = UDim2.fromOffset(14, 36), Size = UDim2.new(1, -28, 0, 18), TextSize = 11, TextTransparency = 0.25,
+        Position = UDim2.fromOffset(16, 37), Size = UDim2.new(1, -32, 0, 18), TextSize = 12, TextTransparency = 0.25,
         TextWrapped = false, TextTruncate = Enum.TextTruncate.AtEnd,
     })
     self.closeButton = Surface.button(window, self.body, "×", {
-        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(32, 32), TextSize = 20,
+        AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 12), Size = UDim2.fromOffset(36, 36), TextSize = 22,
     })
     self.content = window:Create("Frame", {
         Parent = self.body, BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 62),
@@ -21765,7 +21800,8 @@ function Pane.new(window, control)
         local paneWidth, paneHeight, x, y, reserveX, reserveY
         if width &gt;= 420 then
             self.mode = "right"
-            paneWidth, paneHeight = math.min(300, math.floor(width * 0.46)), math.max(1, height - 16)
+            -- Leave a usable controls column while allowing two option cards per row.
+            paneWidth, paneHeight = math.min(440, math.floor(width * 0.55), width - 198), math.max(1, height - 16)
             x, y = left + width - paneWidth - 8, top + 8
             reserveX, reserveY = paneWidth + 18, 0
         else
@@ -21784,23 +21820,30 @@ function Pane.new(window, control)
         local footerWidth = math.max(1, paneWidth - 24)
         local stacked = footerWidth &lt; 180
         local count = #(self.actionViews or {})
-        local rows = stacked and count or (count &gt; 2 and 2 or 1)
-        local footerHeight = math.max(44, rows * 44 + math.max(0, rows - 1) * 8)
-        local bodyHeight = math.max(footerHeight + 174, paneHeight)
+        local inline = count == 3 and footerWidth &gt;= 368
+        local rows = count == 0 and 0 or (inline and 1 or (stacked and count or (count &gt; 2 and 2 or 1)))
+        local footerHeight = rows * 44 + math.max(0, rows - 1) * 8
+        local bodyHeight = math.max(count == 0 and 194 or footerHeight + 204, paneHeight)
+        self.footerMode = count == 0 and "none" or (inline and "inline" or (stacked and "stacked" or "split"))
+        self.footer.Visible, self.footerDivider.Visible = count &gt; 0, count &gt; 0
         assign(self.body, "Size", UDim2.new(1, 0, 0, bodyHeight))
         assign(self.footer, "Position", UDim2.fromOffset(12, bodyHeight - footerHeight - 12))
         assign(self.footer, "Size", UDim2.fromOffset(footerWidth, footerHeight))
         assign(self.footerDivider, "Position", UDim2.fromOffset(12, bodyHeight - footerHeight - 24))
-        assign(self.content, "Size", UDim2.new(1, -24, 0, bodyHeight - footerHeight - 86))
+        assign(self.content, "Size", UDim2.new(1, -24, 0, bodyHeight - (count == 0 and 74 or footerHeight + 86)))
         for index, view in ipairs(self.actionViews or {}) do
             local width, x, y = footerWidth, 0, (index - 1) * 52
-            if not stacked then
+            if inline then
+                local secondary = math.floor((footerWidth - 16) * 0.25)
+                width, x, y = index == 3 and footerWidth - secondary * 2 - 16 or secondary, (index - 1) * (secondary + 8), 0
+            elseif not stacked then
                 width, x, y = index == 3 and footerWidth or (footerWidth - 8) / 2, index == 2 and (footerWidth + 8) / 2 or 0, index == 3 and 52 or 0
             end
             assign(view.button, "Position", UDim2.fromOffset(x, y))
             assign(view.button, "Size", UDim2.fromOffset(width, 44))
             view:Layout(width, 44)
         end
+        if self.LayoutOptions then self:LayoutOptions(paneWidth - 24) end
         assign(self.viewport, "CanvasSize", UDim2.fromOffset(0, bodyHeight))
         assign(self.viewport, "CanvasPosition", Vector2.new(0, math.clamp(self.viewport.CanvasPosition.Y, 0, bodyHeight - paneHeight)))
         self.viewport.ScrollingEnabled = bodyHeight &gt; paneHeight

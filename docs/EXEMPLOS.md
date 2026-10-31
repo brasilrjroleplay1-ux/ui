@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.12 · API Gen2
+# Exemplos da Conexão UI 3.13 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -65,7 +65,7 @@ O callback é definido pelo script: ele pode chamar `window:Notify`, atualizar u
 ## Dropdown único e múltiplo
 
 ```lua
-local single = tab:CreateDropdown({ name = "Modo", flag = "modo", options = { "Normal", "Compacto" }, value = "Normal", callback = function(value) print(value) end })
+local single = tab:CreateDropdown({ name = "Modo", flag = "modo", multiSelect = false, options = { "Normal", "Compacto" }, value = "Normal", callback = function(value) print(value) end })
 single:Set("Compacto")
 single:Refresh({ "Normal", "Compacto", "Novo" })
 local multi = tab:CreateDropdown({ name = "Painéis", flag = "paineis", multiSelect = true, options = { "Perfil", "Atalhos", "Dados" }, value = { "Perfil" }, callback = function(values) print(table.concat(values, ", ")) end })
@@ -74,7 +74,13 @@ multi:Set({ "Perfil", "Dados" })
 
 Ao clicar, o dropdown divide a área de conteúdo **dentro da janela**: os controles ficam à esquerda e uma coluna de opções aparece à direita. A aba continua selecionada e nenhum painel é colocado do lado de fora. Fechar as opções devolve o espaço aos controles.
 
-Cada opção tem um checkbox. No modo múltiplo, clicar marca e clicar novamente desmarca, mantendo as opções abertas. O modo único permite uma escolha e fecha ao selecionar. A busca filtra a lista; Padrão restaura o `value` inicial, Limpar desmarca tudo e Selecionar todos (múltiplo) inclui todas as opções, mesmo com filtro. Listas longas rolam internamente. Padrão e Limpar usam botões com ícones; Selecionar todos ganha uma linha própria em destaque. Em áreas muito estreitas, as ações ficam empilhadas, com alvos de toque de 44 px. Os valores continuam salvos automaticamente.
+As opções aparecem em cartões com texto à esquerda e uma marca de seleção à direita. Duas colunas são usadas quando cabem; em espaços menores, os cartões ficam em uma coluna. O título indica **Escolha uma** (`multiSelect = false`) ou **Escolha várias** (`multiSelect = true`).
+
+No modo múltiplo, clicar marca e clicar novamente desmarca, mantendo as opções abertas. Padrão restaura o `value` inicial, Limpar desmarca tudo e Selecionar todos inclui todas as opções, mesmo com filtro. As três ações ficam na mesma linha quando há largura suficiente; em painéis menores, Selecionar todos ganha uma linha própria. Em áreas muito estreitas, as ações ficam empilhadas, com alvos de toque de 44 px.
+
+O modo único permite só uma opção: selecionar outra substitui a anterior e fecha o painel. Ele mostra a busca e os cartões, sem rodapé de ações em massa. `single:Set("Compacto")` também substitui a escolha; `single:Set({})` limpa por código. O callback recebe uma string no modo único e uma lista de strings no múltiplo. Listas longas rolam internamente e os valores continuam salvos automaticamente.
+
+No [exemplo interativo](../Example.luau), abra a aba Dropdowns: **Prioridade** tem seis opções com escolha única; **Raridades** tem dez opções que podem ser combinadas, inclusive todas. Os dados são apenas demonstrações de controles, sem ações sobre o jogo.
 
 Em janelas estreitas, os controles ficam acima e as opções abaixo, com rolagens separadas. Em janelas muito baixas, a área de opções também permite rolar o cabeçalho e as ações para mantê-los acessíveis. A divisão acompanha o redimensionamento; ao fechar, o tamanho dos controles é restaurado conforme a janela atual. X, Escape, tocar fora da janela, trocar de aba, ocultar/minimizar a janela ou remover o controle fecha as opções. É possível rolar e usar a área dos controles sem fechar a seleção múltipla.
 
