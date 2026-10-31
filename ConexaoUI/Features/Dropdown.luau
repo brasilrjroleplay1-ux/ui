@@ -3,6 +3,7 @@
 -- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
 local Surface = require(script.Parent.Surface)
 local Pane = require(script.Parent.DropdownPane)
+local Buttons = require(script.Parent.ActionButton)
 local Scrolling = require(script.Parent.Scrolling)
 local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local Dropdown = {}
@@ -168,14 +169,15 @@ function Dropdown.attach(control, props)
             { "Limpar", function() control:Set({}) end },
         }
         if self.multiSelect then table.insert(actions, { "Selecionar todos", function() control:Set(table.clone(control.options)) end }) end
-        picker.actions = {}
+        picker.actions, picker.actionViews = {}, {}
         for index, action in ipairs(actions) do
-            local button = Surface.button(w, picker.footer, action[1], {
-                Position = UDim2.new((index - 1) / #actions, index == 1 and 0 or 3, 0, 0),
-                Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 11,
-            }, index == #actions)
-            picker.actions[index] = button
-            picker:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
+            local symbol = ({ "restore", "clear", "select" })[index]
+            local view = Buttons.new(w, picker, picker.footer, action[1], symbol, index == 3 and "primary" or "secondary", 4015)
+            picker.actions[index], picker.actionViews[index] = view.button, view
+            picker:Connect(view.button.MouseButton1Click, function() if not self.locked then action[2]() end end)
+        end
+        function picker:RefreshTheme()
+            for _, view in ipairs(self.actionViews) do view:Paint(false) end
         end
         picker:Layout()
         picker:Rebuild()

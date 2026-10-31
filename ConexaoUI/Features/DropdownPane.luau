@@ -78,6 +78,9 @@ function Pane.new(window, control)
         Parent = self.body, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 1, -48),
         Size = UDim2.new(1, -24, 0, 36), ZIndex = 4011,
     })
+    self.footerDivider = window:Create("Frame", {
+        Parent = self.body, BorderSizePixel = 0, BackgroundTransparency = 0.65, Size = UDim2.new(1, -24, 0, 1), ZIndex = 4011,
+    }, { BackgroundColor3 = "SurfaceStroke" })
     function self:Layout()
         if self.closed then return end
         if window.unloaded or window.hidden or window.minimised or not control.main.Parent or window.selectedTab ~= self.tab then self:Close() return end
@@ -112,8 +115,26 @@ function Pane.new(window, control)
         assign(window.bottomFade, "Position", shifted(self.baseFadePosition, -reserveX, -reserveY))
         assign(self.main, "Position", UDim2.fromOffset(x, y))
         assign(self.main, "Size", UDim2.fromOffset(paneWidth, paneHeight))
-        local bodyHeight = math.max(212, paneHeight)
+        local footerWidth = math.max(1, paneWidth - 24)
+        local stacked = footerWidth < 180
+        local count = #(self.actionViews or {})
+        local rows = stacked and count or (count > 2 and 2 or 1)
+        local footerHeight = math.max(44, rows * 44 + math.max(0, rows - 1) * 8)
+        local bodyHeight = math.max(footerHeight + 174, paneHeight)
         assign(self.body, "Size", UDim2.new(1, 0, 0, bodyHeight))
+        assign(self.footer, "Position", UDim2.fromOffset(12, bodyHeight - footerHeight - 12))
+        assign(self.footer, "Size", UDim2.fromOffset(footerWidth, footerHeight))
+        assign(self.footerDivider, "Position", UDim2.fromOffset(12, bodyHeight - footerHeight - 24))
+        assign(self.content, "Size", UDim2.new(1, -24, 0, bodyHeight - footerHeight - 86))
+        for index, view in ipairs(self.actionViews or {}) do
+            local width, x, y = footerWidth, 0, (index - 1) * 52
+            if not stacked then
+                width, x, y = index == 3 and footerWidth or (footerWidth - 8) / 2, index == 2 and (footerWidth + 8) / 2 or 0, index == 3 and 52 or 0
+            end
+            assign(view.button, "Position", UDim2.fromOffset(x, y))
+            assign(view.button, "Size", UDim2.fromOffset(width, 44))
+            view:Layout(width, 44)
+        end
         assign(self.viewport, "CanvasSize", UDim2.fromOffset(0, bodyHeight))
         assign(self.viewport, "CanvasPosition", Vector2.new(0, math.clamp(self.viewport.CanvasPosition.Y, 0, bodyHeight - paneHeight)))
         self.viewport.ScrollingEnabled = bodyHeight > paneHeight

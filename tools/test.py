@@ -18,6 +18,8 @@ run(['run','scripts/run-tests.luau','--','--coverage-threshold','85.34'],'upstre
 run(['run',str(ROOT/'tests/executor_policy_checks.luau')],'executor-policy')
 runner=(VENDOR/'scripts/run-tests.luau').read_text()
 prefix=runner[:runner.index('local results = {')]
+# Native GuiObject selection signals used by the custom keyboard/gamepad focus treatment.
+prefix+='\nsignalProperties.SelectionGained = true\nsignalProperties.SelectionLost = true\n'
 checks=(ROOT/'tests/bundle_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()).replace('-- DEMO',(ROOT/'dist/Demo.luau').read_text()).replace('-- COMPONENTS',(ROOT/'dist/Components.luau').read_text())
 with tempfile.TemporaryDirectory() as folder:
     test=Path(folder)/'public-bundle.luau';test.write_text(prefix+checks)
@@ -52,3 +54,6 @@ with tempfile.TemporaryDirectory() as folder:
     dropdown_notifications=Path(folder)/'dropdown-notifications.luau'
     dropdown_notifications.write_text(prefix+(ROOT/'tests/dropdown_notification_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(dropdown_notifications)],'dropdown-notifications')
+    actions=Path(folder)/'actions.luau'
+    actions.write_text(prefix+(ROOT/'tests/action_style_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(actions)],'actions')

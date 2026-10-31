@@ -1,4 +1,4 @@
-# Configurações por conta · 3.10.0
+# Configurações por conta · 3.11.0
 
 A separação já vem ativada em `CreateWindow`. A library usa o ID de `Players.LocalPlayer`, não o nome de usuário. A mesma conta continua com seus dados se mudar de nome. Sem uma identificação de conta válida, a janela não escolhe um diretório genérico.
 
@@ -13,7 +13,7 @@ A separação já vem ativada em `CreateWindow`. A library usa o ID de `Players.
 
 Em Aparência, **Navegação compacta** reduz a lateral e oculta os nomes. A escolha fica salva no perfil ativo; desativar volta aos nomes quando houver espaço. Também é possível definir o padrão inicial com `sidebarIconsOnly` ou alterar durante a execução com `window:SetSidebarIconsOnly(true/false)`.
 
-A barra de categorias permite rolagem horizontal no celular e mantém a opção selecionada visível. Trocar a categoria não reaplica os callbacks dos controles do script.
+As categorias têm ícones e um indicador na opção selecionada. A disposição usa uma linha nas áreas largas, duas linhas nas médias e rolagem horizontal nas mais estreitas, mantendo a opção ativa visível. Trocar a categoria não reaplica os callbacks dos controles do script.
 
 ## Individual por padrão
 

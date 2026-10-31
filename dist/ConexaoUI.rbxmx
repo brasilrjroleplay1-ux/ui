@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.10 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.11 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -62,7 +62,7 @@ export type SliderProps = Gen2.SliderProps &amp; ControlNotificationProps &amp; 
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.10.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.11.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -20596,6 +20596,144 @@ function Storage.attach(window, scope)
     end
 end
 return Storage
+</ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">ActionButton</string><ProtectedString name="Source">--!nonstrict
+-- SPDX-License-Identifier: MPL-2.0
+-- Shared, theme-aware action and category buttons. All glyphs are local vector primitives.
+local tweens = game:GetService("TweenService")
+local Buttons = {}
+local function bold(font) return Font.new(font.Family, Enum.FontWeight.SemiBold, font.Style) end
+local function luminance(c)
+    local function linear(v) return v &lt;= 0.04045 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4 end
+    return 0.2126 * linear(c.R) + 0.7152 * linear(c.G) + 0.0722 * linear(c.B)
+end
+local function contrast(a, b)
+    local x, y = luminance(a), luminance(b)
+    return (math.max(x, y) + 0.05) / (math.min(x, y) + 0.05)
+end
+local function ink(color)
+    local dark, light = Color3.new(0, 0, 0), Color3.new(1, 1, 1)
+    return contrast(color, dark) &gt;= contrast(color, light) and dark or light
+end
+function Buttons.new(window, owner, parent, title, symbol, variant, z)
+    z = z or 10
+    local self = { window = window, owner = owner, shown = true, active = false, hovered = false, pressed = false, variant = variant or "secondary", glyph = {} }
+    local function create(class, props) return window:Create(class, props) end
+    local function round(node, radius) create("UICorner", { Parent = node, CornerRadius = UDim.new(0, radius) }) end
+    self.button = create("TextButton", { Name = title, Parent = parent, Text = "", AutoButtonColor = false, BorderSizePixel = 0,
+        BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0, Size = UDim2.fromOffset(132, 44), ZIndex = z,
+    })
+    round(self.button, 11)
+    self.gradient = create("UIGradient", { Parent = self.button, Rotation = 90 })
+    self.stroke = create("UIStroke", { Parent = self.button, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+    self.overlay = create("Frame", { Name = "Interaction", Parent = self.button, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = z + 1 })
+    round(self.overlay, 11)
+    self.content = create("Frame", { Parent = self.button, BackgroundTransparency = 1, Size = UDim2.new(1, -20, 1, 0), ZIndex = z + 2 })
+    self.iconPlate = create("Frame", { Name = symbol, Parent = self.content, AnchorPoint = Vector2.new(0, 0.5), BackgroundTransparency = 0.88, BorderSizePixel = 0, ZIndex = z + 2 })
+    round(self.iconPlate, 6)
+    self.icon = create("Frame", { Parent = self.iconPlate, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(18, 18), BackgroundTransparency = 1, ZIndex = z + 3 })
+    local function part(x, y, width, height, angle, outline)
+        local node = create("Frame", { Parent = self.icon, Position = UDim2.fromOffset(x, y), AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(width, height), Rotation = angle or 0,
+            BorderSizePixel = 0, BackgroundTransparency = outline and 1 or 0, ZIndex = z + 3 })
+        round(node, outline and 2 or 1)
+        if outline then
+            local stroke = create("UIStroke", { Parent = node, Thickness = 1.4 })
+            table.insert(self.glyph, { node = stroke, color = "Color", alpha = "Transparency" })
+        else table.insert(self.glyph, { node = node, color = "BackgroundColor3", alpha = "BackgroundTransparency" }) end
+    end
+    local function line(x, y, width, angle) part(x, y, width, 1.6, angle) end
+    if symbol == "restore" then
+        part(9, 10, 11, 10, 0, true);line(4, 5, 7, 0);line(4, 5, 5, -48);line(4, 5, 5, 48)
+    elseif symbol == "clear" then
+        part(9, 10.5, 10, 10, 0, true);line(9, 4, 14);line(9, 2, 5);line(7, 10.5, 5, 90);line(11, 10.5, 5, 90)
+    elseif symbol == "select" then
+        line(5, 10, 6, 45);line(10, 8.5, 10, -48);line(9, 14, 5, 45);line(14, 12, 7, -48)
+    elseif symbol == "appearance" then
+        for index, y in ipairs({ 4, 9, 14 }) do line(9, y, 14);part(index == 2 and 12 or 6, y, 3, 5) end
+    elseif symbol == "themes" then
+        for _, at in ipairs({ { 5, 5 }, { 13, 5 }, { 5, 13 }, { 13, 13 } }) do part(at[1], at[2], 5, 5, 0, true) end
+    elseif symbol == "saving" then
+        part(9, 9, 14, 14, 0, true);part(9, 4, 6, 4, 0, true);part(9, 12, 8, 5, 0, true)
+    else
+        part(9, 9, 16, 12, 0, true)
+        for _, at in ipairs({ { 5, 7 }, { 9, 7 }, { 13, 7 }, { 5, 11 } }) do part(at[1], at[2], 2, 2) end
+        line(11, 11, 5)
+    end
+    self.label = create("TextLabel", { Parent = self.content, Text = title, TextSize = 14, BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = variant ~= "tab", TextTruncate = Enum.TextTruncate.None, Size = UDim2.fromScale(1, 1), ZIndex = z + 3,
+    })
+    self.indicator = create("Frame", { Name = "Selected", Parent = self.button, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4),
+        Size = UDim2.new(1, -28, 0, 2), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = z + 4 })
+    round(self.indicator, 1)
+    self.scale = create("UIScale", { Parent = self.button, Scale = 1 })
+    function self:Paint(animate)
+        if window.unloaded or owner.closed or not self.button.Parent then return end
+        local theme, primary = window.theme, self.variant == "primary"
+        local accent, base, content = theme.AccentColor, theme.NeutralButton, theme.ContentColor
+        local first, last, foreground, iconColor
+        if primary then
+            foreground = ink(accent)
+            first, last = accent, accent:Lerp(foreground.R == 1 and Color3.new(0, 0, 0) or Color3.new(1, 1, 1), 0.12)
+            iconColor = foreground
+        else
+            first = base:Lerp(accent, self.active and 0.22 or 0.035)
+            last = base:Lerp(accent, self.active and 0.09 or 0.015)
+            foreground = contrast(content, first) &gt;= 4.5 and contrast(content, last) &gt;= 4.5 and content or ink(first)
+            iconColor = contrast(accent, first) &gt;= 3 and accent or content
+        end
+        self.gradient.Color = ColorSequence.new(first, last)
+        self.label.TextColor3, self.label.FontFace = foreground, bold(theme.TitleFont)
+        self.stroke.Color = (primary or self.active) and accent or theme.SurfaceStroke
+        self.iconPlate.BackgroundColor3 = primary and foreground or accent
+        self.overlay.BackgroundColor3 = primary and (foreground.R == 1 and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)) or content
+        self.indicator.BackgroundColor3 = accent
+        window:_reveal(self.button, { BackgroundTransparency = self.shown and 0 or 1 }, animate)
+        window:_reveal(self.label, { TextTransparency = self.shown and 0 or 1 }, animate)
+        window:_reveal(self.stroke, { Transparency = self.shown and ((primary or self.active) and 0.15 or (self.hovered and 0.3 or 0.65)) or 1 }, animate)
+        window:_reveal(self.iconPlate, { BackgroundTransparency = self.shown and (primary and 0.92 or (self.active and 0.84 or 0.92)) or 1 }, animate)
+        window:_reveal(self.overlay, { BackgroundTransparency = self.shown and (self.pressed and 0.86 or (self.hovered and 0.94 or 1)) or 1 }, animate)
+        window:_reveal(self.indicator, { BackgroundTransparency = self.shown and self.active and 0 or 1 }, animate)
+        for _, glyph in ipairs(self.glyph) do
+            glyph.node[glyph.color] = iconColor
+            window:_reveal(glyph.node, { [glyph.alpha] = self.shown and 0 or 1 }, animate)
+        end
+        local target = self.shown and self.pressed and 0.98 or 1
+        if self.scaleTween then self.scaleTween:Cancel() self.scaleTween = nil end
+        if animate then
+            self.scaleTween = tweens:Create(self.scale, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Scale = target })
+            self.scaleTween:Play()
+        else self.scale.Scale = target end
+    end
+    function self:Layout(width, height)
+        local tab = self.variant == "tab"
+        local plate, gap, padding = tab and 24 or 20, tab and 8 or 7, tab and 12 or 6
+        local desired = (utf8.len(title) or #title) * 14 * 0.58 + 4 + plate + gap
+        local extent = tab and math.max(1, width - padding * 2) or math.min(desired, math.max(1, width - padding * 2))
+        self.content.Position, self.content.Size = UDim2.fromOffset(tab and padding or (width - extent) / 2, 0), UDim2.fromOffset(extent, height)
+        self.iconPlate.Position, self.iconPlate.Size = UDim2.new(0, 0, 0.5, 0), UDim2.fromOffset(plate, plate)
+        self.label.Position, self.label.Size = UDim2.fromOffset(plate + gap, 4), UDim2.fromOffset(math.max(1, extent - plate - gap), math.max(1, height - 8))
+    end
+    function self:SetShown(shown, animate)
+        self.shown = shown
+        if not shown then self.hovered, self.pressed = false, false end
+        self:Paint(animate)
+    end
+    local function connect(signal, callback) window:ConnectFor(owner, signal, callback) end
+    connect(self.button.MouseEnter, function() self.hovered = true self:Paint(true) end)
+    connect(self.button.MouseLeave, function() self.hovered, self.pressed = false, false self:Paint(true) end)
+    connect(self.button.SelectionGained, function() self.hovered = true self:Paint(true) end)
+    connect(self.button.SelectionLost, function() self.hovered, self.pressed = false, false self:Paint(true) end)
+    connect(self.button.InputBegan, function(key)
+        if key.UserInputType == Enum.UserInputType.MouseButton1 or key.UserInputType == Enum.UserInputType.Touch then self.pressed = true self:Paint(true) end
+    end)
+    connect(self.button.InputEnded, function(key)
+        if key.UserInputType == Enum.UserInputType.MouseButton1 or key.UserInputType == Enum.UserInputType.Touch then self.pressed = false self:Paint(true) end
+    end)
+    connect(self.button.Destroying, function() if self.scaleTween then self.scaleTween:Cancel() end end)
+    self:Layout(132, 44)
+    self:Paint(false)
+    return self
+end
+return Buttons
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">Appearance</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
 local Appearance = {}
@@ -21151,6 +21289,7 @@ return Notifications
 -- Gen2 remains the control/state owner. Only its presentation of an open dropdown changes.
 local Surface = require(script.Parent.Surface)
 local Pane = require(script.Parent.DropdownPane)
+local Buttons = require(script.Parent.ActionButton)
 local Scrolling = require(script.Parent.Scrolling)
 local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local Dropdown = {}
@@ -21316,14 +21455,15 @@ function Dropdown.attach(control, props)
             { "Limpar", function() control:Set({}) end },
         }
         if self.multiSelect then table.insert(actions, { "Selecionar todos", function() control:Set(table.clone(control.options)) end }) end
-        picker.actions = {}
+        picker.actions, picker.actionViews = {}, {}
         for index, action in ipairs(actions) do
-            local button = Surface.button(w, picker.footer, action[1], {
-                Position = UDim2.new((index - 1) / #actions, index == 1 and 0 or 3, 0, 0),
-                Size = UDim2.new(1 / #actions, -6, 1, 0), TextSize = 11,
-            }, index == #actions)
-            picker.actions[index] = button
-            picker:Connect(button.MouseButton1Click, function() if not self.locked then action[2]() end end)
+            local symbol = ({ "restore", "clear", "select" })[index]
+            local view = Buttons.new(w, picker, picker.footer, action[1], symbol, index == 3 and "primary" or "secondary", 4015)
+            picker.actions[index], picker.actionViews[index] = view.button, view
+            picker:Connect(view.button.MouseButton1Click, function() if not self.locked then action[2]() end end)
+        end
+        function picker:RefreshTheme()
+            for _, view in ipairs(self.actionViews) do view:Paint(false) end
         end
         picker:Layout()
         picker:Rebuild()
@@ -21430,6 +21570,9 @@ function Pane.new(window, control)
         Parent = self.body, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 1, -48),
         Size = UDim2.new(1, -24, 0, 36), ZIndex = 4011,
     })
+    self.footerDivider = window:Create("Frame", {
+        Parent = self.body, BorderSizePixel = 0, BackgroundTransparency = 0.65, Size = UDim2.new(1, -24, 0, 1), ZIndex = 4011,
+    }, { BackgroundColor3 = "SurfaceStroke" })
     function self:Layout()
         if self.closed then return end
         if window.unloaded or window.hidden or window.minimised or not control.main.Parent or window.selectedTab ~= self.tab then self:Close() return end
@@ -21464,8 +21607,26 @@ function Pane.new(window, control)
         assign(window.bottomFade, "Position", shifted(self.baseFadePosition, -reserveX, -reserveY))
         assign(self.main, "Position", UDim2.fromOffset(x, y))
         assign(self.main, "Size", UDim2.fromOffset(paneWidth, paneHeight))
-        local bodyHeight = math.max(212, paneHeight)
+        local footerWidth = math.max(1, paneWidth - 24)
+        local stacked = footerWidth &lt; 180
+        local count = #(self.actionViews or {})
+        local rows = stacked and count or (count &gt; 2 and 2 or 1)
+        local footerHeight = math.max(44, rows * 44 + math.max(0, rows - 1) * 8)
+        local bodyHeight = math.max(footerHeight + 174, paneHeight)
         assign(self.body, "Size", UDim2.new(1, 0, 0, bodyHeight))
+        assign(self.footer, "Position", UDim2.fromOffset(12, bodyHeight - footerHeight - 12))
+        assign(self.footer, "Size", UDim2.fromOffset(footerWidth, footerHeight))
+        assign(self.footerDivider, "Position", UDim2.fromOffset(12, bodyHeight - footerHeight - 24))
+        assign(self.content, "Size", UDim2.new(1, -24, 0, bodyHeight - footerHeight - 86))
+        for index, view in ipairs(self.actionViews or {}) do
+            local width, x, y = footerWidth, 0, (index - 1) * 52
+            if not stacked then
+                width, x, y = index == 3 and footerWidth or (footerWidth - 8) / 2, index == 2 and (footerWidth + 8) / 2 or 0, index == 3 and 52 or 0
+            end
+            assign(view.button, "Position", UDim2.fromOffset(x, y))
+            assign(view.button, "Size", UDim2.fromOffset(width, 44))
+            view:Layout(width, 44)
+        end
         assign(self.viewport, "CanvasSize", UDim2.fromOffset(0, bodyHeight))
         assign(self.viewport, "CanvasPosition", Vector2.new(0, math.clamp(self.viewport.CanvasPosition.Y, 0, bodyHeight - paneHeight)))
         self.viewport.ScrollingEnabled = bodyHeight &gt; paneHeight
@@ -23397,50 +23558,68 @@ return Settings
 -- SPDX-License-Identifier: MPL-2.0
 -- Keep controls on their native tab; category visibility also owns their separate descriptors.
 local Preferences = require(script.Parent.Preferences)
+local Buttons = require(script.Parent.ActionButton)
 local Navigation = {}
-local definitions = { { "appearance", "Aparência", 102 }, { "themes", "Temas", 76 }, { "saving", "Salvamento", 114 }, { "controls", "Controles", 100 } }
+local definitions = { { "appearance", "Aparência", 132 }, { "themes", "Temas", 108 }, { "saving", "Salvamento", 146 }, { "controls", "Controles", 128 } }
 function Navigation.attach(window, membership)
     local tab = window.SettingsTab
     local self = { window = window, tab = tab, name = "Categorias", __type = "SettingsNavigation", buttons = {}, membership = membership, connections = {}, shown = not window.hidden }
     window.SettingsNavigation = self
     local function create(class, props, theme) return window:Create(class, props, theme) end
-    self.main = create("Frame", { Name = "SettingsCategories", Parent = tab.tabPage, Size = UDim2.new(1, -24, 0, 46), BackgroundTransparency = 1, BorderSizePixel = 0 })
+    self.main = create("Frame", { Name = "SettingsCategories", Parent = tab.tabPage, Size = UDim2.new(1, -24, 0, 66), BackgroundTransparency = 1, BorderSizePixel = 0 })
     self.scroller = create("ScrollingFrame", { Parent = self.main, Name = "CategoryBar", BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1),
-        CanvasSize = UDim2.fromOffset(418, 0), ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 2,
-        ScrollBarImageTransparency = 0.5, ClipsDescendants = true, Active = true, ScrollingEnabled = true, CanvasPosition = Vector2.new(), ElasticBehavior = Enum.ElasticBehavior.Never,
-    }, { ScrollBarImageColor3 = "AccentColor" })
-    create("UIPadding", { Parent = self.scroller, PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 7), PaddingLeft = UDim.new(0, 1), PaddingRight = UDim.new(0, 1) })
-    create("UIListLayout", { Parent = self.scroller, FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
-    local width = 2
-    for i, definition in ipairs(definitions) do
-        local key, title, size = definition[1], definition[2], definition[3]
-        local offset = width + (i &gt; 1 and 6 or 0)
-        width += size + (i &gt; 1 and 6 or 0)
-        local button = create("TextButton", { Parent = self.scroller, Name = key, Text = title, TextSize = 12, AutoButtonColor = false, BorderSizePixel = 0,
-            Size = UDim2.fromOffset(size, 32), LayoutOrder = i, BackgroundTransparency = 1, TextTransparency = 1, ZIndex = 8,
-        }, { FontFace = "TitleFont", TextColor3 = "ContentColor", BackgroundColor3 = "AccentColor" })
-        create("UICorner", { Parent = button, CornerRadius = UDim.new(0, 8) })
-        local stroke = create("UIStroke", { Parent = button, Thickness = 1, Transparency = 1 }, { Color = "AccentStroke" })
-        self.buttons[key] = { button = button, stroke = stroke, offset = offset }
-        window:ConnectFor(self, button.MouseButton1Click, function() if window:_interactive() then self:Select(key, true) end end)
+        CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 2,
+        ScrollBarImageTransparency = 1, ClipsDescendants = true, Active = true, ScrollingEnabled = true, CanvasPosition = Vector2.new(), ElasticBehavior = Enum.ElasticBehavior.Never,
+    }, { ScrollBarImageColor3 = "AccentColor", BackgroundColor3 = "StatBackground" })
+    create("UICorner", { Parent = self.scroller, CornerRadius = UDim.new(0, 14) })
+    self.rim = create("UIStroke", { Parent = self.scroller, Thickness = 1, Transparency = 1 }, { Color = "SurfaceStroke" })
+    for _, definition in ipairs(definitions) do
+        local key, title = definition[1], definition[2]
+        local view = Buttons.new(window, self, self.scroller, title, key, "tab", 8)
+        self.buttons[key] = { button = view.button, stroke = view.stroke, view = view, offset = 0, minimum = definition[3] }
+        window:ConnectFor(self, view.button.MouseButton1Click, function() if window:_interactive() then self:Select(key, true) end end)
     end
-    self.scroller.CanvasSize = UDim2.fromOffset(width, 0)
     function self:Layout()
+        if window.unloaded then return end
+        local width = self.scroller.AbsoluteWindowSize.X
+        if width &lt;= 0 then width = self.main.AbsoluteSize.X end
+        if width &lt;= 0 then return end
+        self.mode = width &gt;= 560 and "row" or (width &gt;= 300 and "grid" or "scroll")
+        local height = self.mode == "grid" and 124 or 66
+        local size = UDim2.new(1, -24, 0, height)
+        if self.main.Size ~= size then self.main.Size = size end
+        local x, total = 8, width
+        for index, definition in ipairs(definitions) do
+            local item = self.buttons[definition[1]]
+            local buttonWidth, y = item.minimum, 8
+            if self.mode == "row" then buttonWidth += (width - 554) / 4
+            elseif self.mode == "grid" then
+                buttonWidth = (width - 24) / 2
+                x, y = 8 + ((index - 1) % 2) * (buttonWidth + 8), index &gt; 2 and 66 or 8
+            end
+            item.offset = x
+            item.button.Position, item.button.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(buttonWidth, 50)
+            item.view:Layout(buttonWidth, 50)
+            if self.mode ~= "grid" then x += buttonWidth + 8 end
+        end
+        if self.mode == "scroll" then total = x end
+        self.scroller.CanvasSize = UDim2.fromOffset(total, height)
+        self.overflow = total &gt; width
+        self.scroller.ScrollBarImageTransparency = self.shown and self.overflow and 0.4 or 1
+        local at = 0
         local current = self.buttons[self.active]
-        if not current then return end
-        local view = self.scroller.AbsoluteWindowSize.X
-        if view &lt;= 0 then view = self.main.AbsoluteSize.X end
-        if view &lt;= 0 then return end
-        local x = self.scroller.CanvasPosition.X
-        x = math.min(x, current.offset)
-        x = math.max(x, current.offset + current.button.Size.X.Offset - view)
-        self.scroller.CanvasPosition = Vector2.new(math.clamp(x, 0, math.max(0, width - view)), 0)
+        if self.overflow and current then
+            at = math.min(self.scroller.CanvasPosition.X, current.offset - 8)
+            at = math.max(at, current.offset + current.button.Size.X.Offset + 8 - width)
+        end
+        self.scroller.CanvasPosition = Vector2.new(math.clamp(at, 0, math.max(0, total - width)), 0)
     end
     function self:Paint(animate)
+        window:_reveal(self.scroller, { BackgroundTransparency = self.shown and 0.58 or 1 }, animate)
+        window:_reveal(self.rim, { Transparency = self.shown and 0.7 or 1 }, animate)
         for key, item in pairs(self.buttons) do
-            local active = key == self.active
-            window:_reveal(item.button, { BackgroundTransparency = self.shown and (active and 0.82 or 0.97) or 1, TextTransparency = self.shown and (active and 0 or 0.2) or 1 }, animate)
-            window:_reveal(item.stroke, { Transparency = self.shown and (active and 0.38 or 0.87) or 1 }, animate)
+            item.view.active = key == self.active
+            item.view:SetShown(self.shown, animate)
         end
     end
     function self:Select(key, remember)
@@ -23459,11 +23638,12 @@ function Navigation.attach(window, membership)
     function self:_setShown(shown, animate)
         self.shown = shown
         self.main.Visible = true -- reserve the navigation row while native controls reveal
-        self.scroller.ScrollBarImageTransparency = shown and 0.5 or 1
+        self.scroller.ScrollBarImageTransparency = shown and self.overflow and 0.4 or 1
         self:Paint(animate)
     end
     function self:_refreshTheme() self:Paint(false) end
     window:ConnectFor(self, self.scroller:GetPropertyChangedSignal("AbsoluteWindowSize"), function() self:Layout() end)
+    window:ConnectFor(self, self.main:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
     for control, category in pairs(membership) do
         local show = control._setShown
         function control:_setShown(shown, animate)
@@ -23746,7 +23926,7 @@ function Startup.new(theme, version)
     track(edge, "Transparency", 0.4)
     self.scale = create("UIScale", { Parent = self.panel, Scale = 0.92 })
     text("Eyebrow", "CONEXÃO / INTERFACE", 28, 14, 280, 9, true)
-    self.version = text("Version", "v" .. tostring(version or "3.10"), 334, 14, 58, 10, false)
+    self.version = text("Version", "v" .. tostring(version or "3.11"), 334, 14, 58, 10, false)
     self.version.TextXAlignment = Enum.TextXAlignment.Right
     self.mark = Brand.new(create, self.panel, 64, theme)
     self.mark.root.Position = UDim2.fromOffset(28, 52)

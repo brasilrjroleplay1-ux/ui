@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.10 · API Gen2
+# Exemplos da Conexão UI 3.11 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -72,7 +72,7 @@ multi:Set({ "Perfil", "Dados" })
 
 Ao clicar, o dropdown divide a área de conteúdo **dentro da janela**: os controles ficam à esquerda e uma coluna de opções aparece à direita. A aba continua selecionada e nenhum painel é colocado do lado de fora. Fechar as opções devolve o espaço aos controles.
 
-Cada opção tem um checkbox. No modo múltiplo, clicar marca e clicar novamente desmarca, mantendo as opções abertas. O modo único permite uma escolha e fecha ao selecionar. A busca filtra a lista; Padrão restaura o `value` inicial, Limpar desmarca tudo e Selecionar todos (múltiplo) inclui todas as opções, mesmo com filtro. Listas longas rolam internamente. Os valores continuam salvos automaticamente.
+Cada opção tem um checkbox. No modo múltiplo, clicar marca e clicar novamente desmarca, mantendo as opções abertas. O modo único permite uma escolha e fecha ao selecionar. A busca filtra a lista; Padrão restaura o `value` inicial, Limpar desmarca tudo e Selecionar todos (múltiplo) inclui todas as opções, mesmo com filtro. Listas longas rolam internamente. Padrão e Limpar usam botões com ícones; Selecionar todos ganha uma linha própria em destaque. Em áreas muito estreitas, as ações ficam empilhadas, com alvos de toque de 44 px. Os valores continuam salvos automaticamente.
 
 Em janelas estreitas, os controles ficam acima e as opções abaixo, com rolagens separadas. Em janelas muito baixas, a área de opções também permite rolar o cabeçalho e as ações para mantê-los acessíveis. A divisão acompanha o redimensionamento; ao fechar, o tamanho dos controles é restaurado conforme a janela atual. X, Escape, tocar fora da janela, trocar de aba, ocultar/minimizar a janela ou remover o controle fecha as opções. É possível rolar e usar a área dos controles sem fechar a seleção múltipla.
 
@@ -204,7 +204,7 @@ window:OpenThemes()
 
 Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual, ajuste automático e a escolha de exibir só os ícones nas abas. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
-As categorias são Aparência, Temas, Salvamento e Controles. Elas mantêm os controles nativos na mesma página e ocultam também suas descrições quando estão inativas. A barra de categorias rola horizontalmente em telas estreitas.
+As categorias são Aparência, Temas, Salvamento e Controles. Elas mantêm os controles nativos na mesma página e ocultam também suas descrições quando estão inativas. As categorias usam ícones, texto maior e um indicador de seleção. Em áreas largas ficam em uma linha; em áreas médias, em duas linhas; nas mais estreitas, a barra permite rolagem horizontal e mantém a categoria ativa visível.
 
 Os arquivos são individuais por ID da conta, inclusive presets nomeados e preferências da janela. Ativar Compartilhar entre contas em Salvamento seleciona um perfil compartilhado para a próxima execução. Cada conta precisa ativar sua própria opção; voltar ao modo individual restaura o perfil privado preservado. Um perfil compartilhado novo começa com os valores iniciais do script, sem copiar automaticamente o perfil privado. Os arquivos antigos sem conta identificada permanecem no disco e não são carregados automaticamente.
 

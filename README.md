@@ -1,6 +1,8 @@
-# Conexão UI 3.10.1 · Conexão Studio
+# Conexão UI 3.11.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.11.0**, as ações do dropdown usam botões maiores com ícones e texto em destaque. Padrão e Limpar ficam lado a lado; Selecionar todos ocupa uma linha própria. As categorias de Configurações têm ícones, superfícies com degradê e um indicador na categoria ativa. A organização muda entre uma linha, duas linhas e rolagem horizontal conforme o espaço, com respostas de foco, hover e toque.
 
 Na **3.10.1**, a opção da lateral se chama **Navegação compacta**, com a descrição: “Exibe apenas os ícones na barra lateral, ampliando a área de conteúdo.”
 
