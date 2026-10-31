@@ -26,14 +26,37 @@ for _, props in ipairs({ {}, { content = "Message only" }, { title = "" }, { tit
     check(not ok, "Notify rejects a missing, blank or non-text title")
 end
 check(#w.instances == previousInstances and #w.connections == previousConnections and #manager.messages == 0, "invalid notification titles create no UI or listeners")
+for _, position in ipairs({ "left", "", false, 17, {} }) do
+    check(not pcall(w.Notify, w, { title = "Posição inválida", position = position }), "invalid positions are rejected before creating a notification")
+    check(not pcall(w.SetNotificationPosition, w, position), "the default-position setter also rejects invalid positions")
+end
+check(#w.instances == previousInstances and #w.connections == previousConnections and #manager.messages == 0, "invalid notification positions create no UI or listeners")
+check(w.NotificationPosition == "top" and w.NotificationPositionDropdown.value[1] == "Superior", "notifications default to the upper right and Settings reflects the default")
 for _, props in ipairs({ { title = "Só título" }, { title = "Só título", content = "" }, { Title = "Só título", Content = "" } }) do
     local message = w:Notify(props)
     check(message.title == "Só título" and message.content == "" and not message.descriptionLabel, "an omitted or empty message renders a title-only card without a description")
     message:_destroy()
 end
+local moving = w:Notify({ title = "Segue a preferência", duration = 30 })
+local pinnedTop = w:Notify({ title = "Fixo em cima", position = "Top", duration = 30 })
+local pinnedBottom = w:Notify({ title = "Fixo embaixo", Position = "bOtToM", duration = 30 })
+tick(0.32);tick(1)
+local movingRoot, elapsed = moving.main, moving.elapsed
+w:SetNotificationPosition("Bottom")
+check(moving.main == movingRoot and not moving.stack.top and moving.elapsed == elapsed and moving.state == "visible", "changing the preference moves an existing default notification without resetting its lifetime or recreating it")
+check(pinnedTop.stack.top and not pinnedBottom.stack.top and moving.main.Parent == pinnedBottom.main.Parent, "per-message positions stay fixed while default-position messages move")
+check(w.NotificationPositionDropdown.value[1] == "Inferior" and w.UIPreferences.notificationPosition == "bottom", "the API synchronizes the Settings dropdown and saved preference")
+w.NotificationPositionDropdown:Set("Superior")
+check(moving.stack.top and moving.elapsed == elapsed and w.NotificationPosition == "top" and w.notifications == moving.stack.root, "changing the actual Settings dropdown updates live notifications and the default stack alias")
+clear()
 local n = w:Notify({ title = "Escolhas salvas", content = "Pode continuar de onde parou.", type = "success", duration = 4 })
-check(n.__type == "Notification" and n.caption.Text == "CONCLUÍDO" and n.state == "entering" and n.titleLabel.FontFace.Weight == Enum.FontWeight.Bold, "Notify presents the new semantic card and bold heading")
+check(n.__type == "Notification" and n.flavor == "success" and n.state == "entering" and n.titleLabel.FontFace.Weight == Enum.FontWeight.SemiBold, "Notify presents the compact semantic card and emphasized heading")
 check(n.main.Parent == w.notifications and n.progress.Size.X.Scale == 1 and n.closeButton and n.iconPlate, "the card includes a separate icon plate, dismiss button and duration bar")
+check(n.stack.top and n.stack.root.AnchorPoint == Vector2.new(1, 0) and n.height < 100 and not n.caption, "the default card is compact and anchored to the upper-right corner")
+n.closeButton.MouseEnter:Fire()
+check(n.closeButton.BackgroundTransparency < 1, "the otherwise quiet close target is highlighted on hover")
+n.closeButton.MouseLeave:Fire()
+check(n.closeButton.BackgroundTransparency == 1, "the close target returns to a transparent resting state")
 tick(0.32)
 check(n.state == "visible" and n.elapsed == 0, "dwell begins after the entrance finishes")
 tick(1)
@@ -78,20 +101,27 @@ local oldInset = game:GetService("GuiService"):GetGuiInset()
 for _, size in ipairs({ Vector2.new(200, 240), Vector2.new(320, 568), Vector2.new(568, 320), Vector2.new(768, 1024), Vector2.new(1920, 1080) }) do
     camera.ViewportSize = size
     game:GetService("GuiService")._setGuiInset(Vector2.new(0, 24))
-    local card = w:Notify({ title = "Título com mais informações para testar a quebra de linha", content = string.rep("Conteúdo da notificação com detalhes. ", 25), type = "warning", duration = 10 })
+    for _, position in ipairs({ "Top", "Bottom" }) do
+    local card = w:Notify({ title = "Título com mais informações para testar a quebra de linha", content = string.rep("Conteúdo da notificação com detalhes. ", 25), type = "warning", duration = 10, position = position })
     local root = inside(card.stack.root, size.X, size.Y, "notification stack remains inside the viewport and GUI insets")
     check(root.y >= 32 and card.width <= root.w and card.height + 8 <= root.h, "the new card fits both portrait and landscape safe areas")
     inside(card.iconPlate, card.width, card.height, "icon plate fits the card")
     local close = inside(card.closeButton, card.width, card.height, "dismiss button fits the card")
-    local caption = inside(card.caption, card.width, card.height, "category fits the card")
     local column = inside(card.container, card.width, card.height, "wrapped message viewport fits the card")
-    check(column.x + column.w < close.x and caption.x + caption.w < close.x, "close never overlaps message text")
+    check(column.x + column.w < close.x, "close never overlaps message text")
     inside(card.progressTrack, card.width, card.height, "duration bar stays inside the rounded surface")
     inside(card.titleLabel, column.w, card.container.CanvasSize.Y.Offset, "long title remains reachable in the message canvas")
     inside(card.descriptionLabel, column.w, card.container.CanvasSize.Y.Offset, "long description remains reachable in the message canvas")
     check(card.scrollable and card.container.ScrollingEnabled and card.container.ClipsDescendants, "oversized copy scrolls inside a bounded card")
     card.body.InputBegan:Fire({ UserInputType = Enum.UserInputType.Touch })
     check(not card._dismissed, "scrolling long copy does not immediately dismiss it")
+    clear()
+    end
+    local high = w:Notify({ title = "Em cima", position = "Top", content = string.rep("Detalhe ", 40) })
+    local low = w:Notify({ title = "Embaixo", position = "Bottom", content = string.rep("Detalhe ", 40) })
+    local highRect = inside(high.stack.root, size.X, size.Y, "the top stack fits while both notification positions are active")
+    local lowRect = inside(low.stack.root, size.X, size.Y, "the bottom stack fits while both notification positions are active")
+    check(highRect.y + highRect.h + 8 <= lowRect.y and high.height + 8 <= highRect.h and low.height + 8 <= lowRect.h, "simultaneous upper and lower notification stacks keep separate space on every viewport")
     clear()
     for _, position in ipairs({ "Top", "Bottom" }) do
         local toast = w:Toast({ title = string.rep("Texto longo ", 15), subtitle = string.rep("Detalhes ", 10), position = position })
@@ -112,7 +142,7 @@ gui.GetGuiInset = getInset
 camera.ViewportSize = Vector2.new(320, 320)
 manager:Geometry(true)
 for i = 1, 20 do w:Notify({ title = "Aviso " .. i, duration = 20 }) end
-local stack = manager.stacks.notifications
+local stack = manager.stacks._notificationsTop
 local height = 0
 for _, m in ipairs(stack.live) do height += m.height + 8 end
 check(#stack.live <= 6 and height <= manager.bounds.height and stack.live[#stack.live].title == "Aviso 20", "stack pressure retires oldest messages while preserving the newest within screen height")
@@ -138,10 +168,18 @@ end
 check(#w.connections == connections and #w.instances == instances and #manager.messages == 0, "repeated notification use does not leak handlers or owned instances")
 local pending = w:Notify({ title = "Pendente" })
 local pendingToast = w:Toast({ title = "Pendente" })
+w:SetNotificationPosition("Bottom")
 w:Unload()
 check(pending.state == "destroyed" and pendingToast.state == "destroyed" and manager.destroyed and #w.connections == 0 and #w.instances == 0, "unload cancels active effects and destroys all feedback resources")
 pending:Close();pendingToast:Close();tick(10)
 check(w:Notify({ title = "Tarde" }) == nil and w:Toast({ title = "Tarde" }) == nil, "late callbacks cannot recreate notifications after unload")
+local restored = UI:CreateWindow({ Id = "Feedback372", name = "CONEXÃO STUDIO", notificationPosition = "Top", configuration = { autoSave = false, autoLoad = false } })
+check(restored.NotificationPosition == "bottom" and restored.NotificationPositionDropdown.value[1] == "Inferior", "a saved notification position survives reexecution and takes precedence over the script's initial choice")
+restored:Unload()
+local configured = UI:CreateWindow({ Id = "FeedbackPositionOption", name = "New position profile", NotificationPosition = "BOTTOM", configuration = { autoSave = false, autoLoad = false } })
+check(configured.NotificationPosition == "bottom" and not configured:Notify({ title = "Padrão do script" }).stack.top, "the window option selects the initial position when that account has no saved choice")
+configured:Unload()
+check(not pcall(UI.CreateWindow, UI, { Id = "InvalidFeedbackPosition", notificationPosition = false }), "a non-text initial notification position is rejected instead of silently choosing a different position")
 local dying = UI:CreateWindow({ Id = "FeedbackMeasureRace", configuration = { autoSave = false, autoLoad = false } })
 local measure = textService.GetTextBoundsAsync
 local interrupted = false

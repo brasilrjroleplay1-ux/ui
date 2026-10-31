@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.16.0", "new entry point is bundled")
+check(UI.Version == "3.17.0", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -811,6 +811,8 @@ local function exerciseComponents(window)
     end
     local message = last();click("Fechar o último aviso")
     check(message._dismissed, "the close-last example actually dismisses its notification")
+    click("Notificação no topo");check(last().kind == "Notification" and last().stack.top, "the notification example can explicitly select the upper-right stack")
+    click("Notificação embaixo");check(last().kind == "Notification" and not last().stack.top, "the notification example can explicitly select the lower-right stack")
     click("Toast no topo");check(last().main.Parent == window._toastsTop, "the top-toast example uses the top stack")
     click("Toast embaixo");check(last().main.Parent == window._toastsBottom, "the bottom-toast example uses the bottom stack")
     local textService = game:GetService("TextService")

@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.16 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.17 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -30,10 +30,13 @@ local ControlNotifications = require(script.Features.ControlNotifications)
 local Collapsible = require(script.Features.Collapsible)
 local Presentation = require(script.Features.Presentation)
 
+export type FeedbackPosition = "top" | "bottom" | "Top" | "Bottom"
 export type Window = Gen2.Window & {
     OpenSettings: (self: any, category: string?) -> (),
     SetSharedConfiguration: (self: any, enabled: boolean) -> boolean,
     SetSidebarIconsOnly: (self: any, enabled: boolean) -> boolean,
+    SetNotificationPosition: (self: any, position: FeedbackPosition) -> boolean,
+    NotificationPosition: FeedbackPosition,
     OpenProfile: (self: any) -> any,
     OpenHome: (self: any) -> any,
     GetSessionStats: (self: any) -> any,
@@ -46,7 +49,7 @@ export type Window = Gen2.Window & {
     RefreshSize: (self: any) -> UDim2,
 }
 export type WindowConfiguration = Gen2.WindowConfiguration & { shareAcrossAccounts: boolean? }
-export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean?, sidebarIconsOnly: boolean?, configuration: WindowConfiguration? }
+export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean?, sidebarIconsOnly: boolean?, notificationPosition: FeedbackPosition?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
 export type GroupProps = Gen2.GroupProps & {
@@ -69,10 +72,10 @@ export type InputProps = Gen2.InputProps & ControlNotificationProps
 export type KeybindProps = Gen2.KeybindProps & ControlNotificationProps
 export type ColorPickerProps = Gen2.ColorPickerProps & ControlNotificationProps
 export type SliderProps = Gen2.SliderProps & ControlNotificationProps & { format: ("number" | "percent")?, editable: boolean? }
-export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
+export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")?, position: FeedbackPosition? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.16.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.17.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -171,6 +174,10 @@ function Library:CreateWindow(options)
     cfg.customFolder = cfg.customFolder or cfg.CustomFolder
     local accountScope = AccountStorage.prepare(cfg, p.name)
     local preferences, preferencesDir, preferencesPath = Preferences.load(cfg, p.name)
+    local notificationPosition = p.notificationPosition
+    if notificationPosition == nil then notificationPosition = p.NotificationPosition end
+    assert(notificationPosition == nil or Feedback.position(notificationPosition), "Notification position must be 'Top' or 'Bottom'.")
+    preferences.notificationPosition = preferences.notificationPosition or Feedback.position(notificationPosition) or "top"
     if preferences.sidebarIconsOnly == nil then
         local iconsOnly = p.sidebarIconsOnly
         if iconsOnly == nil then iconsOnly = p.SidebarIconsOnly end
@@ -191,11 +198,11 @@ function Library:CreateWindow(options)
     local id = tostring(p.Id or p.name)
     if windows[id] and not windows[id].unloaded then windows[id]:Unload() end
     local window = Gen2:CreateWindow(p)
-    Feedback.attach(window)
     windows[id] = window
     self.Windows[id] = window
     window.SettingsTab = window.rfSettings
     window.UIPreferences, window._preferencesDir, window._preferencesPath = preferences, preferencesDir, preferencesPath
+    Feedback.attach(window)
     AccountStorage.attach(window, accountScope)
     window.ThemeId = themeId
     window.screenGui.Name = "ConexaoUI3_" .. id

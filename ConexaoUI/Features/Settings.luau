@@ -319,6 +319,12 @@ function Settings.attach(window)
             callback = function(value) window:SetSidebarIconsOnly(value) end,
         })
     end
+    window.NotificationPositionDropdown = tab:CreateDropdown({
+        name = "Posição das notificações", options = { "Superior", "Inferior" },
+        value = window.NotificationPosition == "bottom" and "Inferior" or "Superior", forgetState = true,
+        description = "Escolha o canto superior ou inferior direito da tela.",
+        callback = function(value) window:SetNotificationPosition(value == "Inferior" and "bottom" or "top") end,
+    })
     mark("appearance", first)
     local savingFirst = #tab.elements + 1
     tab:CreateSection({ name = "Conta e salvamento" })

@@ -1,4 +1,4 @@
-# Configurações por conta · 3.16.0
+# Configurações por conta · 3.17.0
 
 A separação já vem ativada em `CreateWindow`. A library usa o ID de `Players.LocalPlayer`, não o nome de usuário. A mesma conta continua com seus dados se mudar de nome. Sem uma identificação de conta válida, a janela não escolhe um diretório genérico.
 
@@ -6,13 +6,15 @@ A separação já vem ativada em `CreateWindow`. A library usa o ID de `Players.
 
 | Seção | Conteúdo |
 | --- | --- |
-| Aparência | Transparência, ajuste automático, tamanho manual, tamanho atual e nomes/ícones na lateral. |
+| Aparência | Transparência, ajuste automático, tamanho manual, tamanho atual, nomes/ícones na lateral e posição das notificações. |
 | Desempenho | Gráficos reduzidos, limite de FPS, contador, renderização 3D e interface do jogo. |
 | Temas | Prévias das paletas e acesso à galeria completa. |
 | Salvamento | Perfil atual, compartilhamento, salvar/restaurar automaticamente e presets nomeados. |
 | Controles | Atalho da janela, cursor, boas-vindas, vibração e opções da lateral. |
 
 Em Aparência, **Navegação compacta** reduz a lateral e oculta os nomes. A escolha fica salva no perfil ativo; desativar volta aos nomes quando houver espaço. Também é possível definir o padrão inicial com `sidebarIconsOnly` ou alterar durante a execução com `window:SetSidebarIconsOnly(true/false)`.
+
+**Posição das notificações** alterna entre os cantos Superior e Inferior direitos. O padrão é Superior. A escolha fica salva por conta/projeto e acompanha o compartilhamento explícito do perfil. Avisos ativos que seguem a preferência mudam de canto sem reiniciar seu tempo; avisos com posição definida no script mantêm essa posição. A API equivalente é `window:SetNotificationPosition("Top"/"Bottom")`.
 
 Configurações usa uma única página com rolagem vertical. Cada seção tem um cabeçalho com ícone, descrição e seta: clique para mostrar seus controles logo abaixo ou para recolhê-los. É possível deixar várias abertas. Aparência começa aberta em um perfil novo; as escolhas de expansão ficam salvas por conta/projeto. Expandir e recolher preserva os valores dos controles. Ao recolher uma seção, o dropdown dela fecha, uma edição numérica termina com a validação existente e a captura de atalho é cancelada.
 

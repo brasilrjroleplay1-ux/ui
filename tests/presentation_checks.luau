@@ -95,7 +95,7 @@ check(nested._presentation and nested.body.TextColor3 == w.theme.MutedContent, "
 group:Collapse();group:Expand()
 check(nested.body.TextTransparency == 0 and calls == 1 and toggle.value, "folding preserves both appearance and values without replaying callbacks")
 local message = w:Notify({ title = "Interface atualizada", content = "O aviso compartilha a identidade visual.", type = "success", duration = 5 })
-check(message.signal and message.signal.Parent == message.body and message.descriptionLabel.TextSize == 14, "notifications use a semantic accent and readable body copy")
+check(message.iconRim.Parent == message.iconPlate and message.shadow.Parent == message.main and message.descriptionLabel.TextSize == 14, "notifications use a semantic icon, separate shadow and readable body copy")
 w:Unload()
 check(#w.instances == 0 and #w.connections == 0, "all presentation layers and their handlers are released on unload")
 local top = UI:CreateWindow({ Id = "BuiltinsTop3151", sidebarLayout = false, configuration = { autoSave = false, autoLoad = false } })

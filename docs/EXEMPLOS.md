@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.16 · API Gen2
+# Exemplos da Conexão UI 3.17 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -230,7 +230,18 @@ window:Popup({ title = "Continuar?", content = "Escolha uma ação.", options = 
 
 `window:Notify` também exige `title` preenchido. `content` pode ser `""` ou omitido para mostrar só o título.
 
-`Notify` aparece no canto inferior direito; `Toast` é um aviso compacto centralizado, com `position = "Top"` ou `"Bottom"`. Os dois incluem ícone, botão de fechar e barra de tempo restante. `type` aceita `info` (padrão e cor do tema), `success`, `warning` e `error`. `icon` continua aceitando um ID numérico ou URI para usar seu próprio ícone. O toast também aceita `avatar`, `minWidth` e `subtitleAbove`.
+`Notify` aparece no **canto superior direito** por padrão. Em Configurações → Aparência → **Posição das notificações**, escolha Superior ou Inferior; essa preferência fica separada por conta/projeto. A opção `notificationPosition` em `CreateWindow` define apenas o padrão inicial, e uma escolha já salva tem prioridade.
+
+```lua
+local window = UI:CreateWindow({ name = "Meu Hub", notificationPosition = "Top" })
+window:SetNotificationPosition("Bottom") -- altera o padrão e salva a preferência
+window:Notify({ title = "Aviso no topo", content = "Só este aviso fica no topo.", position = "Top" })
+window:Notify({ title = "Aviso na posição escolhida" }) -- segue a preferência atual
+```
+
+`Top` e `Bottom` aceitam maiúsculas ou minúsculas. Mudar a preferência move os avisos ativos que não especificaram `position`, mantendo o tempo restante. Avisos com posição explícita permanecem nela. Se houver avisos nos dois cantos, as pilhas reservam áreas separadas para evitar sobreposição.
+
+`Toast` mantém a apresentação compacta centralizada, com `position = "Top"` ou `"Bottom"`. Os dois tipos usam fundo neutro, ícone circular, título em destaque, botão de fechar e barra de tempo restante. `type` aceita `info` (padrão e cor do tema), `success`, `warning` e `error`. `icon` continua aceitando um ID numérico ou URI para usar seu próprio ícone. O toast também aceita `avatar`, `minWidth` e `subtitleAbove`.
 
 `duration` usa segundos; quando omitido, o tempo é calculado pelo tamanho do texto, entre 3 e 9 segundos. Passar o mouse pausa o contador. É possível fechar pelo X, tocar em um aviso curto ou usar `aviso:Close()`. Textos que excedem a altura disponível usam rolagem interna e são fechados pelo X. Cada pilha mantém até seis avisos e retira os mais antigos quando falta espaço na tela. Avisos ativos mudam de cor com o tema e são liberados ao descarregar a janela.
 

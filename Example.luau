@@ -1,4 +1,4 @@
--- Teste completo da Conexão UI 3.16. Os controles deste arquivo pertencem ao script.
+-- Teste completo da Conexão UI 3.17. Os controles deste arquivo pertencem ao script.
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/ConexaoUI.luau"))()
 local window = UI:CreateWindow({
     Id = "ConexaoDemo3", -- substitui a janela da demo inicial ao executar este exemplo
@@ -203,6 +203,15 @@ campos:CreateKeybind({ name = "Atalho de segurar", flag = "demo/segurar", value 
 campos:CreateText({ name = "Sobre as teclas", text = "F6 e F7 exigem teclado. Toque no campo da tecla para mudar o atalho. No celular, use Executar ação do atalho para testar o callback." })
 
 -- NOTIFICAÇÕES, TOASTS E POPUP COM AÇÕES.
+avisos:CreateText({ name = "Posição dos avisos", text = "As notificações aparecem no canto superior direito. Em Configurações → Aparência, escolha Superior ou Inferior. Os dois botões abaixo demonstram posições definidas apenas para um aviso." })
+avisos:CreateButton({ name = "Notificação no topo", callback = function()
+    registrar("Notificação", "Posição: superior direito")
+    ultimoAviso = window:Notify({ title = "No canto superior", content = "Este aviso usa position = Top.", position = "Top", type = "success" })
+end })
+avisos:CreateButton({ name = "Notificação embaixo", callback = function()
+    registrar("Notificação", "Posição: inferior direito")
+    ultimoAviso = window:Notify({ title = "No canto inferior", content = "Este aviso usa position = Bottom.", position = "Bottom" })
+end })
 for _, exemplo in ipairs({ { "info", "Notificação padrão" }, { "success", "Aviso de sucesso" }, { "warning", "Aviso de atenção" }, { "error", "Aviso de erro" } }) do
     local tipo, titulo = exemplo[1], exemplo[2]
     avisos:CreateButton({ name = titulo, callback = function() notificar(titulo, "Este aviso foi criado pelo callback do botão de teste.", tipo) end })

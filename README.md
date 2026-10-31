@@ -1,6 +1,8 @@
-# Conexão UI 3.16.0 · Conexão Studio
+# Conexão UI 3.17.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.17.0**, as notificações usam cartões mais compactos, fundo neutro ligado ao tema, ícone circular, título em destaque e fechamento discreto. O padrão é o canto superior direito. Em Configurações → Aparência → **Posição das notificações**, escolha Superior ou Inferior; a preferência fica salva por conta. `notificationPosition` define o padrão inicial da janela, `window:SetNotificationPosition("Bottom")` altera durante a execução e `position = "Top"/"Bottom"` em `Notify` fixa a posição de um aviso. Alterar a preferência move os avisos que a acompanham sem reiniciar o tempo. [Exemplos](docs/EXEMPLOS.md#notificação-toast-e-popup).
 
 Na **3.16.0**, Configurações usa uma página com rolagem vertical e seções expansíveis: Aparência, Temas, Salvamento, Controles e Desempenho. Os cabeçalhos têm ícone, descrição curta e seta; os controles aparecem logo abaixo. Várias seções podem ficar abertas, e essa escolha é lembrada por perfil. A antiga barra de abas internas foi substituída. `window:OpenSettings("saving")` continua abrindo a seção solicitada na mesma página.
 

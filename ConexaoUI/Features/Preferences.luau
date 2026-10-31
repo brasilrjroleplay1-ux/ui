@@ -21,6 +21,7 @@ function Preferences.load(configuration, name)
     if type(data.autoLoad) == "boolean" then state.autoLoad = data.autoLoad end
     if type(data.autoSize) == "boolean" then state.autoSize = data.autoSize end
     if type(data.sidebarIconsOnly) == "boolean" then state.sidebarIconsOnly = data.sidebarIconsOnly end
+    if type(data.notificationPosition) == "string" and (data.notificationPosition:lower() == "top" or data.notificationPosition:lower() == "bottom") then state.notificationPosition = data.notificationPosition:lower() end
     if ({ appearance = true, themes = true, saving = true, controls = true, performance = true })[data.settingsCategory] then state.settingsCategory = data.settingsCategory end
     if type(data.settingsSections) == "table" then
         state.settingsSections = {}

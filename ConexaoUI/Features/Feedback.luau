@@ -5,10 +5,12 @@ local variables = require(script.Parent.Parent.Gen2.utility.variables)
 local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local image = require(script.Parent.Parent.Gen2.utility.image)
 local haptics = require(script.Parent.Parent.Gen2.utility.HapticEngine)
+local Preferences = require(script.Parent.Preferences)
+local Buttons = require(script.Parent.ActionButton)
 local Feedback, Message = {}, {}
 Message.__index = Message
 local function finite(value) return type(value) == "number" and value == value and value >= 0 and value < math.huge end
-local function bold(font) return Font.new(font.Family, Enum.FontWeight.Bold, font.Style) end
+local function bold(font) return Font.new(font.Family, Enum.FontWeight.SemiBold, font.Style) end
 local tones = { success = Color3.fromRGB(52, 211, 153), warning = Color3.fromRGB(250, 184, 62), error = Color3.fromRGB(251, 99, 126) }
 local captions = { info = "NOTIFICAÇÃO", success = "CONCLUÍDO", warning = "ATENÇÃO", error = "ERRO" }
 local function tone(window, kind)
@@ -16,8 +18,21 @@ local function tone(window, kind)
     local ink = window.theme.ContentColor
     return ink.R + ink.G + ink.B < 1.5 and color:Lerp(ink, 0.3) or color
 end
-local function prop(properties, key) return properties[key] or properties[key:sub(1, 1):upper() .. key:sub(2)] end
+local function prop(properties, key)
+    if properties[key] ~= nil then return properties[key] end
+    return properties[key:sub(1, 1):upper() .. key:sub(2)]
+end
 local function vector(value) return typeof(value) == "Vector2" and finite(value.X) and finite(value.Y) and value.X > 1 and value.Y > 1 end
+function Feedback.position(value)
+    if type(value) ~= "string" then return nil end
+    value = value:lower()
+    return (value == "top" or value == "bottom") and value or nil
+end
+local function surface(window)
+    local ink = window.theme.ContentColor
+    local base = ink.R + ink.G + ink.B < 1.5 and Color3.fromRGB(250, 251, 253) or Color3.fromRGB(24, 27, 35)
+    return base:Lerp(window.theme.StatBackground, 0.18)
+end
 
 function Message:_alive() return self.state ~= "destroyed" and not self.window.unloaded and self.main.Parent ~= nil end
 function Message:_track(node, property, value) table.insert(self.targets, { node = node, property = property, value = value }) end
@@ -56,6 +71,7 @@ function Message:_dismiss(immediate)
     self:_paint(false, true)
     self:_tween(self.scale, { Scale = 0.97 }, 0.22)
     self:_tween(self.body, { Position = self.rest + UDim2.fromOffset(self.kind == "Notification" and 16 or 0, self.kind == "Toast" and 8 or 0) }, 0.22)
+    self:_tween(self.shadow, { Position = self.rest + UDim2.fromOffset(self.kind == "Notification" and 16 or 0, self.kind == "Toast" and 10 or 2) }, 0.22)
     self:_tween(self.main, { Size = UDim2.fromOffset(self.width, 0) }, 0.3)
 end
 function Message:Close() self:_dismiss() end
@@ -65,7 +81,7 @@ function Message:Layout()
     self._layoutToken = (self._layoutToken or 0) + 1
     local token, bounds = self._layoutToken, self.manager.bounds
     local window, toast = self.window, self.kind == "Toast"
-    local maximum = math.min(toast and 320 or 360, bounds.width)
+    local maximum = math.min(toast and 320 or 380, bounds.width)
     local width = maximum
     if toast then
         local extent = metrics.textWidth(bold(window.theme.TitleFont), 15, self.title)
@@ -73,32 +89,33 @@ function Message:Layout()
         width = math.clamp(extent + 104, math.min(self.minWidth, maximum), maximum)
     end
     local small = width < 280
-    local iconSize, left = small and 32 or (toast and 36 or 42), small and 56 or (toast and 62 or 72)
+    local iconSize, left = small and 32 or (toast and 34 or 38), small and 54 or (toast and 62 or 70)
     local column = math.max(1, width - left - 44)
     local textWidth = math.max(1, column - 6) -- reserve the scrollbar before measuring wrapped text
     local titleSize, contentSize = toast and 15 or 16, toast and 13 or 14
     local titleHeight = math.max(titleSize + 4, metrics.textHeight(bold(window.theme.TitleFont), titleSize, self.title, textWidth))
     local contentHeight = self.content ~= "" and math.max(contentSize + 4, metrics.textHeight(window.theme.Font, contentSize, self.content, textWidth)) or 0
-    local textHeight = titleHeight + (contentHeight > 0 and contentHeight + 5 or 0)
-    local top, bottom = toast and 15 or 34, 18
-    local wanted = math.max(toast and 66 or 94, top + textHeight + bottom)
-    local height = math.max(1, math.min(wanted, bounds.height - 8, toast and 180 or 320))
+    local textHeight = titleHeight + (contentHeight > 0 and contentHeight + 6 or 0)
+    local top, bottom = toast and 14 or 17, 19
+    local wanted = math.max(toast and 66 or 74, top + textHeight + bottom)
+    local height = math.max(1, math.min(wanted, self.stack.root.Size.Y.Offset - 8, toast and 180 or 320))
+    if contentHeight == 0 then top = math.max(top, math.floor((height - titleHeight) / 2)) end
     if not self:_alive() or token ~= self._layoutToken then return end -- font measurement can yield
     self.width, self.height = math.floor(width), math.ceil(height)
     self.body.Size = UDim2.fromOffset(self.width, self.height)
-    self.iconPlate.Position, self.iconPlate.Size = UDim2.fromOffset(14, toast and 15 or 18), UDim2.fromOffset(iconSize, iconSize)
+    self.shadow.Size = self.body.Size
+    self.iconPlate.Position, self.iconPlate.Size = UDim2.fromOffset(16, toast and 14 or 17), UDim2.fromOffset(iconSize, iconSize)
     self.closeButton.Position, self.closeButton.Size = UDim2.new(1, -10, 0, 10), UDim2.fromOffset(32, 32)
-    if self.caption then self.caption.Position, self.caption.Size = UDim2.fromOffset(left, 13), UDim2.fromOffset(math.max(1, column), 14) end
     local viewHeight = math.max(1, self.height - top - bottom)
     self.scrollable = textHeight > viewHeight
     self.container.Position, self.container.Size = UDim2.fromOffset(left, top), UDim2.fromOffset(column, viewHeight)
     self.container.ScrollingEnabled = self.scrollable
     self.container.ScrollBarImageTransparency = self.scrollable and 0.45 or 1
     self.titleLabel.TextSize, self.titleLabel.Size = titleSize, UDim2.fromOffset(textWidth, titleHeight)
-    self.titleLabel.Position = UDim2.fromOffset(0, self.subtitleAbove and contentHeight > 0 and contentHeight + 5 or 0)
+    self.titleLabel.Position = UDim2.fromOffset(0, self.subtitleAbove and contentHeight > 0 and contentHeight + 6 or 0)
     if self.descriptionLabel then
         self.descriptionLabel.TextSize, self.descriptionLabel.Size = contentSize, UDim2.fromOffset(textWidth, contentHeight)
-        self.descriptionLabel.Position = UDim2.fromOffset(0, self.subtitleAbove and 0 or titleHeight + 5)
+        self.descriptionLabel.Position = UDim2.fromOffset(0, self.subtitleAbove and 0 or titleHeight + 6)
     end
     self.container.CanvasSize = UDim2.fromOffset(0, textHeight)
     self.container.CanvasPosition = Vector2.new(0, math.clamp(self.container.CanvasPosition.Y, 0, math.max(0, textHeight - viewHeight)))
@@ -116,6 +133,7 @@ local function make(manager, properties, kind, stack)
         title = tostring(prop(properties, "title") or ""),
         content = tostring(prop(properties, kind == "Toast" and "subtitle" or "content") or ""),
         icon = prop(properties, "icon"), avatar = prop(properties, "avatar"), flavor = flavor,
+        followsPosition = kind == "Notification" and prop(properties, "position") == nil,
         minWidth = finite(prop(properties, "minWidth")) and prop(properties, "minWidth") or 150,
         subtitleAbove = prop(properties, "subtitleAbove") == true, duration = prop(properties, "duration"),
         elapsed = 0, age = 0, state = "building", targets = {}, tweens = {}, connections = {}, _hovered = false, _dismissed = false,
@@ -135,33 +153,39 @@ local function make(manager, properties, kind, stack)
         local node = create("TextLabel", { Parent = parent, Name = name, Text = value, BackgroundTransparency = 1, TextTransparency = 1,
             TextSize = size, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
             AutomaticSize = Enum.AutomaticSize.None, ZIndex = z + 4,
-        }, { TextColor3 = "ContentColor", FontFace = strong and { "TitleFont", bold } or "Font" })
+        }, { TextColor3 = { "ContentColor", function(ink)
+            local fill = surface(window)
+            local foreground = Buttons.readableColor(ink, fill)
+            return not strong and Buttons.readableColor(foreground:Lerp(fill, 0.22), fill) or foreground
+        end }, FontFace = strong and { "TitleFont", bold } or "Font" })
         track(node, "TextTransparency", dim or 0)
         return node
     end
     manager.count += 1
-    self.main = frame(stack.root, kind, { Size = UDim2.fromOffset(0, 0), LayoutOrder = kind == "Toast" and -manager.count or manager.count, ZIndex = z })
+    self.order = manager.count
+    self.main = frame(stack.root, kind, { Size = UDim2.fromOffset(0, 0), LayoutOrder = (kind == "Toast" or stack.top) and -self.order or self.order, ZIndex = z })
     table.insert(manager.messages, self)
     table.insert(stack.live, self)
-    self.rest = UDim2.new(0.5, 0, 0, 8)
-    self.body = frame(self.main, "MessageCard", { AnchorPoint = Vector2.new(0.5, 0), Position = self.rest + UDim2.fromOffset(kind == "Notification" and 28 or 0, kind == "Toast" and (stack.top and -14 or 14) or 0), BackgroundColor3 = Color3.new(1, 1, 1), Active = true })
-    round(self.body, 14)
-    self.scale = create("UIScale", { Parent = self.body, Scale = 0.96 })
-    self.gradient = create("UIGradient", { Parent = self.body, Rotation = 18 }, { Color = { "StatBackground", function(base)
-        local color = tone(window, flavor)
-        return ColorSequence.new(base:Lerp(color, 0.14), base:Lerp(color, 0.025))
+    self.rest = UDim2.new(0.5, 0, 0, 4)
+    local entry = UDim2.fromOffset(kind == "Notification" and 28 or 0, kind == "Toast" and (stack.top and -14 or 14) or 0)
+    self.shadow = frame(self.main, "MessageShadow", { AnchorPoint = Vector2.new(0.5, 0), Position = self.rest + entry + UDim2.fromOffset(0, 2), BackgroundColor3 = Color3.new(0, 0, 0), ZIndex = z })
+    round(self.shadow, 16)
+    track(self.shadow, "BackgroundTransparency", 0.82)
+    self.body = frame(self.main, "MessageCard", { AnchorPoint = Vector2.new(0.5, 0), Position = self.rest + entry, BackgroundColor3 = Color3.new(1, 1, 1), Active = true })
+    round(self.body, 16)
+    self.scale = create("UIScale", { Parent = self.body, Scale = 0.98 })
+    self.gradient = create("UIGradient", { Parent = self.body, Rotation = 90 }, { Color = { "StatBackground", function()
+        local base = surface(window)
+        return ColorSequence.new(base:Lerp(tone(window, flavor), 0.035), base)
     end } })
-    track(self.body, "BackgroundTransparency", 0.02)
+    track(self.body, "BackgroundTransparency", 0)
     self.stroke = create("UIStroke", { Parent = self.body, Thickness = 1, Transparency = 1 }, { Color = "SurfaceStroke" })
-    track(self.stroke, "Transparency", 0.5)
-    self.signal = frame(self.body, "MessageAccent", { Position = UDim2.fromOffset(3, 14), Size = UDim2.new(0, 3, 1, -28), ZIndex = z + 2 }, { BackgroundColor3 = accent() })
-    round(self.signal, 2)
-    track(self.signal, "BackgroundTransparency", 0.08)
+    track(self.stroke, "Transparency", 0.75)
     self.iconPlate = frame(self.body, "IconPlate", nil, { BackgroundColor3 = accent() })
-    round(self.iconPlate, 11)
-    track(self.iconPlate, "BackgroundTransparency", 0.78)
-    local iconRim = create("UIStroke", { Parent = self.iconPlate, Thickness = 1, Transparency = 1 }, { Color = accent() })
-    track(iconRim, "Transparency", 0.63)
+    create("UICorner", { Parent = self.iconPlate, CornerRadius = UDim.new(1, 0) })
+    track(self.iconPlate, "BackgroundTransparency", 0.9)
+    self.iconRim = create("UIStroke", { Parent = self.iconPlate, Thickness = 1, Transparency = 1 }, { Color = accent() })
+    track(self.iconRim, "Transparency", 0.82)
     local hasAvatar = kind == "Toast" and finite(self.avatar) and self.avatar > 0
     if hasAvatar or (self.icon ~= nil and self.icon ~= "" and self.icon ~= 0) then
         self.iconLabel = create("ImageLabel", { Name = "MessageIcon", Parent = self.iconPlate, Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
@@ -186,23 +210,22 @@ local function make(manager, properties, kind, stack)
         end
     end
     self.closeButton = create("TextButton", { Name = "DismissMessage", Parent = self.body, AnchorPoint = Vector2.new(1, 0), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = z + 6 }, { BackgroundColor3 = "NeutralButton" })
-    round(self.closeButton, 7)
-    track(self.closeButton, "BackgroundTransparency", 0.45)
+    round(self.closeButton, 10)
+    track(self.closeButton, "BackgroundTransparency", 1)
     for _, angle in ipairs({ 45, -45 }) do
         local mark = frame(self.closeButton, "CloseMark", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(10, 1.5), Rotation = angle, ZIndex = z + 7 }, { BackgroundColor3 = "ContentColor" })
-        track(mark, "BackgroundTransparency", 0.22)
+        track(mark, "BackgroundTransparency", 0.4)
     end
-    if kind == "Notification" then self.caption = label(self.body, "Category", captions[flavor], 10, true, 0.18) end
     self.container = create("ScrollingFrame", { Name = "MessageText", Parent = self.body, BackgroundTransparency = 1, BorderSizePixel = 0,
         AutomaticCanvasSize = Enum.AutomaticSize.None, CanvasSize = UDim2.new(), CanvasPosition = Vector2.new(0, 0),
         ClipsDescendants = true, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 3, ScrollBarImageTransparency = 1,
         Active = true, ElasticBehavior = Enum.ElasticBehavior.Never, ZIndex = z + 3,
     }, { ScrollBarImageColor3 = accent() })
     self.titleLabel = label(self.container, "Title", self.title, kind == "Toast" and 15 or 16, true)
-    if self.content ~= "" then self.descriptionLabel = label(self.container, "Description", self.content, kind == "Toast" and 12 or 13, false, 0.16) end
+    if self.content ~= "" then self.descriptionLabel = label(self.container, "Description", self.content, kind == "Toast" and 12 or 13, false, 0) end
     self.subtitleLabel = kind == "Toast" and self.descriptionLabel or nil
-    self.progressTrack = frame(self.body, "LifetimeTrack", { Position = UDim2.new(0, 14, 1, -7), Size = UDim2.new(1, -28, 0, 2) }, { BackgroundColor3 = "SurfaceStroke" })
-    round(self.progressTrack, 1) track(self.progressTrack, "BackgroundTransparency", 0.82)
+    self.progressTrack = frame(self.body, "LifetimeTrack", { Position = UDim2.new(0, 18, 1, -9), Size = UDim2.new(1, -36, 0, 2) }, { BackgroundColor3 = "SurfaceStroke" })
+    round(self.progressTrack, 1) track(self.progressTrack, "BackgroundTransparency", 0.92)
     self.progress = frame(self.progressTrack, "LifetimeRemaining", { Size = UDim2.fromScale(1, 1), ZIndex = z + 2 }, { BackgroundColor3 = accent() })
     round(self.progress, 1) track(self.progress, "BackgroundTransparency", 0.06)
     window:ConnectFor(self, self.body.MouseEnter, function() self._hovered = true end)
@@ -211,6 +234,13 @@ local function make(manager, properties, kind, stack)
         if not self.scrollable and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then self:Close() end
     end)
     window:ConnectFor(self, self.closeButton.MouseButton1Click, function() self:Close() end)
+    local function closeHover(active)
+        if self:_alive() and self.state ~= "exiting" then self:_tween(self.closeButton, { BackgroundTransparency = active and 0.75 or 1 }, 0.14) end
+    end
+    window:ConnectFor(self, self.closeButton.MouseEnter, function() closeHover(true) end)
+    window:ConnectFor(self, self.closeButton.MouseLeave, function() closeHover(false) end)
+    window:ConnectFor(self, self.closeButton.SelectionGained, function() closeHover(true) end)
+    window:ConnectFor(self, self.closeButton.SelectionLost, function() closeHover(false) end)
     if self.iconLabel then
         local uri = hasAvatar and image.avatar(self.avatar, function(value)
             if self:_alive() and self.iconLabel.Parent then image.assign(self.iconLabel, "Image", value) end
@@ -218,12 +248,14 @@ local function make(manager, properties, kind, stack)
         if not self:_alive() then return self end
         image.assign(self.iconLabel, "Image", uri)
     end
+    manager:Geometry(true)
     self:Layout()
     if not self:_alive() then return self end
     self.state = "entering"
     self:_paint(true, true)
     self:_tween(self.main, { Size = UDim2.fromOffset(self.width, self.height + 8) }, 0.32)
     self:_tween(self.body, { Position = self.rest }, 0.32)
+    self:_tween(self.shadow, { Position = self.rest + UDim2.fromOffset(0, 2) }, 0.32)
     self:_tween(self.scale, { Scale = 1 }, 0.32)
     haptics.notify()
     manager:Trim(stack)
@@ -231,8 +263,13 @@ local function make(manager, properties, kind, stack)
 end
 
 function Feedback.attach(window)
-    local self = { window = window, messages = {}, stacks = {}, count = 0, connections = {} }
+    local self = { window = window, messages = {}, stacks = {}, count = 0, connections = {}, position = window.UIPreferences.notificationPosition or "top" }
     window.Feedback = self
+    window.NotificationPosition = self.position
+    function self:SyncAliases()
+        local stack = self.stacks[self.position == "top" and "_notificationsTop" or "_notificationsBottom"]
+        window.notifications, window._liveNotifications = stack and stack.root, stack and stack.live
+    end
     function self:Geometry(force)
         local camera = workspace.CurrentCamera
         local viewport = camera and camera.ViewportSize
@@ -243,14 +280,17 @@ function Feedback.attach(window)
         local margin = math.min(16, viewport.X * 0.04)
         local upper = math.max(12, top.Y + 8)
         if window._collapsedShown then upper = math.max(upper, 94) end
-        local bounds = { width = math.max(1, viewport.X - top.X - bottom.X - margin * 2), height = math.max(1, viewport.Y - upper - math.max(12, bottom.Y + 8)), margin = margin, top = upper, bottom = math.max(12, bottom.Y + 8), center = (top.X - bottom.X) / 2, right = margin + bottom.X }
+        local high, low = self.stacks._notificationsTop, self.stacks._notificationsBottom
+        local bounds = { width = math.max(1, viewport.X - top.X - bottom.X - margin * 2), height = math.max(1, viewport.Y - upper - math.max(12, bottom.Y + 8)), margin = margin, top = upper, bottom = math.max(12, bottom.Y + 8), center = (top.X - bottom.X) / 2, right = margin + bottom.X,
+            split = high ~= nil and low ~= nil and #high.live > 0 and #low.live > 0,
+        }
         local old = self.bounds
-        if not force and old and old.width == bounds.width and old.height == bounds.height and old.top == bounds.top and old.bottom == bounds.bottom and old.center == bounds.center and old.right == bounds.right then return end
+        if not force and old and old.width == bounds.width and old.height == bounds.height and old.top == bounds.top and old.bottom == bounds.bottom and old.center == bounds.center and old.right == bounds.right and old.split == bounds.split then return end
         self.bounds = bounds
         for _, stack in pairs(self.stacks) do
-            local width = math.min(stack.toast and 320 or 360, bounds.width)
-            stack.root.Size = UDim2.fromOffset(width, bounds.height)
-            stack.root.Position = stack.toast and (stack.top and UDim2.new(0.5, bounds.center, 0, bounds.top) or UDim2.new(0.5, bounds.center, 1, -bounds.bottom)) or UDim2.new(1, -bounds.right, 1, -bounds.bottom)
+            local width = math.min(stack.toast and 320 or 380, bounds.width)
+            stack.root.Size = UDim2.fromOffset(width, not stack.toast and bounds.split and math.max(1, math.floor((bounds.height - 12) / 2)) or bounds.height)
+            stack.root.Position = UDim2.new(stack.toast and 0.5 or 1, stack.toast and bounds.center or -bounds.right, stack.top and 0 or 1, stack.top and bounds.top or -bounds.bottom)
         end
         for _, message in ipairs(table.clone(self.messages)) do if message.state ~= "building" then message:Layout() end end
         for _, stack in pairs(self.stacks) do self:Trim(stack) end
@@ -258,7 +298,7 @@ function Feedback.attach(window)
     function self:Trim(stack)
         local total = 0
         for _, item in ipairs(stack.live) do total += (item.height or 0) + 8 end
-        while #stack.live > 1 and (#stack.live > 6 or total > self.bounds.height) do
+        while #stack.live > 1 and (#stack.live > 6 or total > stack.root.Size.Y.Offset) do
             local oldest = stack.live[1]
             total -= (oldest.height or 0) + 8
             oldest:_dismiss(true)
@@ -266,21 +306,48 @@ function Feedback.attach(window)
         end
     end
     function self:Stack(kind, top)
-        local key = kind == "Notification" and "notifications" or (top and "_toastsTop" or "_toastsBottom")
+        local key = kind == "Notification" and (top and "_notificationsTop" or "_notificationsBottom") or (top and "_toastsTop" or "_toastsBottom")
         local stack = self.stacks[key]
         if stack then self:Geometry() return stack end
         local root = window:Create("Frame", { Name = kind == "Notification" and "Notifications" or "Toasts", Parent = window.screenGui, BackgroundTransparency = 1, BorderSizePixel = 0,
-            AnchorPoint = kind == "Notification" and Vector2.new(1, 1) or Vector2.new(0.5, top and 0 or 1),
+            AnchorPoint = Vector2.new(kind == "Notification" and 1 or 0.5, top and 0 or 1),
             ClipsDescendants = true, ZIndex = kind == "Notification" and 1500 or 2000,
         })
         window:Create("UIListLayout", { Parent = root, FillDirection = Enum.FillDirection.Vertical, VerticalAlignment = top and Enum.VerticalAlignment.Top or Enum.VerticalAlignment.Bottom,
             HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 0) })
         stack = { root = root, live = {}, toast = kind == "Toast", top = top }
         self.stacks[key], window[key] = stack, root
-        if kind == "Notification" then window._liveNotifications = stack.live
+        if kind == "Notification" then self:SyncAliases()
         else window._liveToasts = window._liveToasts or {} window._liveToasts[root] = stack.live end
         self:Geometry(true)
         return stack
+    end
+    function window:SetNotificationPosition(position)
+        local value = Feedback.position(position)
+        assert(value, "Notification position must be 'Top' or 'Bottom'.")
+        if self.unloaded or self.Feedback.destroyed then return false end
+        local manager = self.Feedback
+        manager.position, self.NotificationPosition, self.UIPreferences.notificationPosition = value, value, value
+        local target
+        for _, message in ipairs(table.clone(manager.messages)) do
+            if message.kind == "Notification" and message.followsPosition then
+                target = target or manager:Stack("Notification", value == "top")
+                if message.stack ~= target then
+                    local index = table.find(message.stack.live, message)
+                    if index then table.remove(message.stack.live, index) end
+                    message.stack = target
+                    message.main.Parent = target.root
+                    message.main.LayoutOrder = value == "top" and -message.order or message.order
+                    table.insert(target.live, message)
+                end
+            end
+        end
+        if target then table.sort(target.live, function(a, b) return a.order < b.order end) end
+        manager:SyncAliases()
+        manager:Geometry(true)
+        if self.NotificationPositionDropdown then self.NotificationPositionDropdown:Set(value == "top" and "Superior" or "Inferior", true) end
+        Preferences.save(self)
+        return true
     end
     function self:RefreshTheme() self:Geometry(true) end
     function self:Destroy()
@@ -296,7 +363,10 @@ function Feedback.attach(window)
         props = type(props) == "table" and props or {}
         local title = prop(props, "title")
         assert(type(title) == "string" and title:match("%S"), "Notify requires a non-empty title")
-        local stack = self.Feedback:Stack("Notification", false)
+        local requested = prop(props, "position")
+        local position = requested == nil and self.Feedback.position or Feedback.position(requested)
+        assert(position, "Notification position must be 'Top' or 'Bottom'.")
+        local stack = self.Feedback:Stack("Notification", position == "top")
         return make(self.Feedback, props, "Notification", stack)
     end
     function window:Toast(props)
