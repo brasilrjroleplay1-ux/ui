@@ -16,8 +16,8 @@ local function ink(color)
     local dark, light = Color3.new(0, 0, 0), Color3.new(1, 1, 1)
     return contrast(color, dark) >= contrast(color, light) and dark or light
 end
-function Buttons.readableColor(preferred, background)
-    return contrast(preferred, background) >= 4.5 and preferred or ink(background)
+function Buttons.readableColor(preferred, background, minimum)
+    return contrast(preferred, background) >= (minimum or 4.5) and preferred or ink(background)
 end
 function Buttons.new(window, owner, parent, title, symbol, variant, z)
     z = z or 10

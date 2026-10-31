@@ -2,6 +2,7 @@
 -- SPDX-License-Identifier: MPL-2.0
 -- A persistent action mark; the native button still owns its hit target and callback.
 local tweenService = game:GetService("TweenService")
+local Buttons = require(script.Parent.ActionButton)
 local Indicator = {}
 
 function Indicator.attach(control)
@@ -33,10 +34,11 @@ function Indicator.attach(control)
         local active = self.shown and not control.locked
         local hover, press = active and self.hovered, active and self.pressed
         local base, accent = window.theme.NeutralButton, window.theme.AccentColor
-        window:_reveal(self.plate, { BackgroundColor3 = base:Lerp(accent, press and 0.3 or (hover and 0.22 or 0.12)), BackgroundTransparency = self.shown and (control.locked and 0.5 or 0) or 1 }, animate)
+        local fill = base:Lerp(accent, press and 0.38 or (hover and 0.3 or 0.2))
+        window:_reveal(self.plate, { BackgroundColor3 = fill, BackgroundTransparency = self.shown and (control.locked and 0.5 or 0) or 1 }, animate)
         window:_reveal(self.stroke, { Color = accent, Transparency = self.shown and (control.locked and 0.85 or (hover and 0.25 or 0.65)) or 1 }, animate)
         for _, mark in ipairs(self.glyph) do
-            window:_reveal(mark, { BackgroundColor3 = window.theme.ContentColor, BackgroundTransparency = self.shown and (control.locked and 0.65 or 0) or 1 }, animate)
+            window:_reveal(mark, { BackgroundColor3 = Buttons.readableColor(window.theme.ContentColor, fill), BackgroundTransparency = self.shown and (control.locked and 0.65 or 0) or 1 }, animate)
         end
         if self.tween then self.tween:Cancel() self.tween = nil end
         if animate then

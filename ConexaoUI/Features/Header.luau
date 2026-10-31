@@ -92,7 +92,7 @@ function Header.attach(window, version)
     create("UIGradient", {
         Parent = self.separator, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.18, 0.1), NumberSequenceKeypoint.new(0.8, 0.3), NumberSequenceKeypoint.new(1, 1) }),
     }, { Color = { "SurfaceStroke", function(color) return ColorSequence.new(color) end } })
-    track(self.separator, "BackgroundTransparency", 0.82)
+    track(self.separator, "BackgroundTransparency", 0.55)
     for _, node in ipairs(window.actionContainer:GetChildren()) do
         if node.Parent == window.actionContainer and node:IsA("Frame") and node.Visible ~= false and node:FindFirstChild("ImageLabel") then
             window.themeProperties[node] = window.themeProperties[node] or {}
@@ -117,7 +117,7 @@ function Header.attach(window, version)
         local width = window.main.AbsoluteSize.X
         if width <= 0 or window.animating or window._revealing then width = window.size.X.Offset end
         local compact, tiny = width < 540, width < 380
-        local slot, padding, gap = compact and 26 or 28, 12, 12
+        local slot, padding, gap = compact and 28 or 32, 14, 12
         local actionGap = 5
         if width < 240 then slot, padding, gap, actionGap = 22, 8, 8, 4 end
         window.actionsListLayout.Padding = UDim.new(0, actionGap)

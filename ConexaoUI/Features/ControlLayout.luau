@@ -91,7 +91,7 @@ local function slider(control, width)
     if control.minimal then
         setHeight(control, 41)
         control.track.AnchorPoint, control.track.Position = Vector2.new(0, 0.5), UDim2.new(0, 16 + inset, 0.5, 0)
-        control.track.Size = UDim2.new(1, -32 - inset * 2, 0, 14)
+        control.track.Size = UDim2.new(1, -32 - inset * 2, 0, 8)
         control.interact.Size = UDim2.new(1, inset * 2, 0, 32)
     else
         local size, inner = width < 320 and 14 or 16, math.max(1, width - 32)
@@ -133,7 +133,7 @@ local function slider(control, width)
             control.container.Position, control.container.Size = UDim2.fromOffset(16, (height - titleHeight) / 2), UDim2.fromOffset(column, titleHeight)
             control.valueHost.Position = UDim2.new(1, -16, 0.5, 0)
             control.track.AnchorPoint, control.track.Position = Vector2.new(0, 0.5), UDim2.new(0, 16 + column + 12 + inset, 0.5, 0)
-            control.track.Size = UDim2.fromOffset(trackWidth, 14)
+            control.track.Size = UDim2.fromOffset(trackWidth, 8)
             control._controlLayout.mode = "wide"
         else
             local trackY = 12 + titleHeight + (separate and 6 + valueHeight + 10 or 6) + 22
@@ -141,7 +141,7 @@ local function slider(control, width)
             control.container.Position, control.container.Size = UDim2.fromOffset(16, 12), UDim2.fromOffset(inner, titleHeight)
             control.valueHost.Position = UDim2.new(1, -16, 0, separate and 12 + titleHeight + 6 + valueHeight / 2 or trackY)
             control.track.AnchorPoint, control.track.Position = Vector2.new(0, 0.5), UDim2.fromOffset(16 + inset, trackY)
-            control.track.Size = UDim2.fromOffset(separate and inner - inset * 2 or besideWidth, 14)
+            control.track.Size = UDim2.fromOffset(separate and inner - inset * 2 or besideWidth, 8)
             control._controlLayout.mode = separate and "compact" or "stacked"
         end
         control._layoutMode = control._controlLayout.mode
@@ -166,7 +166,7 @@ local function row(control, width)
     local room = stacked and inner or math.max(1, inner - (right > 0 and right + 12 or 0))
     local height = textHeight(control.title, size, room - icon)
     if not current(control, width) then return end
-    local body = math.max(44, height + (stacked and 64 or 24))
+    local body = math.max(48, height + (stacked and 64 or 24))
     setHeight(control, body)
     label(control, room, height, size)
     control.container.AnchorPoint = Vector2.new(0, stacked and 0 or 0.5)

@@ -40,7 +40,7 @@ local function build(window, player, info, version)
         window:Create("UIGradient", { Parent = node, Rotation = 75 }, { Color = { "StatBackground", function(base)
             return ColorSequence.new(base:Lerp(window.theme.AccentColor, 0.07), base)
         end } })
-        rim(node, 14, "SurfaceStroke", 0.72)
+        rim(node, 14, "SurfaceStroke", 0.58)
         track(node, "BackgroundTransparency", function() return window.theme.ElementTransparency end)
         return node
     end
@@ -49,7 +49,7 @@ local function build(window, player, info, version)
     end
     local function rule(parent, y)
         local node = frame(parent, "Divider", { Position = UDim2.fromOffset(14, y), Size = UDim2.new(1, -28, 0, 1) }, { BackgroundColor3 = "SurfaceStroke" })
-        track(node, "BackgroundTransparency", 0.85)
+        track(node, "BackgroundTransparency", 0.72)
         return node
     end
     local function button(parent, name, value, props)

@@ -1,4 +1,4 @@
--- Teste completo da Conexão UI 3.14. Os controles deste arquivo pertencem ao script.
+-- Teste completo da Conexão UI 3.15. Os controles deste arquivo pertencem ao script.
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/ConexaoUI.luau"))()
 local window = UI:CreateWindow({
     Id = "ConexaoDemo3", -- substitui a janela da demo inicial ao executar este exemplo

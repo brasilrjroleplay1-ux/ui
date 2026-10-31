@@ -7,20 +7,20 @@ local Shell = {}
 function Shell.attach(window)
     local layout = table.clone(window.layout)
     window.layout, window.StudioShell = layout, true
-    local delta = layout.topbarHeight - 44
-    layout.topbarHeight, layout.chromeHeight = 44, layout.chromeHeight - delta
+    local delta = layout.topbarHeight - 52
+    layout.topbarHeight, layout.chromeHeight = 52, layout.chromeHeight - delta
     layout.fadeSize, layout.fadeTransparency = UDim2.new(1, 0, 0, 20), NumberSequence.new(1)
-    window.topbar.Size = UDim2.new(1, 0, 0, 44)
+    window.topbar.Size = UDim2.new(1, 0, 0, 52)
     window.elements.Size = UDim2.new(1, 0, 1, -layout.chromeHeight)
     if window.elementsCorner then window.elementsCorner.CornerRadius = UDim.new(0, 8) end
-    window.windowCorner.CornerRadius, window.theme.CornerRoundness = UDim.new(0, 10), UDim.new(0, 10)
+    window.windowCorner.CornerRadius, window.theme.CornerRoundness = UDim.new(0, 14), UDim.new(0, 14)
     if window.elementsStroke then window.elementsStroke.Enabled = false end
     if layout.mode == "sidebar" then
         layout.railWidth, layout.railCollapsedWidth, layout.railCollapseBelow = 196, 64, 480
-        layout.rowInset, layout.rowHeight, layout.rowCornerRadius, layout.rowSpacing = 8, 38, 8, 4
+        layout.rowInset, layout.rowHeight, layout.rowCornerRadius, layout.rowSpacing = 8, 42, 10, 6
         layout.rowPadding, layout.rowIconSize, layout.footerHeight, layout.railPadding = 10, 20, 60, 10
         layout.cardTransparency = 1
-        window.tabListLayout.Padding = UDim.new(0, 4)
+        window.tabListLayout.Padding = UDim.new(0, 6)
         for _, child in ipairs(window.tabList:GetChildren()) do
             if child:IsA("UIPadding") then child.PaddingTop, child.PaddingBottom = UDim.new(0, 10), UDim.new(0, 10) end
         end
@@ -77,10 +77,10 @@ function Shell.attach(window)
     function window:_fadeSurfaces(shown, info)
         fade(self, shown, info)
         local visible = shown or (self.minimised and not self.hidden)
-        self:_reveal(self.windowStroke, { Transparency = visible and 0.75 or 1 }, info ~= nil, info)
+        self:_reveal(self.windowStroke, { Transparency = visible and 0.5 or 1 }, info ~= nil, info)
     end
     function window:RefreshShellTheme()
-        self.theme.CornerRoundness = UDim.new(0, 10)
+        self.theme.CornerRoundness = UDim.new(0, 14)
         if not self.hidden and not self.minimised then self.windowCorner.CornerRadius = self.theme.CornerRoundness end
     end
 end

@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.14 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.15 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -28,6 +28,7 @@ local Feedback = require(script.Features.Feedback)
 local AccountStorage = require(script.Features.AccountStorage)
 local ControlNotifications = require(script.Features.ControlNotifications)
 local Collapsible = require(script.Features.Collapsible)
+local Presentation = require(script.Features.Presentation)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any, category: string?) -> (),
@@ -71,7 +72,7 @@ export type SliderProps = Gen2.SliderProps & ControlNotificationProps & { format
 export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.14.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.15.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -93,6 +94,7 @@ end
 local function adaptHost(host)
     if host._conexaoAdapted then return host end
     host._conexaoAdapted = true
+    if host.tabPageLayout then Presentation.tab(host) end
     if host.tabPageLayout then Scrolling.tab(host) end
     if host.Select then
         local select = host.Select
@@ -106,6 +108,7 @@ local function adaptHost(host)
     end
     for _, element in ipairs(host.elements or {}) do
         Controls.attach(element)
+        Presentation.control(element)
         if element.__type == "Dropdown" then DropdownPanel.attach(element)
         elseif element.__type == "Group" then adaptHost(element) end
     end
@@ -124,6 +127,7 @@ local function adaptHost(host)
                 if control then
                     if kind == "Slider" then SliderInput.attach(control, mapped) end
                     Controls.attach(control)
+                    Presentation.control(control)
                     if kind == "Group" then
                         adaptHost(control)
                         if collapsible then
@@ -217,6 +221,13 @@ function Library:CreateWindow(options)
     local changeTheme = window.ChangeTheme
     function window:ChangeTheme(theme)
         local resolved = Themes.resolve(theme) or (type(theme) == "table" and table.clone(theme))
+        if type(theme) == "table" and resolved then
+            if resolved.ElementGradient and not resolved.ButtonGradient then resolved.ButtonGradient = resolved.ElementGradient end
+            if resolved.WindowColor then
+                resolved.HeaderGradient = resolved.HeaderGradient or resolved.WindowColor
+                resolved.RailGradient = resolved.RailGradient or resolved.WindowColor
+            end
+        end
         if resolved then resolved.ElementTransparency = (self.UIPreferences.transparency or 0) / 100 end
         changeTheme(self, resolved or theme)
         self.ThemeId = type(theme) == "string" and theme:lower() or nil
@@ -233,6 +244,7 @@ function Library:CreateWindow(options)
     Profile.attach(window, executorInfo, self.Version)
     Responsive.attach(window)
     Appearance.attach(window)
+    Presentation.attach(window)
     Session.attach(window)
     Settings.attach(window)
     Friends.attach(window)

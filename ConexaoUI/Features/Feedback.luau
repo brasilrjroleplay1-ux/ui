@@ -76,7 +76,7 @@ function Message:Layout()
     local iconSize, left = small and 32 or (toast and 36 or 42), small and 56 or (toast and 62 or 72)
     local column = math.max(1, width - left - 44)
     local textWidth = math.max(1, column - 6) -- reserve the scrollbar before measuring wrapped text
-    local titleSize, contentSize = toast and 15 or 16, toast and 12 or 13
+    local titleSize, contentSize = toast and 15 or 16, toast and 13 or 14
     local titleHeight = math.max(titleSize + 4, metrics.textHeight(bold(window.theme.TitleFont), titleSize, self.title, textWidth))
     local contentHeight = self.content ~= "" and math.max(contentSize + 4, metrics.textHeight(window.theme.Font, contentSize, self.content, textWidth)) or 0
     local textHeight = titleHeight + (contentHeight > 0 and contentHeight + 5 or 0)
@@ -149,14 +149,17 @@ local function make(manager, properties, kind, stack)
     self.scale = create("UIScale", { Parent = self.body, Scale = 0.96 })
     self.gradient = create("UIGradient", { Parent = self.body, Rotation = 18 }, { Color = { "StatBackground", function(base)
         local color = tone(window, flavor)
-        return ColorSequence.new(base:Lerp(color, 0.025), base:Lerp(color, 0.12))
+        return ColorSequence.new(base:Lerp(color, 0.14), base:Lerp(color, 0.025))
     end } })
     track(self.body, "BackgroundTransparency", 0.02)
     self.stroke = create("UIStroke", { Parent = self.body, Thickness = 1, Transparency = 1 }, { Color = "SurfaceStroke" })
     track(self.stroke, "Transparency", 0.5)
+    self.signal = frame(self.body, "MessageAccent", { Position = UDim2.fromOffset(3, 14), Size = UDim2.new(0, 3, 1, -28), ZIndex = z + 2 }, { BackgroundColor3 = accent() })
+    round(self.signal, 2)
+    track(self.signal, "BackgroundTransparency", 0.08)
     self.iconPlate = frame(self.body, "IconPlate", nil, { BackgroundColor3 = accent() })
     round(self.iconPlate, 11)
-    track(self.iconPlate, "BackgroundTransparency", 0.86)
+    track(self.iconPlate, "BackgroundTransparency", 0.78)
     local iconRim = create("UIStroke", { Parent = self.iconPlate, Thickness = 1, Transparency = 1 }, { Color = accent() })
     track(iconRim, "Transparency", 0.63)
     local hasAvatar = kind == "Toast" and finite(self.avatar) and self.avatar > 0
@@ -184,12 +187,12 @@ local function make(manager, properties, kind, stack)
     end
     self.closeButton = create("TextButton", { Name = "DismissMessage", Parent = self.body, AnchorPoint = Vector2.new(1, 0), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = z + 6 }, { BackgroundColor3 = "NeutralButton" })
     round(self.closeButton, 7)
-    track(self.closeButton, "BackgroundTransparency", 0.7)
+    track(self.closeButton, "BackgroundTransparency", 0.45)
     for _, angle in ipairs({ 45, -45 }) do
         local mark = frame(self.closeButton, "CloseMark", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(10, 1.5), Rotation = angle, ZIndex = z + 7 }, { BackgroundColor3 = "ContentColor" })
         track(mark, "BackgroundTransparency", 0.22)
     end
-    if kind == "Notification" then self.caption = label(self.body, "Category", captions[flavor], 9, true, 0.24) end
+    if kind == "Notification" then self.caption = label(self.body, "Category", captions[flavor], 10, true, 0.18) end
     self.container = create("ScrollingFrame", { Name = "MessageText", Parent = self.body, BackgroundTransparency = 1, BorderSizePixel = 0,
         AutomaticCanvasSize = Enum.AutomaticSize.None, CanvasSize = UDim2.new(), CanvasPosition = Vector2.new(0, 0),
         ClipsDescendants = true, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 3, ScrollBarImageTransparency = 1,

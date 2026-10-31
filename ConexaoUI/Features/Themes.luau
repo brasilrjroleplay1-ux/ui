@@ -76,6 +76,51 @@ local function luminance(color)
     local function linear(c) return c <= 0.04045 and c / 12.92 or ((c + 0.055) / 1.055) ^ 2.4 end
     return 0.2126 * linear(color.R) + 0.7152 * linear(color.G) + 0.0722 * linear(color.B)
 end
+local function contrast(a, b)
+    local x, y = luminance(a), luminance(b)
+    return (math.max(x, y) + 0.05) / (math.min(x, y) + 0.05)
+end
+
+-- Shared depth and typography roles. Every palette retains its own accent pair and tint.
+local function finish(theme)
+    local points = theme.WindowColor.Keypoints
+    local original, raised = points[1].Value, theme.StatBackground
+    local accent = theme.AccentColor
+    local slider = theme.SliderProgress.Keypoints
+    local secondary = slider[#slider].Value
+    local light = luminance(original) > 0.5
+    local base = light and original or original:Lerp(hex("0D1018"), 0.6)
+    local surface = light and raised or raised:Lerp(hex("242936"), 0.45)
+    local ink = light and hex("202633") or hex("F4F6FC")
+    theme.WindowColor = ColorSequence.new({ ColorSequenceKeypoint.new(0, base),
+        ColorSequenceKeypoint.new(0.55, base:Lerp(surface, 0.18)), ColorSequenceKeypoint.new(1, base:Lerp(secondary, light and 0.035 or 0.06)) })
+    theme.ElementGradient = ColorSequence.new(surface:Lerp(accent, light and 0.025 or 0.055), surface:Lerp(base, 0.16))
+    theme.ButtonGradient = ColorSequence.new(surface:Lerp(accent, light and 0.07 or 0.14), surface:Lerp(secondary, light and 0.035 or 0.07))
+    theme.HeaderGradient = ColorSequence.new(base:Lerp(surface, 0.32), base:Lerp(accent, light and 0.055 or 0.09))
+    theme.RailGradient = ColorSequence.new(base:Lerp(surface, 0.2), base)
+    theme.HeroGradient = ColorSequence.new(surface:Lerp(accent, light and 0.12 or 0.24), surface:Lerp(secondary, light and 0.08 or 0.16))
+    theme.ContentColor, theme.TitlingColor, theme.ElementTextHoverColor, theme.TabColor = ink, ink, ink, ink
+    local muted = ink:Lerp(surface, light and 0.25 or 0.28)
+    if contrast(muted, surface) < 4.5 then muted = ink end
+    theme.MutedContent, theme.PlaceholderColor = muted, muted
+    theme.StatBackground, theme.NeutralButton = surface, surface
+    theme.NeutralButtonHover, theme.NeutralButtonStroke = surface:Lerp(accent, 0.18), surface:Lerp(ink, 0.25)
+    theme.SurfaceStroke = surface:Lerp(ink, light and 0.24 or 0.3)
+    theme.ElementStroke, theme.ElementStrokeHover = surface:Lerp(ink, 0.18), accent
+    theme.ElementStrokeTransparency, theme.ElementStrokeHoverTransparency = 0.4, 0.12
+    theme.ElementStrokeGradient = ColorSequence.new(surface:Lerp(accent, 0.3), surface:Lerp(secondary, 0.2))
+    theme.ElementCornerRadius = UDim.new(0, 12)
+    theme.TabBackground = ColorSequence.new(surface:Lerp(accent, light and 0.12 or 0.23), surface:Lerp(secondary, light and 0.08 or 0.12))
+    theme.TabStroke = ColorSequence.new(accent, secondary)
+    theme.SliderBackground, theme.SliderBackgroundHover = surface:Lerp(ink, light and 0.12 or 0.1), surface:Lerp(accent, 0.2)
+    theme.SliderHandle = light and hex("2D3648") or white
+    theme.ToggleTrack = surface:Lerp(ink, light and 0.14 or 0.1)
+    theme.ToggleTrackTransparency = 0
+    theme.ToggleKnobOff, theme.ToggleKnobOffTransparency = ink:Lerp(surface, 0.32), 0
+    theme.FieldBackground, theme.FieldTransparency, theme.FieldGlow = surface:Lerp(accent, light and 0.06 or 0.1), 0, accent
+    theme.AccentGlow = light and 0.88 or 0.65
+    return theme
+end
 
 local accents = { ["á"] = "a", ["à"] = "a", ["â"] = "a", ["ã"] = "a", ["é"] = "e", ["ê"] = "e", ["í"] = "i", ["ó"] = "o", ["ô"] = "o", ["õ"] = "o", ["ú"] = "u", ["ç"] = "c", ["Á"] = "a", ["À"] = "a", ["Â"] = "a", ["Ã"] = "a", ["É"] = "e", ["Ê"] = "e", ["Í"] = "i", ["Ó"] = "o", ["Ô"] = "o", ["Õ"] = "o", ["Ú"] = "u", ["Ç"] = "c" }
 function Themes.normalize(value)
@@ -86,6 +131,7 @@ end
 
 local function register(entry)
     assert(not named[entry.id], "Repeated theme id: " .. entry.id)
+    entry.theme = finish(entry.theme)
     entry.search = Themes.normalize(entry.id .. " " .. entry.name .. " " .. entry.description .. " " .. entry.group)
     named[entry.id] = entry
     table.insert(Themes.catalog, entry)

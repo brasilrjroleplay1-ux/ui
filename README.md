@@ -1,6 +1,8 @@
-# Conexão UI 3.14.1 · Conexão Studio
+# Conexão UI 3.15.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.15.0**, a revisão visual alcança a janela inteira: fundos e cartões com mais separação, textos de apoio legíveis, cabeçalho mais espaçoso, navegação com seleção marcada e botões com destaque próprio. Switches e sliders usam controles circulares; Início, perfil e notificações acompanham as mesmas cores e hierarquia. As 60 paletas preservam seus IDs e cores de destaque. [O que mudou no visual](docs/VISUAL.md).
 
 Na **3.14.1**, os sliders mostram o valor à direita da barra. Os campos editáveis incluem um lápis, borda e destaque ao passar o mouse ou focar pelo teclado. Toque no número ou no lápis para digitar. O layout mantém título, barra e edição separados e se reorganiza em espaços pequenos; validação e salvamento continuam iguais.
 

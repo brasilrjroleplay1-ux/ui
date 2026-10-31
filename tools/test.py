@@ -21,6 +21,15 @@ prefix=runner[:runner.index('local results = {')]
 # Native GuiObject selection signals used by the custom keyboard/gamepad focus treatment.
 prefix+='\nsignalProperties.SelectionGained = true\nsignalProperties.SelectionLost = true\n'
 prefix+='signalProperties.DescendantAdded = true\n'
+# Match Roblox GuiObject inheritance for visibility checks and decorative-layer ordering.
+prefix+='''
+local guiKinds = { Frame = true, ScrollingFrame = true, TextLabel = true, TextButton = true, TextBox = true, ImageLabel = true, ImageButton = true, ViewportFrame = true }
+local nativeIsA = instanceMethods.IsA
+function instanceMethods:IsA(name)
+    if name == "GuiObject" then return guiKinds[self.ClassName] == true end
+    return nativeIsA(self, name)
+end
+'''
 checks=(ROOT/'tests/bundle_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()).replace('-- DEMO',(ROOT/'dist/Demo.luau').read_text()).replace('-- COMPONENTS',(ROOT/'dist/Components.luau').read_text())
 with tempfile.TemporaryDirectory() as folder:
     test=Path(folder)/'public-bundle.luau';test.write_text(prefix+checks)
@@ -64,3 +73,6 @@ with tempfile.TemporaryDirectory() as folder:
     groups=Path(folder)/'collapsible-groups.luau'
     groups.write_text(prefix+(ROOT/'tests/collapsible_group_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(groups)],'collapsible-groups')
+    presentation=Path(folder)/'presentation.luau'
+    presentation.write_text(prefix+(ROOT/'tests/presentation_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(presentation)],'presentation')

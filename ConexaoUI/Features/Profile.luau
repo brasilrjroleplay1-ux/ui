@@ -94,7 +94,7 @@ function Profile.attach(window, executorInfo, version)
         window.profileLabels.Size = UDim2.new(1, -64, 0, 40)
         window.profileName.Size = UDim2.new(1, 0, 0, 20)
         window.profileName.AutomaticSize = Enum.AutomaticSize.None
-        window.profileName.TextSize, window.profileName.ZIndex = 14, 123
+        window.profileName.TextSize, window.profileName.ZIndex = 15, 123
         window.profileName.FontFace = window.theme.TitleFont
         window.themeProperties[window.profileName].FontFace = "TitleFont"
         window.profileName.TextWrapped, window.profileName.TextTruncate = false, Enum.TextTruncate.AtEnd
@@ -104,7 +104,7 @@ function Profile.attach(window, executorInfo, version)
         window.profileSubtitle.TextWrapped, window.profileSubtitle.TextTruncate = false, Enum.TextTruncate.AtEnd
         window.ProfileCard = window:Create("Frame", {
             Name = "PlayerCard", Parent = window.profile, BorderSizePixel = 0,
-            BackgroundTransparency = 0.9, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 48), ZIndex = 120,
+            BackgroundTransparency = 0.15, Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -16, 0, 48), ZIndex = 120,
         }, { BackgroundColor3 = "StatBackground" })
         Surface.round(window, window.ProfileCard, 8)
         window.ProfileCardStroke = window:Create("UIStroke", { Parent = window.ProfileCard, Transparency = 0.7, Thickness = 1 }, { Color = "AccentStroke" })
@@ -116,8 +116,18 @@ function Profile.attach(window, executorInfo, version)
         function window:_refreshProfileCard()
             if self.unloaded then return end
             local selected = self.ProfileTab ~= nil and self.selectedTab == self.ProfileTab
-            self.ProfileCard.BackgroundTransparency = selected and 0.8 or 0.9
-            self.ProfileCardStroke.Transparency = selected and 0.25 or 0.7
+            local hover = self._profileHover
+            self.ProfileCard.BackgroundTransparency = selected and 0 or (hover and 0.04 or 0.15)
+            self.ProfileCardStroke.Transparency = selected and 0.15 or (hover and 0.3 or 0.65)
+        end
+        window:Connect(window.ProfileButton.MouseEnter, function() if window:_interactive() then window._profileHover = true window:_refreshProfileCard() end end)
+        window:Connect(window.ProfileButton.MouseLeave, function() window._profileHover = false window:_refreshProfileCard() end)
+        local fade = window._fadeSurfaces
+        function window:_fadeSurfaces(shown, info)
+            fade(self, shown, info)
+            local selected = self.ProfileTab ~= nil and self.selectedTab == self.ProfileTab
+            self:_reveal(self.ProfileCard, { BackgroundTransparency = shown and (selected and 0 or 0.15) or 1 }, info ~= nil, info)
+            self:_reveal(self.ProfileCardStroke, { Transparency = shown and (selected and 0.15 or 0.65) or 1 }, info ~= nil, info)
         end
     end
 end

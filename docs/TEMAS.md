@@ -1,6 +1,6 @@
 # Os 60 temas da Conexão Studio
 
-Cada miniatura usa as cores do catálogo real. Este mapa é uma referência das paletas; não é uma captura do cliente Roblox. Na library, as prévias são feitas com GuiObjects e aplicam o tema ao tocar. Elas ficam em áreas com altura limitada e rolagem, com busca e filtros acima da lista.
+Cada miniatura usa as cores do catálogo real, atualizadas na 3.15.0. Este mapa é uma referência das paletas; não é uma captura do cliente Roblox. Na library, as prévias são feitas com GuiObjects e aplicam o tema ao tocar. Elas ficam em áreas com altura limitada e rolagem, com busca e filtros acima da lista. `python tools/theme_preview.py` atualiza o mapa a partir do bundle distribuído.
 
 ![Paletas dos 60 temas](theme-preview.svg)
 
