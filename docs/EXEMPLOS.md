@@ -4,13 +4,15 @@ Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é s
 
 O cabeçalho exibe CONEXÃO STUDIO com as duas palavras no mesmo tamanho. A etiqueta TESTES foi removida do topo; `CreateTag` permanece opcional e o botão de teste só cria uma etiqueta quando clicado.
 
-O exemplo completo abre a aba Testes e permite clicar nos controles para observar seus callbacks em notificações, na última ação e no console. Há abas para sliders, dropdowns, campos, avisos e dados/grupos. Para executá-lo diretamente, use `dist/Components.luau`. Configurações, perfil e salvamento continuam sendo fornecidos pela library; os controles de demonstração estão no script.
+O exemplo completo abre a aba Testes e permite clicar nos controles para observar seus callbacks em notificações, na última ação e no console. Há abas para sliders, dropdowns, campos, avisos e dados/grupos. Para executá-lo diretamente, use `dist/Components.luau`. Início e Configurações já aparecem no começo da lateral; perfil e salvamento também são fornecidos pela library. Os controles de demonstração estão no script.
 
 ```lua
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/ConexaoUI.luau"))()
 local window = UI:CreateWindow({ name = "Meu Hub", subtitle = "Conexão UI", sidebarLayout = true, theme = "conexao" })
 local tab = window:CreateTab({ name = "Principal", icon = 93364949241311 })
 ```
+
+`CreateWindow` já inclui Início e Configurações. Sem abas próprias, a janela abre no Início. A primeira aba criada pelo script passa a ser selecionada, preservando as duas páginas prontas na navegação. Use `window:OpenHome()` ou `window:OpenSettings()` para abri-las pelo código.
 
 ## Lateral com nomes ou somente ícones
 

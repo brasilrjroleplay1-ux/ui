@@ -1,6 +1,8 @@
-# Conexão UI 3.15.0 · Conexão Studio
+# Conexão UI 3.15.1 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.15.1**, toda janela já cria **Início** e **Configurações**, inclusive no exemplo completo de componentes. As duas ficam antes das abas do script na lateral. O seletor de Configurações aparece desde a primeira abertura, acima do fundo da navegação. Sem abas próprias, a janela abre no Início; a primeira aba criada pelo script continua sendo selecionada automaticamente.
 
 Na **3.15.0**, a revisão visual alcança a janela inteira: fundos e cartões com mais separação, textos de apoio legíveis, cabeçalho mais espaçoso, navegação com seleção marcada e botões com destaque próprio. Switches e sliders usam controles circulares; Início, perfil e notificações acompanham as mesmas cores e hierarquia. As 60 paletas preservam seus IDs e cores de destaque. [O que mudou no visual](docs/VISUAL.md).
 
@@ -44,7 +46,7 @@ Para testar os componentes e seus callbacks, execute o **exemplo interativo comp
 loadstring(game:HttpGet("https://raw.githubusercontent.com/brasilrjroleplay1-ux/ui/main/dist/Components.luau"))()
 ```
 
-Ele abre na aba **Testes**, com botão e toggle que demonstram as notificações opcionais e um botão sem notificação. As abas Sliders, Dropdowns, Campos, Avisos e Dados e grupos incluem os demais componentes, entrada precisa, seleções únicas/múltiplas, cores, atalhos, popup com ações, texto dinâmico, estatística, progresso e console de eventos. Os sliders notificam na confirmação; o seletor de cor atualiza a leitura e tem um botão de notificação. No celular, um botão executa a mesma ação do atalho. As escolhas usam o perfil por conta da library. O script fica em [Example.luau](Example.luau); os controles e as ações são definidos nele.
+Ele abre na aba **Testes**, com **Início** e **Configurações** no começo da lateral. Botão e toggle demonstram as notificações opcionais, e há um botão sem notificação. As abas Sliders, Dropdowns, Campos, Avisos e Dados e grupos incluem os demais componentes, entrada precisa, seleções únicas/múltiplas, cores, atalhos, popup com ações, texto dinâmico, estatística, progresso e console de eventos. Os sliders notificam na confirmação; o seletor de cor atualiza a leitura e tem um botão de notificação. No celular, um botão executa a mesma ação do atalho. As escolhas usam o perfil por conta da library. O script fica em [Example.luau](Example.luau); os controles e as ações são definidos nele.
 
 A **3.6.1** mantém o cabeçalho de **44 px** e restaura a busca no topo. A lateral de **196 px** mostra ícones e nomes das abas, com avatar, nome do jogador e executor no rodapé. Abaixo de 480 px de largura de janela, ela se recolhe para 64 px para preservar a área dos controles. O topo usa marca, título e subtítulo na mesma linha. Nome, subtítulo e ícone continuam personalizáveis em `CreateWindow`.
 

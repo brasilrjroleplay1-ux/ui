@@ -8,6 +8,7 @@ local constants = require(script.Parent.Parent.Gen2.utility.constants)
 local Scrolling = require(script.Parent.Scrolling)
 local Navigation = require(script.Parent.SettingsNavigation)
 local Performance = require(script.Parent.Performance)
+local Presentation = require(script.Parent.Presentation)
 local Settings = {}
 
 -- These are Roblox GuiObjects using the actual palette; no image downloads or AI previews.
@@ -260,7 +261,11 @@ function Settings.attach(window)
     end
     tab.name, tab.tabPage.Name = "Configurações", "Configurações"
     tab.icon, tab.neglectSelector = constants.icons.settings, false
+    tab.customOrder = -900 -- Keep built-in navigation before the script's default-order tabs.
     selector.build(tab, window.layout)
+    Presentation.tab(tab)
+    -- This selector is built outside CreateTab, so reveal it for an already open window too.
+    tab.topbarItem.Visible = not window.hidden and not window.minimised
     window:_applyRailWidth()
     window:ConnectFor(tab, tab.topbarItemInteract.MouseButton1Click, function() tab:Select() end)
     window:ConnectFor(tab, tab.topbarItemInteract.MouseEnter, function()

@@ -91,10 +91,11 @@ end
 
 function Presentation.tab(tab)
     if tab._presentationTab then return end
-    tab._presentationTab = true
     local window = tab.window
     if tab.tabPageLayout then tab.tabPageLayout.Padding = UDim.new(0, 10) end
     if not tab.topbarItem then return end
+    -- Settings receives its selector after the native window has been constructed.
+    tab._presentationTab = true
     for _, node in ipairs(tab.topbarItem:GetDescendants()) do
         if node:IsA("GuiObject") and node.ZIndex < 2 then node.ZIndex = 2 end
     end

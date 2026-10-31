@@ -72,7 +72,7 @@ export type SliderProps = Gen2.SliderProps & ControlNotificationProps & { format
 export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.15.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.15.1", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -284,6 +284,8 @@ function Library:CreateWindow(options)
     window.SaveConfig = window.Save
     window.SelectTab = function(_, tab) tab:Select() end
     window:Connect(window.screenGui.Destroying, function() if not window.unloaded then window:Unload() end end)
+    -- Every window includes Home, even when the script only adds its own component tabs.
+    window:OpenHome()
     return window
 end
 

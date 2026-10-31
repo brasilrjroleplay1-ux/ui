@@ -7,7 +7,7 @@ end
 local UI = (function()
 -- BUNDLE
 end)()
-check(UI.Version == "3.15.0", "new entry point is bundled")
+check(UI.Version == "3.15.1", "new entry point is bundled")
 local instanceNew = Instance.new
 local openingNodes = {}
 Instance.new = function(className)
@@ -51,11 +51,10 @@ haptics:Set(not previousHaptics)
 check(w.settings.haptics == not previousHaptics, "translated controls still call their original setting callbacks")
 haptics:Set(previousHaptics)
 check(w.SettingsTab == w.rfSettings, "settings are provided by the actual Gen2 implementation")
-check(not w.SettingsTab.neglectSelector and w.SettingsTab.topbarItem and w.selectedTab == w.SettingsTab, "settings are visible in the sidebar and open by default without demo tabs")
+check(not w.SettingsTab.neglectSelector and w.SettingsTab.topbarItem.Visible and w.HomeTab and w.selectedTab == w.HomeTab, "every window creates Home and a visible Settings selector without script-side setup")
 check(w.TransparencySlider and w.WindowSizeSlider and w.AutoSizeToggle, "transparency, window size and automatic sizing controls are built into settings")
-local initiallySelected = w.selectedTab
 w:CloseProfile()
-check(w.selectedTab == initiallySelected and not w.HomePage, "closing the profile before it was opened leaves navigation unchanged")
+check(w.selectedTab == w.SettingsTab and not w.ProfilePage and w.HomePage, "the legacy Home close action returns to Settings while retaining the automatic Home page")
 check(w.SizeStatus and w.SizeInfo.automatic, "settings and automatic sizing are included with CreateWindow alone")
 check(w.WindowSizeSlider.value == w.SizeInfo.percent and w.AutoSizeToggle.value, "the initial slider readout reflects automatic sizing without switching to manual mode")
 local scrollFrame, scrollLayout = w.SettingsTab.tabPage, w.SettingsTab.tabPageLayout
@@ -707,6 +706,8 @@ local ComponentsUI, componentsWindow = (function()
 return UI, window
 end)()
 check(componentsWindow and #componentsWindow.tabs >= 7 and componentsWindow.selectedTab.name == "Testes", "the interactive component example opens its test controls")
+check(componentsWindow.HomeTab and componentsWindow.HomeTab.topbarItem.Visible and componentsWindow.SettingsTab.topbarItem.Visible, "the full component example keeps both built-in pages visible without calling OpenHome")
+check(componentsWindow.HomeTab.topbarItem.LayoutOrder < componentsWindow.SettingsTab.topbarItem.LayoutOrder and componentsWindow.SettingsTab.topbarItem.LayoutOrder < componentsWindow.selectedTab.topbarItem.LayoutOrder, "Home and Settings precede the example's own tabs in the scrolling sidebar")
 check(#componentsWindow.tags == 0 and not componentsWindow.BrandHeader.tagSlot.Visible, "the example starts without a TESTES badge in the header")
 local function exerciseComponents(window)
     local function find(name, list)

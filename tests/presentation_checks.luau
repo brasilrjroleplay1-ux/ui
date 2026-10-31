@@ -13,7 +13,19 @@ local function contrast(a, b)
     return (math.max(x, y) + 0.05) / (math.min(x, y) + 0.05)
 end
 local w = UI:CreateWindow({ Id = "Presentation315", name = "CONEXÃO STUDIO", rememberTheme = false, configuration = { autoSave = false, autoLoad = false } })
+check(w.HomeTab and w.HomePage and w.selectedTab == w.HomeTab, "Home is built and selected by CreateWindow alone")
+for _, builtin in ipairs({ w.HomeTab, w.SettingsTab }) do
+    check(builtin.topbarItem.Visible and builtin.activeMarker and builtin.topbarItemTitle.TextTransparency < 0.25, "built-in selectors are visible and styled on the first opening")
+    for _, node in ipairs({ builtin.topbarItem, builtin.topbarItemTitle, builtin.topbarItemIcon, builtin.topbarItemInteract }) do
+        check(node.ZIndex > w.Presentation.rail.ZIndex, "built-in selector parts draw above the navigation surface")
+    end
+end
+w.SettingsTab.topbarItemInteract.MouseButton1Click:Fire()
+check(w.selectedTab == w.SettingsTab and w.SettingsTab.activeMarker.BackgroundTransparency == 0, "the initial Settings selector opens its native settings page")
+w.HomeTab.topbarItemInteract.MouseButton1Click:Fire()
+check(w.selectedTab == w.HomeTab and w.HomeTab.activeMarker.BackgroundTransparency == 0, "the initial Home selector returns to its native dashboard")
 local tab = w:CreateTab({ name = "Principal", icon = 93364949241311 })
+check(w.selectedTab == tab, "the first custom tab still selects itself after the built-in pages")
 local other = w:CreateTab({ name = "Outra aba" })
 tab:Select()
 local calls = 0
@@ -70,6 +82,12 @@ w:Show()
 check(w.Presentation.header.BackgroundTransparency < 1 and tab.activeMarker.BackgroundTransparency == 0 and copy.body.TextTransparency == 0, "show restores visual hierarchy and selection")
 w:SetSidebarIconsOnly(true)
 check(not tab.topbarItemTitle.Visible and w.sidebar.Size.X.Offset == 64 and tab.activeMarker.Size.X.Offset == 3, "compact navigation retains its selection marker and icon access")
+for _, builtin in ipairs({ w.HomeTab, w.SettingsTab }) do
+    check(builtin.topbarItem.Visible and builtin.topbarItemIcon.Visible and not builtin.topbarItemTitle.Visible, "compact mode preserves both built-in navigation icons")
+    builtin.topbarItemInteract.MouseButton1Click:Fire()
+    check(w.selectedTab == builtin and builtin.activeMarker.BackgroundTransparency == 0, "both built-in pages remain selectable in compact mode")
+end
+tab:Select()
 w:SetSidebarIconsOnly(false)
 local group = tab:CreateGroup({ name = "Grupo", collapsible = true })
 local nested = group:CreateText({ name = "Texto dentro do grupo", text = "Também usa as mesmas cores e fontes." })
@@ -80,4 +98,11 @@ local message = w:Notify({ title = "Interface atualizada", content = "O aviso co
 check(message.signal and message.signal.Parent == message.body and message.descriptionLabel.TextSize == 14, "notifications use a semantic accent and readable body copy")
 w:Unload()
 check(#w.instances == 0 and #w.connections == 0, "all presentation layers and their handlers are released on unload")
+local top = UI:CreateWindow({ Id = "BuiltinsTop3151", sidebarLayout = false, configuration = { autoSave = false, autoLoad = false } })
+for _, builtin in ipairs({ top.HomeTab, top.SettingsTab }) do
+    check(builtin.topbarItem.Visible and builtin.activeMarker, "top-tab windows also include visible built-in selectors from construction")
+    builtin.topbarItemInteract.MouseButton1Click:Fire()
+    check(top.selectedTab == builtin and builtin.activeMarker.BackgroundTransparency == 0, "top-tab built-ins select and update their markers")
+end
+top:Unload()
 print("PASS: " .. checks .. " global presentation, palette contrast and lifecycle checks")
