@@ -1,4 +1,4 @@
--- Teste completo da Conexão UI 3.15. Os controles deste arquivo pertencem ao script.
+-- Teste completo da Conexão UI 3.16. Os controles deste arquivo pertencem ao script.
 local UI = require(game:GetService("ReplicatedStorage"):WaitForChild("ConexaoUI"))
 local window = UI:CreateWindow({
     Id = "ConexaoDemo3", -- substitui a janela da demo inicial ao executar este exemplo

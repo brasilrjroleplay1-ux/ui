@@ -1,6 +1,8 @@
-# Conexão UI 3.15.2 · Conexão Studio
+# Conexão UI 3.16.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.16.0**, Configurações usa uma página com rolagem vertical e seções expansíveis: Aparência, Temas, Salvamento, Controles e Desempenho. Os cabeçalhos têm ícone, descrição curta e seta; os controles aparecem logo abaixo. Várias seções podem ficar abertas, e essa escolha é lembrada por perfil. A antiga barra de abas internas foi substituída. `window:OpenSettings("saving")` continua abrindo a seção solicitada na mesma página.
 
 Na **3.15.2**, o indicador à direita dos botões usa uma mão clicando, com o dedo levantado e traços de toque. O desenho vetorial acompanha os temas, foco, toque e bloqueio. Todos os `CreateButton` recebem o ícone automaticamente, inclusive dentro dos grupos.
 

@@ -69,8 +69,8 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         for _, at in ipairs({ { 5, 7 }, { 9, 7 }, { 13, 7 }, { 5, 11 } }) do part(at[1], at[2], 2, 2) end
         line(11, 11, 5)
     end
-    self.label = create("TextLabel", { Parent = self.content, Text = title, TextSize = 14, BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = variant ~= "tab", TextTruncate = Enum.TextTruncate.None, Size = UDim2.fromScale(1, 1), ZIndex = z + 3,
+    self.label = create("TextLabel", { Parent = self.content, Text = title, TextSize = variant == "section" and 16 or 14, BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = variant ~= "tab" and variant ~= "section", TextTruncate = variant == "section" and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None, Size = UDim2.fromScale(1, 1), ZIndex = z + 3,
     })
     self.indicator = create("Frame", { Name = "Selected", Parent = self.button, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4),
         Size = UDim2.new(1, -28, 0, 2), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = z + 4 })
@@ -97,9 +97,9 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         self.iconPlate.BackgroundColor3 = primary and foreground or accent
         self.overlay.BackgroundColor3 = primary and (foreground.R == 1 and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)) or content
         self.indicator.BackgroundColor3 = accent
-        window:_reveal(self.button, { BackgroundTransparency = self.shown and 0 or 1 }, animate)
+        window:_reveal(self.button, { BackgroundTransparency = self.shown and self.variant ~= "section" and 0 or 1 }, animate)
         window:_reveal(self.label, { TextTransparency = self.shown and 0 or 1 }, animate)
-        window:_reveal(self.stroke, { Transparency = self.shown and ((primary or self.active) and 0.15 or (self.hovered and 0.3 or 0.65)) or 1 }, animate)
+        window:_reveal(self.stroke, { Transparency = self.shown and self.variant ~= "section" and ((primary or self.active) and 0.15 or (self.hovered and 0.3 or 0.65)) or 1 }, animate)
         window:_reveal(self.iconPlate, { BackgroundTransparency = self.shown and (primary and 0.92 or (self.active and 0.84 or 0.92)) or 1 }, animate)
         window:_reveal(self.overlay, { BackgroundTransparency = self.shown and (self.pressed and 0.86 or (self.hovered and 0.94 or 1)) or 1 }, animate)
         window:_reveal(self.indicator, { BackgroundTransparency = self.shown and self.active and 0 or 1 }, animate)
@@ -115,7 +115,7 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         else self.scale.Scale = target end
     end
     function self:Layout(width, height)
-        local tab = self.variant == "tab"
+        local tab = self.variant == "tab" or self.variant == "section"
         local plate, gap, padding = tab and 24 or 20, tab and 8 or 7, tab and 12 or 6
         local desired = (utf8.len(title) or #title) * 14 * 0.58 + 4 + plate + gap
         local extent = tab and math.max(1, width - padding * 2) or math.min(desired, math.max(1, width - padding * 2))

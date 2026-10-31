@@ -22,6 +22,12 @@ function Preferences.load(configuration, name)
     if type(data.autoSize) == "boolean" then state.autoSize = data.autoSize end
     if type(data.sidebarIconsOnly) == "boolean" then state.sidebarIconsOnly = data.sidebarIconsOnly end
     if ({ appearance = true, themes = true, saving = true, controls = true, performance = true })[data.settingsCategory] then state.settingsCategory = data.settingsCategory end
+    if type(data.settingsSections) == "table" then
+        state.settingsSections = {}
+        for _, key in ipairs({ "appearance", "themes", "saving", "controls", "performance" }) do
+            if type(data.settingsSections[key]) == "boolean" then state.settingsSections[key] = data.settingsSections[key] end
+        end
+    end
     if type(data.performance) == "table" then
         local p, clean = data.performance, {}
         for _, key in ipairs({ "lowGraphics", "disable3D", "hideUI", "showStats", "graphicsCollapsed", "frameCollapsed" }) do

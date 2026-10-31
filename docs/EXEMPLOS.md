@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.15 · API Gen2
+# Exemplos da Conexão UI 3.16 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -236,7 +236,7 @@ window:Popup({ title = "Continuar?", content = "Escolha uma ação.", options = 
 
 ## Desempenho
 
-A categoria Desempenho já vem pronta; o script não precisa criar os controles. As setas dos cartões Gráficos e Taxa de quadros abrem ou recolhem seus conteúdos. Em janelas largas, ficam lado a lado; em janelas estreitas, ficam empilhados.
+A seção Desempenho já vem pronta; o script não precisa criar os controles. As setas dos cartões Gráficos e Taxa de quadros abrem ou recolhem seus conteúdos. Em janelas largas, ficam lado a lado; em janelas estreitas, ficam empilhados.
 
 ```lua
 window:OpenSettings("performance")
@@ -271,7 +271,7 @@ window:OpenThemes()
 
 Configurações já aparece na sidebar e inclui transparência do fundo, tamanho manual, ajuste automático e a escolha de exibir só os ícones nas abas. Essas preferências são salvas sem controles extras no script. `window:RefreshSize()` permite solicitar uma atualização imediata, mas não é necessário chamá-lo para ativar o ajuste.
 
-As categorias são Aparência, Temas, Salvamento, Controles e Desempenho. Elas mantêm os controles nativos na mesma página e ocultam também suas descrições quando estão inativas. As categorias usam ícones, texto maior e um indicador de seleção. Em áreas largas ficam em uma linha; em áreas médias, em uma grade; nas mais estreitas, a barra permite rolagem horizontal e mantém a categoria ativa visível.
+As seções são Aparência, Temas, Salvamento, Controles e Desempenho. Elas seguem uma coluna com rolagem vertical. Clique no cabeçalho para expandir ou recolher os controles logo abaixo; várias seções podem ficar abertas ao mesmo tempo. As descrições acompanham os controles. A expansão fica salva por perfil e `window:OpenSettings("saving")` expande e leva até Salvamento na mesma página.
 
 Os arquivos são individuais por ID da conta, inclusive presets nomeados e preferências da janela. Ativar Compartilhar entre contas em Salvamento seleciona um perfil compartilhado para a próxima execução. Cada conta precisa ativar sua própria opção; voltar ao modo individual restaura o perfil privado preservado. Um perfil compartilhado novo começa com os valores iniciais do script, sem copiar automaticamente o perfil privado. Os arquivos antigos sem conta identificada permanecem no disco e não são carregados automaticamente.
 

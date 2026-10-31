@@ -19,28 +19,38 @@ local function viewFits(view, width, height)
     local content = inside(view.content, width, height, "button content stays within its hit target")
     local icon = inside(view.iconPlate, content.w, content.h, "the icon plate fits its content group")
     local text = inside(view.label, content.w, content.h, "the label has its own space inside the button")
-    check(apart(icon, text) and view.label.TextSize == 14 and view.label.FontFace.Weight == Enum.FontWeight.SemiBold, "icons and larger semibold labels never overlap")
+    check(apart(icon, text) and view.label.TextSize == (view.variant == "section" and 16 or 14) and view.label.FontFace.Weight == Enum.FontWeight.SemiBold, "icons and larger semibold labels never overlap")
 end
 local w = UI:CreateWindow({ Id = "Actions311", name = "CONEXÃO STUDIO", theme = "oceano", rememberTheme = false, configuration = { autoSave = false, autoLoad = false } })
 local nav = w.SettingsNavigation
+check(nav.mode == "sections" and not nav.scroller and not w.SettingsTab.tabPage:FindFirstChild("SettingsCategories"), "settings has inline sections instead of an internal tab bar")
+local sectionOrder = { "appearance", "themes", "saving", "controls", "performance" }
+local tabs = #w.tabs
 for _, width in ipairs({ 160, 240, 299, 300, 420, 559, 560, 720 }) do
-    nav.main.AbsoluteSize = Vector2.new(width, 66)
-    nav.scroller.AbsoluteWindowSize = Vector2.new(width, 66)
-    nav:Layout()
-    local roots = {}
-    for key, item in pairs(nav.buttons) do
-        local at = inside(item.button, nav.scroller.CanvasSize.X.Offset, nav.main.Size.Y.Offset, "category tiles remain inside their canvas")
-        check(at.h >= 44, "category targets remain large enough for touch")
+    local previous = nav.main.LayoutOrder
+    for _, key in ipairs(sectionOrder) do
+        local item = nav.sections[key]
+        item.main.AbsoluteSize = Vector2.new(width, 60)
+        item:Layout()
+        local at = inside(item.button, width, 60, "section headers fit the native page width")
+        check(at.h >= 44 and item.main.Parent == w.SettingsTab.tabPage, "section touch targets stay inline in the same scrolling page")
         viewFits(item.view, at.w, at.h)
-        table.insert(roots, at)
+        local caption = inside(item.caption, item.view.content.Size.X.Offset, item.view.content.Size.Y.Offset, "section captions fit their reserved space")
+        local title = rect(item.view.label, item.view.content.Size.X.Offset, item.view.content.Size.Y.Offset)
+        check(apart(caption, title), "section titles and captions never overlap")
+        check(item.main.LayoutOrder > previous, "section headings follow the intended vertical order")
+        previous = item.main.LayoutOrder
+        for control, category in pairs(nav.membership) do
+            if category == key then
+                check(control.main.LayoutOrder > previous, "controls stay below their own section heading")
+            end
+        end
     end
-    for i = 1, #roots do for j = i + 1, #roots do check(apart(roots[i], roots[j]), "category tiles never overlap") end end
-    check(nav.mode == (width >= nav.rowMinimum and "row" or (width >= 300 and "grid" or "scroll")), "the category strip changes layout without shrinking its labels")
+    nav:SetExpanded("controls", false, false)
     nav.buttons.controls.button.MouseButton1Click:Fire()
-    check(nav.active == "controls" and nav.buttons.controls.view.indicator.BackgroundTransparency == 0 and nav.buttons.appearance.view.indicator.BackgroundTransparency == 1, "actual clicks update both the active category and its indicator")
-    if width < 300 then
-        check(nav.scroller.CanvasPosition.X > 0 and nav.overflow, "the active category is kept reachable by horizontal scrolling on tiny panels")
-    else check(nav.scroller.CanvasPosition.X == 0 and not nav.overflow, "a row or grid shows every category without horizontal scrolling") end
+    check(nav.sections.controls.expanded and nav.sections.appearance.expanded and nav.sections.controls.arrow.Rotation == 90, "clicking a section expands its controls while leaving another section open")
+    nav.buttons.controls.button.MouseButton1Click:Fire()
+    check(not nav.sections.controls.expanded and nav.sections.controls.arrow.Rotation == 0 and #w.tabs == tabs, "clicking again collapses the section without creating or switching tabs")
 end
 local selected = nav.buttons.controls.view
 selected.button.MouseEnter:Fire()
@@ -49,11 +59,43 @@ selected.button.InputBegan:Fire({ UserInputType = Enum.UserInputType.Touch })
 check(selected.scale.Scale == 0.98, "touch press has a short scale response")
 selected.button.InputEnded:Fire({ UserInputType = Enum.UserInputType.Touch })
 selected.button.MouseLeave:Fire()
-check(selected.scale.Scale == 1 and selected.overlay.BackgroundTransparency == 1 and selected.indicator.BackgroundTransparency == 0, "release restores geometry while retaining the selected indicator")
-nav:_setShown(false, false)
-check(selected.button.BackgroundTransparency == 1 and selected.label.TextTransparency == 1 and selected.glyph[1].node[selected.glyph[1].alpha] == 1, "hiding fades the whole category treatment, including local vector glyphs")
-nav:_setShown(true, false)
-check(selected.button.BackgroundTransparency == 0 and selected.label.TextTransparency == 0, "revealing restores opaque surfaces and readable labels")
+check(selected.scale.Scale == 1 and selected.overlay.BackgroundTransparency == 1 and selected.indicator.BackgroundTransparency == 1, "release restores the heading without a selected-tab underline")
+w:OpenSettings();w:Hide()
+check(selected.button.BackgroundTransparency == 1 and selected.label.TextTransparency == 1 and selected.glyph[1].node[selected.glyph[1].alpha] == 1, "hiding fades the inline section heading and its local vector glyphs")
+w:Show()
+check(selected.button.BackgroundTransparency == 1 and selected.label.TextTransparency == 0, "revealing restores readable headings on the page background")
+local menuBind, savedConfigs
+for control, key in pairs(nav.membership) do
+    if control.__type == "Keybind" then menuBind = control end
+    if key == "saving" and control.__type == "Dropdown" then savedConfigs = control end
+end
+w:OpenSettings("controls")
+local binding = menuBind.value
+menuBind:_startRecording();nav:SetExpanded("controls", false, false)
+check(not menuBind.recording and not w._recordingKeybind and menuBind.value == binding, "collapsing Controls cancels hidden key recording without replacing the binding")
+w:OpenSettings("appearance")
+local input = w.TransparencySlider._valueInput
+input:Begin();input.editor.Text = "27"
+nav:SetExpanded("appearance", false, false)
+check(not input.editing and w.TransparencySlider.value == 27, "collapsing a section finishes numeric editing through the existing slider validation")
+nav:SetExpanded("themes", false, false)
+w.searchAction.callback()
+check(w._searching and w.ThemeGallery.main.Parent == w.searchPage and w.ThemeGallery.main.Visible, "global search can still show controls from collapsed sections")
+w.searchAction.callback()
+check(not w._searching and not w.ThemeGallery.main.Visible and not w.TransparencySlider.main.Visible, "closing search restores folded controls and their original section visibility")
+w:OpenSettings("saving");savedConfigs:Open()
+local savedPane = savedConfigs.selectionPanel
+nav:SetExpanded("appearance", false, false)
+check(not savedPane.closed, "collapsing another section leaves the current settings dropdown open")
+nav:SetExpanded("saving", false, false)
+check(savedPane.closed and not savedConfigs._isOpen, "collapsing the dropdown's own section closes its internal options pane")
+local page, layout = w.SettingsTab.tabPage, w.SettingsTab.tabPageLayout
+page.AbsoluteWindowSize = Vector2.new(420, 300);page.AbsolutePosition = Vector2.new(0, 100)
+layout.AbsoluteContentSize = Vector2.new(420, 2000)
+page.CanvasPosition = Vector2.new(0, 0)
+nav.sections.controls.main.AbsolutePosition = Vector2.new(0, 1000)
+nav:ScrollTo("controls")
+check(page.CanvasPosition.Y == 890, "opening a named section can scroll to its position in the same native page")
 
 local tab = w:CreateTab({ name = "Dropdown actions" })
 local changed = 0
@@ -139,9 +181,12 @@ if process.env.CONEXAO_ACTION_AUDIT == "1" then
     for _, theme in ipairs({ "oceano", "conexao", "porcelana" }) do
         w:ChangeTheme(theme)
         for _, width in ipairs({ 560, 420 }) do
-            nav.scroller.AbsoluteWindowSize = Vector2.new(width, 66);nav:Layout();nav:Select("appearance", false)
-            local data = serialize(nav.main);data.size = { { 0, width }, { 0, nav.main.Size.Y.Offset } }
-            fs.writeFile("/tmp/conexao-buttons-" .. theme .. "-" .. width .. ".json", serde.encode("json", data))
+            for _, key in ipairs(sectionOrder) do
+                local section = nav.sections[key]
+                section.main.AbsoluteSize = Vector2.new(width, 60);section:Layout()
+                local data = serialize(section.main);data.size = { { 0, width }, { 0, 60 } }
+                fs.writeFile("/tmp/conexao-section-" .. key .. "-" .. theme .. "-" .. width .. ".json", serde.encode("json", data))
+            end
         end
         tab:Select()
         if not multi._isOpen then multi:Open() picker = multi.selectionPanel end
@@ -155,4 +200,4 @@ for _ = 1, 8 do multi:Open();multi:Close() end
 check(#w.connections == connections and #w.instances == instances, "styling and focus handlers do not accumulate during repeated picker use")
 w:Unload()
 check(#w.connections == 0 and #w.instances == 0, "unload releases the new button groups and their owned listeners")
-print("PASS: " .. checks .. " category/action styling, responsive geometry, contrast and interaction checks")
+print("PASS: " .. checks .. " inline settings/action styling, responsive geometry, contrast and interaction checks")

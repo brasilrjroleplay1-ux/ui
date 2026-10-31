@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.15 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.16 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -72,7 +72,7 @@ export type SliderProps = Gen2.SliderProps & ControlNotificationProps & { format
 export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.15.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.16.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)

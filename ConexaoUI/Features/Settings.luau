@@ -253,6 +253,7 @@ function Settings.attach(window)
     local tab = window.SettingsTab
     local membership, nativeCategory = {}, "controls"
     for _, element in ipairs(tab.elements) do
+        if element.name == "Window" then nativeCategory = "appearance" end
         if element.name == "Configurations" then nativeCategory = "saving" end
         membership[element] = nativeCategory
     end

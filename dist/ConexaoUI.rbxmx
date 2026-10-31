@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.15 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.16 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -73,7 +73,7 @@ export type SliderProps = Gen2.SliderProps &amp; ControlNotificationProps &amp; 
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.15.2", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.16.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -20700,8 +20700,8 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         for _, at in ipairs({ { 5, 7 }, { 9, 7 }, { 13, 7 }, { 5, 11 } }) do part(at[1], at[2], 2, 2) end
         line(11, 11, 5)
     end
-    self.label = create("TextLabel", { Parent = self.content, Text = title, TextSize = 14, BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = variant ~= "tab", TextTruncate = Enum.TextTruncate.None, Size = UDim2.fromScale(1, 1), ZIndex = z + 3,
+    self.label = create("TextLabel", { Parent = self.content, Text = title, TextSize = variant == "section" and 16 or 14, BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = variant ~= "tab" and variant ~= "section", TextTruncate = variant == "section" and Enum.TextTruncate.AtEnd or Enum.TextTruncate.None, Size = UDim2.fromScale(1, 1), ZIndex = z + 3,
     })
     self.indicator = create("Frame", { Name = "Selected", Parent = self.button, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4),
         Size = UDim2.new(1, -28, 0, 2), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = z + 4 })
@@ -20728,9 +20728,9 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         self.iconPlate.BackgroundColor3 = primary and foreground or accent
         self.overlay.BackgroundColor3 = primary and (foreground.R == 1 and Color3.new(0, 0, 0) or Color3.new(1, 1, 1)) or content
         self.indicator.BackgroundColor3 = accent
-        window:_reveal(self.button, { BackgroundTransparency = self.shown and 0 or 1 }, animate)
+        window:_reveal(self.button, { BackgroundTransparency = self.shown and self.variant ~= "section" and 0 or 1 }, animate)
         window:_reveal(self.label, { TextTransparency = self.shown and 0 or 1 }, animate)
-        window:_reveal(self.stroke, { Transparency = self.shown and ((primary or self.active) and 0.15 or (self.hovered and 0.3 or 0.65)) or 1 }, animate)
+        window:_reveal(self.stroke, { Transparency = self.shown and self.variant ~= "section" and ((primary or self.active) and 0.15 or (self.hovered and 0.3 or 0.65)) or 1 }, animate)
         window:_reveal(self.iconPlate, { BackgroundTransparency = self.shown and (primary and 0.92 or (self.active and 0.84 or 0.92)) or 1 }, animate)
         window:_reveal(self.overlay, { BackgroundTransparency = self.shown and (self.pressed and 0.86 or (self.hovered and 0.94 or 1)) or 1 }, animate)
         window:_reveal(self.indicator, { BackgroundTransparency = self.shown and self.active and 0 or 1 }, animate)
@@ -20746,7 +20746,7 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         else self.scale.Scale = target end
     end
     function self:Layout(width, height)
-        local tab = self.variant == "tab"
+        local tab = self.variant == "tab" or self.variant == "section"
         local plate, gap, padding = tab and 24 or 20, tab and 8 or 7, tab and 12 or 6
         local desired = (utf8.len(title) or #title) * 14 * 0.58 + 4 + plate + gap
         local extent = tab and math.max(1, width - padding * 2) or math.min(desired, math.max(1, width - padding * 2))
@@ -23185,6 +23185,12 @@ function Preferences.load(configuration, name)
     if type(data.autoSize) == "boolean" then state.autoSize = data.autoSize end
     if type(data.sidebarIconsOnly) == "boolean" then state.sidebarIconsOnly = data.sidebarIconsOnly end
     if ({ appearance = true, themes = true, saving = true, controls = true, performance = true })[data.settingsCategory] then state.settingsCategory = data.settingsCategory end
+    if type(data.settingsSections) == "table" then
+        state.settingsSections = {}
+        for _, key in ipairs({ "appearance", "themes", "saving", "controls", "performance" }) do
+            if type(data.settingsSections[key]) == "boolean" then state.settingsSections[key] = data.settingsSections[key] end
+        end
+    end
     if type(data.performance) == "table" then
         local p, clean = data.performance, {}
         for _, key in ipairs({ "lowGraphics", "disable3D", "hideUI", "showStats", "graphicsCollapsed", "frameCollapsed" }) do
@@ -24271,6 +24277,7 @@ function Settings.attach(window)
     local tab = window.SettingsTab
     local membership, nativeCategory = {}, "controls"
     for _, element in ipairs(tab.elements) do
+        if element.name == "Window" then nativeCategory = "appearance" end
         if element.name == "Configurations" then nativeCategory = "saving" end
         membership[element] = nativeCategory
     end
@@ -24411,111 +24418,167 @@ end
 return Settings
 </ProtectedString></Properties></Item><Item class="ModuleScript"><Properties><string name="Name">SettingsNavigation</string><ProtectedString name="Source">--!nonstrict
 -- SPDX-License-Identifier: MPL-2.0
--- Keep controls on their native tab; category visibility also owns their separate descriptors.
+-- Inline sections share the native Settings page, its controls and its vertical scroll.
 local Preferences = require(script.Parent.Preferences)
 local Buttons = require(script.Parent.ActionButton)
 local Navigation = {}
-local definitions = { { "appearance", "Aparência", 132 }, { "themes", "Temas", 108 }, { "saving", "Salvamento", 146 }, { "controls", "Controles", 128 }, { "performance", "Desempenho", 156 } }
+local definitions = {
+    { "appearance", "Aparência", "Janela, transparência e navegação" },
+    { "themes", "Temas", "Cores e prévias das paletas" },
+    { "saving", "Salvamento", "Sua conta, preferências e configurações" },
+    { "controls", "Controles", "Atalho, cursor e respostas da interface" },
+    { "performance", "Desempenho", "Gráficos, limite de FPS e métricas" },
+}
+
 function Navigation.attach(window, membership)
     local tab = window.SettingsTab
-    local self = { window = window, tab = tab, name = "Categorias", __type = "SettingsNavigation", buttons = {}, membership = membership, connections = {}, shown = not window.hidden }
+    local self = { window = window, tab = tab, name = "Configurações", __type = "Section", sections = {}, membership = membership, connections = {}, mode = "sections", active = "appearance" }
     window.SettingsNavigation = self
-    self.rowMinimum = 16 + (#definitions - 1) * 8
-    for _, definition in ipairs(definitions) do self.rowMinimum += definition[3] end
+    self.buttons = self.sections -- Keep existing integrations that inspect the named sections.
+    local originals = table.clone(tab.elements)
+    local saved = window.UIPreferences.settingsSections or {}
+    window.UIPreferences.settingsSections = table.clone(saved)
     local function create(class, props, theme) return window:Create(class, props, theme) end
-    self.main = create("Frame", { Name = "SettingsCategories", Parent = tab.tabPage, Size = UDim2.new(1, -24, 0, 66), BackgroundTransparency = 1, BorderSizePixel = 0 })
-    self.scroller = create("ScrollingFrame", { Parent = self.main, Name = "CategoryBar", BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1),
-        CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 2,
-        ScrollBarImageTransparency = 1, ClipsDescendants = true, Active = true, ScrollingEnabled = true, CanvasPosition = Vector2.new(), ElasticBehavior = Enum.ElasticBehavior.Never,
-    }, { ScrollBarImageColor3 = "AccentColor", BackgroundColor3 = "StatBackground" })
-    create("UICorner", { Parent = self.scroller, CornerRadius = UDim.new(0, 14) })
-    self.rim = create("UIStroke", { Parent = self.scroller, Thickness = 1, Transparency = 1 }, { Color = "SurfaceStroke" })
+    self.main = create("Frame", { Name = "SettingsHeading", Parent = tab.tabPage, Size = UDim2.new(1, -24, 0, 56), BackgroundTransparency = 1, BorderSizePixel = 0 })
+    self.title = create("TextLabel", { Parent = self.main, Text = "Configurações", TextSize = 22, Position = UDim2.fromOffset(4, 0), Size = UDim2.new(1, -8, 0, 28),
+        BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
+    }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
+    self.subtitle = create("TextLabel", { Parent = self.main, Text = "Abra uma seção para ajustar sua interface.", TextSize = 12, Position = UDim2.fromOffset(4, 32), Size = UDim2.new(1, -8, 0, 18),
+        BackgroundTransparency = 1, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
+    }, { TextColor3 = { "ContentColor", function(color) return window.theme.MutedContent or color end }, FontFace = "Font" })
+    function self:_setShown(shown, animate)
+        window:_reveal(self.title, { TextTransparency = shown and 0 or 1 }, animate)
+        window:_reveal(self.subtitle, { TextTransparency = shown and 0 or 1 }, animate)
+    end
+    function self:_refreshTheme() end
+    tab:_register(self)
+    tab:_moveElement(self, 1)
+    local nextIndex = 2
     for _, definition in ipairs(definitions) do
-        local key, title = definition[1], definition[2]
-        local view = Buttons.new(window, self, self.scroller, title, key, "tab", 8)
-        self.buttons[key] = { button = view.button, stroke = view.stroke, view = view, offset = 0, minimum = definition[3] }
-        window:ConnectFor(self, view.button.MouseButton1Click, function() if window:_interactive() then self:Select(key, true) end end)
+        local key, title, caption = table.unpack(definition)
+        local expanded = saved[key]
+        if expanded == nil then expanded = key == "appearance" end
+        local section = { window = window, tab = tab, name = title, __type = "Section", expanded = expanded, connections = {} }
+        self.sections[key] = section
+        section.main = create("Frame", { Name = key .. "SettingsSection", Parent = tab.tabPage, Size = UDim2.new(1, -24, 0, 60), BackgroundTransparency = 1, BorderSizePixel = 0 })
+        local view = Buttons.new(window, section, section.main, title, key, "section", 4)
+        section.view, section.button = view, view.button
+        view.button.Size = UDim2.fromScale(1, 1)
+        section.caption = create("TextLabel", { Parent = view.content, Text = caption, TextSize = 12, BackgroundTransparency = 1,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 8,
+        }, { TextColor3 = { "ContentColor", function(color) return window.theme.MutedContent or color end }, FontFace = "Font" })
+        section.arrow = create("TextLabel", { Name = "ExpandSection", Parent = view.button, Text = "›", TextSize = 26, BackgroundTransparency = 1,
+            AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(24, 28), ZIndex = 9,
+        }, { TextColor3 = "ContentColor", FontFace = "TitleFont" })
+        section.divider = create("Frame", { Parent = section.main, Position = UDim2.new(0, 12, 1, -1), Size = UDim2.new(1, -24, 0, 1), BorderSizePixel = 0, ZIndex = 4 }, { BackgroundColor3 = "SurfaceStroke" })
+        function section:Layout()
+            local width = self.main.AbsoluteSize.X
+            if width &lt;= 0 then return end
+            view:Layout(math.max(1, width - 32), 60)
+            view.label.Position, view.label.Size = UDim2.fromOffset(32, 8), UDim2.new(1, -32, 0, 21)
+            self.caption.Position, self.caption.Size = UDim2.fromOffset(32, 31), UDim2.new(1, -32, 0, 18)
+            self.arrow.Rotation = self.expanded and 90 or 0
+        end
+        function section:_setShown(shown, animate)
+            view:SetShown(shown, animate)
+            window:_reveal(self.caption, { TextTransparency = shown and 0 or 1 }, animate)
+            window:_reveal(self.arrow, { TextTransparency = shown and 0.15 or 1, Rotation = self.expanded and 90 or 0 }, animate)
+            window:_reveal(self.divider, { BackgroundTransparency = shown and 0.65 or 1 }, animate)
+        end
+        function section:_refreshTheme() view:Paint(false) end
+        window:ConnectFor(section, view.button.MouseButton1Click, function()
+            if window:_interactive() then self:SetExpanded(key, not section.expanded, true) end
+        end)
+        window:ConnectFor(section, section.main:GetPropertyChangedSignal("AbsoluteSize"), function() section:Layout() end)
+        tab:_register(section)
+        tab:_moveElement(section, nextIndex)
+        nextIndex += 1
+        for _, control in ipairs(originals) do
+            if membership[control] == key then tab:_moveElement(control, nextIndex) nextIndex += 1 end
+        end
+        section:Layout()
     end
     function self:Layout()
-        if window.unloaded then return end
-        local width = self.scroller.AbsoluteWindowSize.X
-        if width &lt;= 0 then width = self.main.AbsoluteSize.X end
-        if width &lt;= 0 then return end
-        self.mode = width &gt;= self.rowMinimum and "row" or (width &gt;= 300 and "grid" or "scroll")
-        local columns = width &gt;= 540 and 3 or 2
-        local rows = self.mode == "grid" and math.ceil(#definitions / columns) or 1
-        local height = rows * 50 + (rows - 1) * 8 + 16
-        local size = UDim2.new(1, -24, 0, height)
-        if self.main.Size ~= size then self.main.Size = size end
-        local x, total = 8, width
-        for index, definition in ipairs(definitions) do
-            local item = self.buttons[definition[1]]
-            local buttonWidth, y = item.minimum, 8
-            if self.mode == "row" then buttonWidth += (width - self.rowMinimum) / #definitions
-            elseif self.mode == "grid" then
-                buttonWidth = (width - 16 - (columns - 1) * 8) / columns
-                x, y = 8 + ((index - 1) % columns) * (buttonWidth + 8), 8 + math.floor((index - 1) / columns) * 58
-                if columns == 2 and index == #definitions and #definitions % 2 == 1 then buttonWidth = width - 16 end
-            end
-            item.offset = x
-            item.button.Position, item.button.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(buttonWidth, 50)
-            item.view:Layout(buttonWidth, 50)
-            if self.mode ~= "grid" then x += buttonWidth + 8 end
-        end
-        if self.mode == "scroll" then total = x end
-        self.scroller.CanvasSize = UDim2.fromOffset(total, height)
-        self.overflow = total &gt; width
-        self.scroller.ScrollBarImageTransparency = self.shown and self.overflow and 0.4 or 1
-        local at = 0
-        local current = self.buttons[self.active]
-        if self.overflow and current then
-            at = math.min(self.scroller.CanvasPosition.X, current.offset - 8)
-            at = math.max(at, current.offset + current.button.Size.X.Offset + 8 - width)
-        end
-        self.scroller.CanvasPosition = Vector2.new(math.clamp(at, 0, math.max(0, total - width)), 0)
+        for _, section in pairs(self.sections) do section:Layout() end
     end
-    function self:Paint(animate)
-        window:_reveal(self.scroller, { BackgroundTransparency = self.shown and 0.58 or 1 }, animate)
-        window:_reveal(self.rim, { Transparency = self.shown and 0.7 or 1 }, animate)
-        for key, item in pairs(self.buttons) do
-            item.view.active = key == self.active
-            item.view:SetShown(self.shown, animate)
+    function self:Refresh()
+        for control in pairs(self.membership) do control:_setShown(not window.hidden and not window.minimised, false) end
+    end
+    local function categoryOf(control)
+        while control and control ~= tab do
+            if membership[control] then return membership[control] end
+            control = control.tab
         end
+    end
+    function self:SetExpanded(key, expanded, remember)
+        local section = assert(self.sections[key], "Seção de configurações inválida.")
+        if window.unloaded then return end
+        if window.WindowSizeSlider.dragging and key == "appearance" then window.WindowSizeSlider:_endDrag() end
+        if not expanded and window._conexaoPanel and categoryOf(window._conexaoPanel.control) == key then window._conexaoPanel:Close() end
+        if not expanded and categoryOf(window._recordingKeybind) == key then window._recordingKeybind:_stopRecording() end
+        section.expanded = expanded == true
+        section:_setShown(not window.hidden and not window.minimised, true)
+        for control, category in pairs(self.membership) do
+            if category == key then
+                if not expanded and control.__type == "Input" then control.input:ReleaseFocus() end
+                control:_setShown(not window.hidden and not window.minimised, false)
+            end
+        end
+        if tab._scrollController then tab._scrollController:Queue() end
+        if remember then
+            window.UIPreferences.settingsSections[key] = section.expanded
+            Preferences.save(window)
+        end
+    end
+    function self:ScrollTo(key)
+        if window.unloaded or window._searching then return end
+        local frame, section = tab.tabPage, self.sections[key]
+        local offset = math.max(0, section.main.AbsolutePosition.Y - frame.AbsolutePosition.Y + frame.CanvasPosition.Y - 10)
+        local scroll = tab._scrollController
+        if scroll then scroll.atEnd, scroll.desiredY = false, offset scroll:Queue()
+        else frame.CanvasPosition = Vector2.new(0, offset) end
     end
     function self:Select(key, remember)
-        assert(self.buttons[key], "Categoria de configurações inválida.")
-        if window.unloaded then return end
-        if window.WindowSizeSlider.dragging then window.WindowSizeSlider:_endDrag() end
-        if window._conexaoPanel then window._conexaoPanel:Close() end
+        local section = assert(self.sections[key], "Seção de configurações inválida.")
+        if not section.expanded then self.pendingFocus = key end
         self.active = key
-        for control, category in pairs(self.membership) do control:_setShown(not window.hidden and category == key, false) end
-        self:Paint(false)
-        self:Layout()
-        tab.tabPage.CanvasPosition = Vector2.new(0, 0)
-        if tab._scrollController then tab._scrollController.desiredY, tab._scrollController.atEnd = 0, false tab._scrollController:Queue() end
-        if remember then window.UIPreferences.settingsCategory = key Preferences.save(window) end
+        self:SetExpanded(key, true, remember)
+        self:ScrollTo(key)
+        task.defer(function() self:ScrollTo(key) end)
     end
-    function self:_setShown(shown, animate)
-        self.shown = shown
-        self.main.Visible = true -- reserve the navigation row while native controls reveal
-        self.scroller.ScrollBarImageTransparency = shown and self.overflow and 0.4 or 1
-        self:Paint(animate)
-    end
-    function self:_refreshTheme() self:Paint(false) end
-    window:ConnectFor(self, self.scroller:GetPropertyChangedSignal("AbsoluteWindowSize"), function() self:Layout() end)
-    window:ConnectFor(self, self.main:GetPropertyChangedSignal("AbsoluteSize"), function() self:Layout() end)
-    for control, category in pairs(membership) do
+    for control, key in pairs(membership) do
         local show = control._setShown
         function control:_setShown(shown, animate)
-            show(self, shown, animate)
-            local visible = window.SettingsNavigation.active == category
-            self.main.Visible = visible
-            if self.descriptor and self.descriptor.main.Parent == tab.tabPage then self.descriptor.main.Visible = visible end
+            local home = self.main.Parent == tab.tabPage
+            local visible = self.__type ~= "Section" and (not home or window.SettingsNavigation.sections[key].expanded)
+            show(self, shown and visible, animate)
+            if home then
+                self.main.Visible = visible and (self.__type ~= "ThemeGallery" or shown)
+                if self.descriptor and self.descriptor.main.Parent == tab.tabPage then self.descriptor.main.Visible = visible end
+            end
         end
     end
-    tab:_register(self)
-    self.main.LayoutOrder = -10000
-    self:Select(self.buttons[window.UIPreferences.settingsCategory] and window.UIPreferences.settingsCategory or "appearance", false)
+    local select = tab.Select
+    function tab:Select(...)
+        local result = select(self, ...)
+        self.window.SettingsNavigation:Refresh()
+        return result
+    end
+    local search = window.searchAction and window.searchAction.callback
+    if search then
+        window.searchAction.callback = function(...)
+            local result = search(...)
+            self:Refresh()
+            return result
+        end
+    end
+    window:ConnectFor(self, tab.tabPageLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+        local key = self.pendingFocus
+        self.pendingFocus = nil
+        if key then self:ScrollTo(key) end
+    end)
+    self:Refresh()
+    self:Layout()
     return self
 end
 return Navigation

@@ -85,30 +85,39 @@ check(b.ConfigurationScope.shared and cb[2].value == 42 and cb[4].value == "Shar
 check(b:SetSharedConfiguration(false), "account B can return to its individual profile")
 b, cb = make()
 check(not b.ConfigurationScope.shared and cb[2].value == 22 and cb[4].value == "Only B" and b.ThemeId == "oceano", "turning sharing off restores the preserved individual profile")
--- Categories show only their own controls and descriptor rows, even after reveal/theme changes.
+-- Sections expand independently in one page, preserving their controls and descriptors.
 local nav = b.SettingsNavigation
 local userCalls = 0
 cb[1].callback = function() userCalls += 1 end
+for key in pairs(nav.sections) do nav:SetExpanded(key, false, false) end
 for _, key in ipairs({ "appearance", "themes", "saving", "controls" }) do
     b:OpenSettings(key)
-    check(nav.active == key and b.selectedTab == b.SettingsTab, "OpenSettings selects a built-in category")
+    check(nav.active == key and nav.sections[key].expanded and b.selectedTab == b.SettingsTab, "OpenSettings expands the requested section on the same settings page")
     for control, category in pairs(nav.membership) do
-        check(control.main.Visible == (category == key), "only the active settings category occupies the page")
-        if control.descriptor then check(control.descriptor.main.Visible == (category == key), "descriptor visibility follows its category") end
+        local visible = nav.sections[category].expanded and control.__type ~= "Section"
+        check(control.main.Visible == visible, "expanded sections keep their controls visible together without duplicate headings")
+        if control.descriptor then check(control.descriptor.main.Visible == visible, "descriptor visibility follows its expanded section") end
     end
 end
-check(userCalls == 0, "category navigation never reapplies script callbacks")
+check(nav.sections.appearance.expanded and nav.sections.themes.expanded and nav.sections.saving.expanded and nav.sections.controls.expanded, "multiple settings sections can remain open at once")
+check(userCalls == 0, "folding settings never reapplies script callbacks")
+nav:SetExpanded("themes", false, true)
 b:OpenSettings("appearance");b.ThemeGallery:_setShown(true)
-check(not b.ThemeGallery.main.Visible, "the native reveal path cannot expose an inactive theme gallery")
+check(not b.ThemeGallery.main.Visible, "the native reveal path cannot expose a collapsed theme section")
 b:OpenSettings("themes");b:ChangeTheme("porcelana");b:Hide();b:Show()
-check(b.ThemeGallery.main.Visible and nav.active == "themes", "the selected category survives theme changes and window reopening")
-nav.scroller.AbsoluteWindowSize = Vector2.new(160, 46)
-b:OpenSettings("controls")
-check(nav.scroller.ScrollingEnabled and nav.scroller.CanvasPosition.X > 0, "category navigation scrolls the active button into view on a narrow screen")
+check(b.ThemeGallery.main.Visible and nav.sections.themes.expanded and nav.sections.appearance.expanded, "expanded sections survive theme changes and window reopening")
+nav:SetExpanded("appearance", false, true);nav:SetExpanded("controls", false, true)
+local expected = table.clone(b.UIPreferences.settingsSections)
 file(b.ConfigurationScope.metadataPath, "invalid json")
 file(b.ConfigurationScope.metadataPath .. ".tmp", game:GetService("HttpService"):JSONEncode({ version = 1, shareAcrossAccounts = true }))
 b, cb = make()
 check(not b.ConfigurationScope.shared and cb[4].value == "Only B", "corrupt scope metadata and an uncommitted opt-in cannot activate sharing")
+for key, expanded in pairs(expected) do check(b.SettingsNavigation.sections[key].expanded == expanded, "section expansion choices restore from this account's preferences") end
+account(303, "ContaC")
+c, cc = make()
+check(c.SettingsNavigation.sections.appearance.expanded and not c.SettingsNavigation.sections.themes.expanded, "another account keeps its own section defaults instead of inheriting expanded sections")
+account(202, "ContaB")
+b, cb = make()
 local http = game:GetService("HttpService")
 local encode = http.JSONEncode
 http.JSONEncode = function() error("simulated storage failure") end
