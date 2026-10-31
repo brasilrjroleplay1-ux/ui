@@ -97,26 +97,28 @@ local function slider(control, width)
         local size, inner = width < 320 and 14 or 16, math.max(1, width - 32)
         local icon = control.iconLabel and 21 or 0
         local titleWidth = metrics.textWidth(control.title.FontFace, size, plain(control.title))
-        local valueWidth = 0
+        local textWidth = 0
         for _, value in ipairs({ control.range[1], control.range[2], control.value }) do
-            valueWidth = math.max(valueWidth, metrics.textWidth(control.title.FontFace, 15, control:_format(value)) + 12)
+            textWidth = math.max(textWidth, metrics.textWidth(control.title.FontFace, 15, control:_format(value)))
         end
-        local valueHeight = control._valueInput and 30 or 18
-        valueWidth = math.min(inner, control._valueInput and math.max(64, valueWidth + 12) or valueWidth)
-        local trackWidth = math.min(240, math.floor(width * 0.42))
-        local column = width - trackWidth - 32 - inset * 2 - 16
-        local wide = width >= 560 and titleWidth + icon <= column and valueWidth <= column
-        local separate = not wide and width < 320
-        local room = wide and column or (separate and inner or math.max(1, inner - valueWidth - 12))
+        local valueHeight = control._valueInput and 36 or 18
+        local valueWidth = math.min(inner, control._valueInput and math.max(86, textWidth + 44) or textWidth + 12)
+        local trackWidth = math.min(240, math.floor(width * 0.28))
+        local column = inner - trackWidth - inset * 2 - valueWidth - 24
+        local wide = width >= 480 and titleWidth + icon <= column
+        local besideWidth = inner - valueWidth - 12 - inset * 2
+        local separate = not wide and besideWidth < 32
+        local room = wide and column or inner
         local titleHeight = textHeight(control.title, size, room - icon)
-        local heading = (wide or separate) and titleHeight + 4 + valueHeight or math.max(titleHeight, valueHeight)
         if not current(control, width) then return end
         -- Commit only after measurements finish: the viewport may change while fonts load.
         control.container.AnchorPoint = Vector2.new(0, 0)
         control.titleContainer.AnchorPoint, control.titleContainer.Position = Vector2.new(0, 0), UDim2.fromOffset(0, 0)
         control.titleContainer.Size = UDim2.fromOffset(room, titleHeight)
         control.valueHost.AutomaticSize, control.valueHost.ClipsDescendants = Enum.AutomaticSize.None, true
-        control.valueHost.AnchorPoint, control.valueHost.Size = Vector2.new(0, 0), UDim2.fromOffset(valueWidth, valueHeight)
+        control.valueHost.Parent = control.main
+        control.valueHost.AnchorPoint, control.valueHost.Size = Vector2.new(1, 0.5), UDim2.fromOffset(valueWidth, valueHeight)
+        if control._valueInput then control._valueInput:Layout(valueWidth, valueHeight, textWidth) end
         control.title.AutomaticSize = Enum.AutomaticSize.None
         control.title.TextSize, control.title.TextWrapped, control.title.TextTruncate = size, true, Enum.TextTruncate.None
         control.title.TextYAlignment = Enum.TextYAlignment.Center
@@ -126,20 +128,20 @@ local function slider(control, width)
             control.iconLabel.Position = UDim2.fromScale(0, 0.5)
         end
         if wide then
-            local height = math.max(65, heading + 24)
+            local height = math.max(65, titleHeight + 24, valueHeight + 24)
             setHeight(control, height)
-            control.container.Position, control.container.Size = UDim2.fromOffset(16, (height - heading) / 2), UDim2.fromOffset(column, heading)
-            control.valueHost.Position = UDim2.fromOffset(0, titleHeight + 4)
-            control.track.AnchorPoint, control.track.Position = Vector2.new(0, 0.5), UDim2.new(1, -16 - inset - trackWidth, 0.5, 0)
+            control.container.Position, control.container.Size = UDim2.fromOffset(16, (height - titleHeight) / 2), UDim2.fromOffset(column, titleHeight)
+            control.valueHost.Position = UDim2.new(1, -16, 0.5, 0)
+            control.track.AnchorPoint, control.track.Position = Vector2.new(0, 0.5), UDim2.new(0, 16 + column + 12 + inset, 0.5, 0)
             control.track.Size = UDim2.fromOffset(trackWidth, 14)
             control._controlLayout.mode = "wide"
         else
-            local trackY = 12 + heading + 22
+            local trackY = 12 + titleHeight + (separate and 6 + valueHeight + 10 or 6) + 22
             setHeight(control, trackY + 22 + 12)
-            control.container.Position, control.container.Size = UDim2.fromOffset(16, 12), UDim2.fromOffset(inner, heading)
-            control.valueHost.Position = separate and UDim2.fromOffset(0, titleHeight + 4) or UDim2.fromOffset(inner - valueWidth, 0)
+            control.container.Position, control.container.Size = UDim2.fromOffset(16, 12), UDim2.fromOffset(inner, titleHeight)
+            control.valueHost.Position = UDim2.new(1, -16, 0, separate and 12 + titleHeight + 6 + valueHeight / 2 or trackY)
             control.track.AnchorPoint, control.track.Position = Vector2.new(0, 0.5), UDim2.fromOffset(16 + inset, trackY)
-            control.track.Size = UDim2.new(1, -32 - inset * 2, 0, 14)
+            control.track.Size = UDim2.fromOffset(separate and inner - inset * 2 or besideWidth, 14)
             control._controlLayout.mode = separate and "compact" or "stacked"
         end
         control._layoutMode = control._controlLayout.mode

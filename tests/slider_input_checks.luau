@@ -13,6 +13,16 @@ local number = tab:CreateSlider({ name = "Número", flag = "precise_number", ran
 local legacy = tab:CreateSlider({ name = "Tempo", flag = "legacy_units", range = { 0, 20 }, increment = 0.1, value = 2, suffix = "ms" })
 check(percent.suffix == "%" and number.suffix == "" and legacy.suffix == "ms", "number/percent modes and existing unit suffixes are supported")
 check(percent.valueInput and w.TransparencySlider.valueInput and w.WindowSizeSlider.valueInput, "script and built-in settings sliders receive inline editors")
+local hint = percent._valueInput
+check(hint.icon.Parent == percent.valueHost and #hint.glyph == 3 and hint.button.Parent == percent.valueHost, "the numeric field includes a local pencil icon inside its existing click target")
+local hintValue, hintCalls = percent.value, #calls
+hint.button.MouseEnter:Fire()
+check(hint.hovered and hint.stroke.Color == w.theme.AccentColor and not hint.editing and percent.value == hintValue and #calls == hintCalls, "hover highlights the editable field without editing or invoking a callback")
+hint.button.MouseLeave:Fire()
+hint.button.SelectionGained:Fire()
+check(hint.hovered and hint.glyph[1].node[hint.glyph[1].alpha] == 0, "keyboard/gamepad focus emphasizes the pencil too")
+hint.button.SelectionLost:Fire()
+check(not hint.hovered and hint.glyph[1].node[hint.glyph[1].alpha] == 0.15, "idle restores the visible edit hint")
 local function begin(control)
     control._valueInput.button.MouseButton1Click:Fire()
     check(control._valueInput.editing and control.valueInput:IsFocused() and not control._valueInput.readout.Visible, "clicking the value focuses the numeric editor")
@@ -61,7 +71,9 @@ check(not percent._valueInput.editing and percent.value == saved and #calls == c
 percent:Lock()
 percent._valueInput.button.MouseButton1Click:Fire()
 check(not percent._valueInput.editing, "locked sliders cannot enter numeric editing")
+check(hint.glyph[1].node[hint.glyph[1].alpha] == 0.65, "locking dims the edit hint")
 percent:Unlock()
+check(hint.glyph[1].node[hint.glyph[1].alpha] == 0.15, "unlocking restores the edit affordance")
 begin(percent)
 percent.valueInput.Text = "90"
 percent:Lock()
@@ -73,6 +85,19 @@ check(not plain.valueInput and not minimal.valueInput, "editing can be disabled 
 check(not pcall(function() tab:CreateSlider({ name = "Formato inválido", format = "invalid" }) end), "invalid format names fail before creating a control")
 local column = tab:CreateGroup():CreateGroup({ direction = "column" })
 check(column:CreateSlider({ name = "Coluna", Format = "Percent" }).valueInput ~= nil, "sliders in nested groups support the editor and PascalCase format")
+begin(percent)
+percent.valueInput.Text = "64,5"
+local draftCalls = #calls
+for _, width in ipairs({ 560, 240, 160, 720 }) do
+    percent.main.AbsoluteSize = Vector2.new(width, 100)
+    percent:_layoutConexaoControl()
+    check(hint.editing and percent.valueInput.Text == "64,5" and #calls == draftCalls, "resizing preserves the in-progress number without committing it")
+end
+for _, theme in ipairs({ "oceano", "porcelana", "opala" }) do
+    w:ChangeTheme(theme)
+    check(hint.editing and hint.stroke.Color == w.theme.AccentColor and hint.glyph[1].node[hint.glyph[1].color] == w.theme.ContentColor, "the active pencil and field border follow the current theme")
+end
+hint:Finish(false)
 edit(w.WindowSizeSlider, "77")
 check(w.UIPreferences.autoSize == false and w.UIPreferences.sizePercent == 77 and w.SizeInfo.percent == 77, "editing window size commits manual sizing through the original setting callback")
 edit(percent, "61.25")
@@ -86,7 +111,9 @@ begin(restored)
 restored.valueInput.Text = "82"
 w:Hide()
 check(not restored._valueInput.editing and restored.value == 82, "hiding the window confirms a valid active draft")
+check(restored._valueInput.glyph[1].node[restored._valueInput.glyph[1].alpha] == 1, "hiding the window fades the pencil along with its numeric field")
 w:Show()
+check(restored._valueInput.glyph[1].node[restored._valueInput.glyph[1].alpha] < 1, "showing the window restores the visible edit hint")
 begin(restored)
 restored.valueInput.Text = "95"
 w:Unload()

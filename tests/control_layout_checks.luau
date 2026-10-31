@@ -67,6 +67,19 @@ for _, width in ipairs({ 120, 160, 180, 199, 240, 299, 319, 320, 426, 559, 560, 
                 separate(title, value, "slider title and readout")
                 separate(title, hit, "slider title and drag target")
                 separate(value, hit, "slider readout and drag target")
+                check(math.abs(value.x + value.w - (width - 16)) < 0.01, "slider values align with the right inset")
+                if control._controlLayout.mode ~= "compact" then
+                    check(math.abs(value.y + value.h / 2 - hit.y - hit.h / 2) < 0.01 and hit.x + hit.w + 12 <= value.x + 0.01, "the value field sits beside the bar with its own click area")
+                end
+                if control._valueInput then
+                    local numeric = control._valueInput
+                    local editIcon = rect(numeric.icon, control.main, width, height)
+                    local editor = rect(numeric.editor, control.main, width, height)
+                    inside(editIcon, width, height, "slider pencil icon")
+                    inside(editor, width, height, "numeric editor")
+                    separate(editor, editIcon, "numeric text and edit hint")
+                    check(value.x + 10 + numeric.readout.Size.X.Offset * numeric.readoutScale.Scale <= editIcon.x - 7.99, "the scaled readout leaves room for the pencil even on narrow controls")
+                end
             end
             for _, value in ipairs({ 0, 50, 100 }) do
                 control:Set(value, true)

@@ -54,9 +54,11 @@ slider:Set(75)
 local preciso = tab:CreateSlider({ name = "Valor preciso", flag = "preciso", range = { -100, 1000 }, increment = 0.01, value = 25.5, format = "number" })
 ```
 
-Clique ou toque no valor para editar. Enter ou tocar fora confirma; Escape cancela. Ponto e vírgula decimal são aceitos, incluindo texto colado com o sufixo, como `73,5 %`. O valor é limitado pela `range` e alinhado ao `increment`. Para duas casas decimais, use `increment = 0.01`. Entradas vazias ou inválidas mantêm o valor anterior.
+O valor aparece à direita da barra. Nos sliders editáveis, o campo tem um ícone de lápis: clique ou toque no número ou no lápis para digitar. A borda destaca hover, foco e edição. Em áreas menores, o título fica acima da barra; se ainda não houver espaço para o campo ao lado, ele ocupa uma linha própria sem sobrepor o controle de arraste.
 
-O formato `percent` mostra o valor seguido de `%`; os limites, o callback e o arquivo salvo usam o número da `range`. Por exemplo, `75` representa `75 %` quando a faixa é `{ 0, 100 }`. `suffix` continua disponível para unidades próprias, como `ms`, quando `format` não é informado. `editable = false` desativa a digitação. Sliders `minimal = true` mantêm apenas o trilho.
+Enter ou tocar fora confirma; Escape cancela. Ponto e vírgula decimal são aceitos, incluindo texto colado com o sufixo, como `73,5 %`. O valor é limitado pela `range` e alinhado ao `increment`. Para duas casas decimais, use `increment = 0.01`. Entradas vazias ou inválidas mantêm o valor anterior.
+
+O formato `percent` mostra o valor seguido de `%`; os limites, o callback e o arquivo salvo usam o número da `range`. Por exemplo, `75` representa `75 %` quando a faixa é `{ 0, 100 }`. `suffix` continua disponível para unidades próprias, como `ms`, quando `format` não é informado. `editable = false` desativa a digitação e remove o lápis. Sliders `minimal = true` mantêm apenas o trilho.
 
 A confirmação chama o callback uma vez, com `dragging = false`, e usa o salvamento nativo. Durante a digitação, o texto é um rascunho; digitar o mesmo valor novamente não repete o callback. A edição também funciona em grupos e nos sliders incluídos em Configurações.
 

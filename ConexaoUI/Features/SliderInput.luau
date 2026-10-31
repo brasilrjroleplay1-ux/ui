@@ -29,7 +29,7 @@ function Input.attach(control, props)
     if editable == nil then editable = props.Editable end
     if control.minimal or editable == false or not control.valueHost then return end
     local window, host = control.window, control.valueHost
-    local self = { editing = false, shown = not window.hidden }
+    local self = { editing = false, hovered = false, shown = not window.hidden, glyph = {} }
     control._valueInput = self
     control._decimals = math.max(control._decimals, decimals(control.range[1]), decimals(control.range[2]))
     control.valueOdo:snap(control:_format(control.value))
@@ -47,27 +47,55 @@ function Input.attach(control, props)
     -- Move the odometer's owned children into a display layer. An overlay must not become
     -- another item in its UIListLayout, or it would push the digits out of the value field.
     local children = host:GetChildren()
-    self.readout = window:Create("Frame", { Name = "SliderReadout", Parent = host, BackgroundTransparency = 1, Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -16, 1, 0), ZIndex = 7 })
+    self.readout = window:Create("Frame", { Name = "SliderReadout", Parent = host, BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(1, -44, 1, 0), ZIndex = 7 })
     for _, child in ipairs(children) do child.Parent = self.readout end
+    self.readoutScale = window:Create("UIScale", { Parent = self.readout, Scale = 1 })
     control.valueOdo.container = self.readout
     window.themeProperties[host] = window.themeProperties[host] or {}
     window.themeProperties[host].BackgroundColor3 = "NeutralButton"
     host.BackgroundColor3 = window.theme.NeutralButton
     window:Create("UICorner", { Parent = host, CornerRadius = UDim.new(0, 7) })
-    self.stroke = window:Create("UIStroke", { Parent = host, Thickness = 1, Transparency = 1 }, { Color = "SurfaceStroke" })
+    self.stroke = window:Create("UIStroke", { Parent = host, Thickness = 1, Transparency = 1 })
+    self.icon = window:Create("Frame", { Name = "EditHint", Parent = host, BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(16, 16), ZIndex = 11 })
+    local function pencil(x, y, width, height, rotation, outline)
+        local part = window:Create("Frame", { Parent = self.icon, BackgroundTransparency = 1, BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(width, height), Rotation = rotation, ZIndex = 11 })
+        window:Create("UICorner", { Parent = part, CornerRadius = UDim.new(0, 0.7) })
+        if outline then
+            local stroke = window:Create("UIStroke", { Parent = part, Thickness = 1.4, Transparency = 1 })
+            table.insert(self.glyph, { node = stroke, color = "Color", alpha = "Transparency" })
+        else table.insert(self.glyph, { node = part, color = "BackgroundColor3", alpha = "BackgroundTransparency" }) end
+    end
+    pencil(8.5, 7.5, 11, 4, -45, true)
+    pencil(11.5, 4.5, 1.4, 4, -45, false)
+    pencil(3, 13, 3, 2, -45, false)
     self.button = window:Create("TextButton", { Name = "EditSliderValue", Parent = host, Text = "", TextTransparency = 1, AutoButtonColor = false, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 12 })
     self.editor = window:Create("TextBox", {
-        Name = "SliderValueInput", Parent = host, Position = UDim2.fromOffset(8, 0), Size = UDim2.new(1, -16, 1, 0),
+        Name = "SliderValueInput", Parent = host, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -44, 1, 0),
         BackgroundTransparency = 1, Text = numeric(control.value), TextSize = 15, TextTransparency = 0,
         TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, MultiLine = false, TextWrapped = false,
         Visible = false, ZIndex = 13,
     }, { FontFace = "Font", TextColor3 = "ContentColor" })
     control.valueInput = self.editor
+    function self:Layout(width, height, textWidth)
+        local available = math.max(1, width - 44)
+        local scale = math.min(1, available / math.max(1, textWidth))
+        self.readoutScale.Scale = scale
+        self.readout.Size = UDim2.fromOffset(available / scale, height / scale)
+    end
     function self:Paint(shown, animate)
+        if window.unloaded or not host.Parent then return end
         self.shown = shown
-        window:_reveal(host, { BackgroundTransparency = shown and (self.editing and 0.05 or 0.35) or 1 }, animate)
-        window:_reveal(self.stroke, { Transparency = shown and (self.editing and 0.2 or 0.65) or 1 }, animate)
-        self.stroke.Color = self.editing and window.theme.AccentColor or window.theme.SurfaceStroke
+        local active = not control.locked and (self.editing or self.hovered)
+        window:_reveal(host, { BackgroundTransparency = shown and (active and 0.05 or 0.25) or 1 }, animate)
+        window:_reveal(self.stroke, { Color = active and window.theme.AccentColor or window.theme.SurfaceStroke,
+            Transparency = shown and (active and 0.2 or 0.5) or 1 }, animate)
+        for _, mark in ipairs(self.glyph) do
+            window:_reveal(mark.node, { [mark.color] = window.theme.ContentColor,
+                [mark.alpha] = shown and (control.locked and 0.65 or (active and 0 or 0.15)) or 1 }, animate)
+        end
     end
     function self:Finish(commit)
         if not self.editing then return false end
@@ -97,6 +125,14 @@ function Input.attach(control, props)
         self.editor.CursorPosition, self.editor.SelectionStart = #self.editor.Text + 1, 1
     end
     window:ConnectFor(control, self.button.MouseButton1Click, function() self:Begin() end)
+    for _, signal in ipairs({ self.button.MouseEnter, self.button.SelectionGained }) do
+        window:ConnectFor(control, signal, function()
+            if window:_interactive() and not control.locked then self.hovered = true self:Paint(self.shown, true) end
+        end)
+    end
+    for _, signal in ipairs({ self.button.MouseLeave, self.button.SelectionLost }) do
+        window:ConnectFor(control, signal, function() self.hovered = false self:Paint(self.shown, true) end)
+    end
     window:ConnectFor(control, self.editor.FocusLost, function(_, input)
         self:Finish(not (input and input.KeyCode == Enum.KeyCode.Escape))
     end)
@@ -113,6 +149,7 @@ function Input.attach(control, props)
     local shown = control._setShown
     control._setShown = function(c, value, animate)
         if not value and self.editing then self:Finish(not window.unloaded) end
+        if not value then self.hovered = false end
         if window.unloaded or not c.main.Parent then return end
         shown(c, value, animate)
         self:Paint(value, animate)
@@ -122,8 +159,16 @@ function Input.attach(control, props)
         refresh(c, ...)
         self:Paint(self.shown, false)
     end
-    local lock = control.Lock
-    control.Lock = function(c, ...) self:Finish(false) return lock(c, ...) end
+    for _, method in ipairs({ "Lock", "Unlock" }) do
+        local native = control[method]
+        control[method] = function(c, ...)
+            self:Finish(false)
+            local result = native(c, ...)
+            self.hovered = false
+            self:Paint(self.shown, false)
+            return result
+        end
+    end
     self:Paint(self.shown, false)
 end
 return Input

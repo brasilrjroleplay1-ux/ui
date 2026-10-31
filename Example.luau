@@ -99,7 +99,7 @@ testes:CreateButton({ name = "Carregar escolhas salvas", callback = function()
 end })
 
 -- SLIDERS: atualize mostradores durante o movimento; notifique apenas na confirmação.
-sliders:CreateText({ name = "Arraste ou digite", text = "Nos sliders editáveis, toque no valor e digite. Enter ou tocar fora confirma; Escape cancela. Mínimo, máximo e incremento continuam valendo." })
+sliders:CreateText({ name = "Arraste ou digite", text = "Nos sliders editáveis, toque no campo com o lápis à direita da barra para digitar. Enter ou tocar fora confirma; Escape cancela. Mínimo, máximo e incremento continuam valendo." })
 sliders:CreateSlider({
     name = "Porcentagem editável", flag = "demo/intensidade", range = { 0, 100 }, increment = 0.25, value = 50, format = "percent",
     callback = function(valor, arrastando)
