@@ -1,6 +1,8 @@
-# Conexão UI 3.15.1 · Conexão Studio
+# Conexão UI 3.15.2 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.15.2**, o indicador à direita dos botões usa uma mão clicando, com o dedo levantado e traços de toque. O desenho vetorial acompanha os temas, foco, toque e bloqueio. Todos os `CreateButton` recebem o ícone automaticamente, inclusive dentro dos grupos.
 
 Na **3.15.1**, toda janela já cria **Início** e **Configurações**, inclusive no exemplo completo de componentes. As duas ficam antes das abas do script na lateral. O seletor de Configurações aparece desde a primeira abertura, acima do fundo da navegação. Sem abas próprias, a janela abre no Início; a primeira aba criada pelo script continua sendo selecionada automaticamente.
 

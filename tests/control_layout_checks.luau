@@ -169,7 +169,7 @@ dropdown:_layoutConexaoHeader()
 local labelRect, selectedRect = rect(dropdown.title, dropdown.main, 420, dropdown.main.Size.Y.Offset), rect(dropdown.selectedLabel, dropdown.main, 420, dropdown.main.Size.Y.Offset)
 check(dropdown.main.Size.Y.Offset == 70, "long dropdown titles stack before they collide with selected values")
 separate(labelRect, selectedRect, "dropdown title and selection")
-check(not dropdown._buttonIndicator and not toggle._buttonIndicator, "action arrows distinguish buttons from dropdowns and toggles")
+check(not dropdown._buttonIndicator and not toggle._buttonIndicator, "click indicators distinguish buttons from dropdowns and toggles")
 tab:Select()
 local action = button._buttonIndicator
 button.main.MouseEnter:Fire()
