@@ -4,6 +4,7 @@
 local metrics = require(script.Parent.Parent.Gen2.utility.textMetrics)
 local textService = game:GetService("TextService")
 local SliderInput = require(script.Parent.SliderInput)
+local ButtonIndicator = require(script.Parent.ButtonIndicator)
 local Controls = {}
 local heightCache, heightCount = {}, 0
 
@@ -153,6 +154,8 @@ local function row(control, width)
     if kind == "Toggle" then
         right = 50
         stacked = inner < right + 12 + 60 + icon
+    elseif kind == "Button" and control._buttonIndicator then
+        right = 28
     elseif kind == "Input" or kind == "Keybind" then
         local text = kind == "Input" and (control.input.Text ~= "" and control.input.Text or control.placeholder) or control.keyLabel.Text
         right = math.min(inner, math.clamp(metrics.textWidth(control.title.FontFace, 15, text) + 30, kind == "Input" and 70 or 40, kind == "Input" and 220 or 200))
@@ -180,6 +183,7 @@ end
 function Controls.attach(control)
     if not control or control._controlLayout then return end
     if control.__type == "Group" then for _, element in ipairs(control.elements or {}) do Controls.attach(element) end return end
+    ButtonIndicator.attach(control)
     SliderInput.attach(control)
     if control.descriptor then Controls.attach(control.descriptor) end
     local kind = control.__type

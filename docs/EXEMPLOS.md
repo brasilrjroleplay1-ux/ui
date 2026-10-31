@@ -31,6 +31,8 @@ window:SetSidebarIconsOnly(true)
 
 ## Button
 
+Todo `CreateButton` já inclui um indicador de ação com seta à direita, sem precisar configurar no script. Ele acompanha as cores do tema e destaca hover, foco e toque. O indicador também aparece nos grupos em linha; títulos longos mantêm espaço separado para ele.
+
 ```lua
 tab:CreateButton({ name = "Executar", icon = 125823673784681, callback = function()
     window:Notify({ title = "Pronto", content = "Callback executado." })

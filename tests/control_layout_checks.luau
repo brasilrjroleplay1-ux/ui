@@ -19,7 +19,8 @@ local toggle = tab:CreateToggle({ name = "Salvar escolhas automaticamente neste 
 local slider = tab:CreateSlider({ name = "Transparência do fundo e da janela", icon = 93364949241311, range = { 0, 100 }, suffix = "%", value = 37, description = "Esta descrição usa a largura disponível e acompanha o tamanho da janela sem cortar o texto." })
 local input = tab:CreateInput({ name = "Nome da configuração para restaurar", value = "Um nome comprido para uma configuração" })
 local key = tab:CreateKeybind({ name = "Tecla para mostrar e esconder a interface", value = Enum.KeyCode.LeftControl })
-local button = tab:CreateButton({ name = "Salvar esta configuração no dispositivo agora" })
+local buttonCalls = 0
+local button = tab:CreateButton({ name = "Salvar esta configuração no dispositivo agora", icon = 93364949241311, callback = function() buttonCalls += 1 end })
 local bare = tab:CreateSlider({ minimal = true, range = { 0, 100 } })
 local function rect(node, root, width, height)
     if node == root then return { x = 0, y = 0, w = width, h = height } end
@@ -43,6 +44,11 @@ for _, width in ipairs({ 120, 160, 180, 199, 240, 299, 319, 320, 426, 559, 560, 
         local height = control._controlLayout.height
         check(height > 0 and control._controlConstraint.MinSize.Y == height and control._controlConstraint.MaxSize.Y == height, "rendered height is protected from fixed-height press animations")
         if control.title then inside(rect(control.title, control.main, width, height), width, height, "title") end
+        if control._buttonIndicator then
+            local action = rect(control._buttonIndicator.plate, control.main, width, height)
+            inside(action, width, height, "button action indicator")
+            separate(rect(control.title, control.main, width, height), action, "button title and action indicator")
+        end
         if control.functionContainer then
             local pill = rect(control.functionContainer, control.main, width, height)
             inside(pill, width, height, "toggle switch")
@@ -135,6 +141,9 @@ do
     slider.container, service.GetTextBoundsAsync = rawContainer, measure
 end
 local row = tab:CreateGroup()
+local compactButton = row:CreateButton({ name = "Executar" })
+check(compactButton._buttonIndicator.plate.Parent == compactButton.interact and compactButton._buttonIndicator.plate.LayoutOrder == 2, "row buttons keep their action indicator after their label in the native layout")
+check(compactButton.main.Size.X.Offset == compactButton:_minWidth() and compactButton:_minWidth() >= 66 + 8 * 16 * 0.6, "compact wrapping reserves the width of the action indicator")
 local column = row:CreateGroup({ direction = "column" })
 local nested = column:CreateSlider({ name = "Slider dentro de uma coluna", value = 50 })
 nested.main.AbsoluteSize = Vector2.new(199, 100)
@@ -147,6 +156,35 @@ dropdown:_layoutConexaoHeader()
 local labelRect, selectedRect = rect(dropdown.title, dropdown.main, 420, dropdown.main.Size.Y.Offset), rect(dropdown.selectedLabel, dropdown.main, 420, dropdown.main.Size.Y.Offset)
 check(dropdown.main.Size.Y.Offset == 70, "long dropdown titles stack before they collide with selected values")
 separate(labelRect, selectedRect, "dropdown title and selection")
+check(not dropdown._buttonIndicator and not toggle._buttonIndicator, "action arrows distinguish buttons from dropdowns and toggles")
+tab:Select()
+local action = button._buttonIndicator
+button.main.MouseEnter:Fire()
+check(action.hovered and action.stroke.Transparency == 0.25, "hover highlights the button action indicator")
+button.interact.InputBegan:Fire({ UserInputType = Enum.UserInputType.Touch })
+check(action.scale.Scale == 0.9, "touch press animates the indicator without changing the hit target")
+button.interact.MouseButton1Click:Fire()
+check(buttonCalls == 1, "the decorated button still executes its native callback exactly once")
+button.interact.InputEnded:Fire({ UserInputType = Enum.UserInputType.Touch })
+button.main.MouseLeave:Fire()
+check(action.scale.Scale == 1 and not action.pressed and not action.hovered, "release and leave reset the action indicator")
+button.interact.SelectionGained:Fire()
+check(action.hovered, "keyboard focus also highlights the action indicator")
+button.interact.SelectionLost:Fire()
+button:Lock()
+button.interact.MouseButton1Click:Fire()
+button.interact.InputBegan:Fire({ UserInputType = Enum.UserInputType.Touch })
+check(buttonCalls == 1 and action.glyph[1].BackgroundTransparency == 0.65 and action.scale.Scale == 1, "locked buttons dim their action mark and retain native callback blocking")
+button:Unlock()
+check(action.glyph[1].BackgroundTransparency == 0 and action.scale.Scale == 1, "unlocking restores the normal action mark")
+button:_setShown(false, false)
+check(action.plate.BackgroundTransparency == 1 and action.stroke.Transparency == 1 and action.glyph[1].BackgroundTransparency == 1, "hiding the control fades the whole indicator")
+button:_setShown(true, false)
+check(action.plate.BackgroundTransparency == 0 and action.glyph[1].BackgroundTransparency == 0, "showing the control restores its indicator")
+window:ChangeTheme("porcelana")
+check(action.glyph[1].BackgroundColor3 == window.theme.ContentColor and action.stroke.Color == window.theme.AccentColor, "action marks follow a switch to a light theme")
+window:ChangeTheme("conexao")
+check(action.glyph[1].BackgroundColor3 == window.theme.ContentColor, "action marks follow a switch back to a dark theme")
 window:Unload()
 check(#window.connections == 0, "control layout listeners are released on unload")
 print("PASS: " .. checks .. " responsive control geometry and interaction checks")

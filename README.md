@@ -1,6 +1,8 @@
-# Conexão UI 3.12.0 · Conexão Studio
+# Conexão UI 3.12.1 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.12.1**, os botões criados com `CreateButton` exibem uma seta de ação em um indicador à direita. Ela acompanha o tema, destaca o foco e responde ao toque. O texto reserva espaço para o indicador, inclusive em janelas pequenas e grupos de botões.
 
 Na **3.12.0**, Configurações → **Desempenho** traz cartões expansíveis de Gráficos e Taxa de quadros. Inclui limite de FPS editável (30–360), contador de FPS/ping, três modos de gráficos reduzidos, controle da renderização 3D, cor de fundo e ocultação da interface do jogo. As funções dependentes do cliente indicam quando não estão disponíveis. Os ajustes são reversíveis e acompanham as opções de salvar/restaurar do perfil. [Funcionamento e limites](docs/DESEMPENHO.md).
 
