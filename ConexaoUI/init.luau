@@ -1,5 +1,5 @@
 --!nonstrict
--- Conexão UI 3.13 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.14 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -27,6 +27,7 @@ local SliderInput = require(script.Features.SliderInput)
 local Feedback = require(script.Features.Feedback)
 local AccountStorage = require(script.Features.AccountStorage)
 local ControlNotifications = require(script.Features.ControlNotifications)
+local Collapsible = require(script.Features.Collapsible)
 
 export type Window = Gen2.Window & {
     OpenSettings: (self: any, category: string?) -> (),
@@ -47,6 +48,15 @@ export type WindowConfiguration = Gen2.WindowConfiguration & { shareAcrossAccoun
 export type WindowProps = Gen2.WindowProps & { Id: string?, rememberTheme: boolean?, sidebarIconsOnly: boolean?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
+export type GroupProps = Gen2.GroupProps & {
+    name: string?, icon: (number | string)?, collapsible: boolean?, collapsed: boolean?,
+}
+export type CollapsibleGroup = Gen2.Group & {
+    SetCollapsed: (self: any, collapsed: boolean) -> (),
+    ToggleCollapsed: (self: any) -> (),
+    IsCollapsed: (self: any) -> boolean,
+    Expand: (self: any) -> (), Collapse: (self: any) -> (),
+}
 export type ControlNotificationProps = {
     notification: boolean?, notificationMessage: (string | (...any) -> string)?,
     notificationTitle: string?, notificationType: ("info" | "success" | "warning" | "error")?, notificationDuration: number?,
@@ -61,7 +71,7 @@ export type SliderProps = Gen2.SliderProps & ControlNotificationProps & { format
 export type NotifyProps = Gen2.NotifyProps & { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps & { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.13.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.14.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -104,6 +114,8 @@ local function adaptHost(host)
         if method then
             host["Create" .. kind] = function(self, props)
                 local mapped = properties(props)
+                local collapsible = kind == "Group" and (mapped.collapsible == true or mapped.Collapsible == true)
+                if collapsible and mapped.direction == nil and mapped.Direction == nil then mapped.direction = "column" end
                 if kind == "Slider" then SliderInput.prepare(mapped) end
                 if kind == "ColorPicker" and mapped.color == nil and mapped.Color == nil then mapped.color = mapped.value or mapped.Value end
                 local enableNotifications = ControlNotifications.prepare(self.window, kind, mapped)
@@ -112,7 +124,14 @@ local function adaptHost(host)
                 if control then
                     if kind == "Slider" then SliderInput.attach(control, mapped) end
                     Controls.attach(control)
-                    if kind == "Group" then adaptHost(control) end
+                    if kind == "Group" then
+                        adaptHost(control)
+                        if collapsible then
+                            local closed = mapped.collapsed
+                            if closed == nil then closed = mapped.Collapsed end
+                            Collapsible.attach(control, tostring(mapped.name or mapped.Name or "Grupo"), mapped.icon or mapped.Icon or "folder", closed)
+                        end
+                    end
                     if kind == "Dropdown" then DropdownPanel.attach(control, mapped) end
                     if control.Set then
                         control.SetValue = function(c, value) return c:Set(value) end

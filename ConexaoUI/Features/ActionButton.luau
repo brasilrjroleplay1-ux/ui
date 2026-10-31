@@ -62,6 +62,8 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         part(9, 9, 15, 10, 0, true);part(9, 9, 4, 4, 0, true)
     elseif symbol == "performance" then
         part(9, 9, 14, 14, 0, true);line(10, 8, 8, -45);part(9, 10, 3, 3)
+    elseif symbol == "folder" then
+        part(9, 10, 14, 10, 0, true);part(5.5, 4.5, 7, 3, 0, true)
     else
         part(9, 9, 16, 12, 0, true)
         for _, at in ipairs({ { 5, 7 }, { 9, 7 }, { 13, 7 }, { 5, 11 } }) do part(at[1], at[2], 2, 2) end

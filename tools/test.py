@@ -61,3 +61,6 @@ with tempfile.TemporaryDirectory() as folder:
     performance=Path(folder)/'performance.luau'
     performance.write_text(prefix+(ROOT/'tests/performance_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
     run(['run',str(performance)],'performance')
+    groups=Path(folder)/'collapsible-groups.luau'
+    groups.write_text(prefix+(ROOT/'tests/collapsible_group_checks.luau').read_text().replace('-- BUNDLE',(ROOT/'dist/ConexaoUI.luau').read_text()))
+    run(['run',str(groups)],'collapsible-groups')

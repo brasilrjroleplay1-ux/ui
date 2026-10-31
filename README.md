@@ -1,6 +1,8 @@
-# Conexão UI 3.13.0 · Conexão Studio
+# Conexão UI 3.14.0 · Conexão Studio
 
 Esta versão usa o **source oficial do Rayfield Gen2 1.2.1** como base. A Conexão acrescenta configurações visíveis, transparência e tamanho ajustáveis, perfil clicável, dropdowns em uma divisão interna do conteúdo e temas com prévia. É um fork sob MPL-2.0, com créditos e licença preservados. [Origem e alterações](docs/FORK.md) · [Licença e créditos](NOTICE.md).
+
+Na **3.14.0**, seus scripts podem criar grupos recolhíveis com `tab:CreateGroup({ name = "Minhas ações", collapsible = true, collapsed = true })`. Crie os controles com `grupo:CreateButton`, `grupo:CreateToggle`, `grupo:CreateSlider` e os outros componentes compatíveis com grupos. O cabeçalho abre e fecha pela seta; valores e callbacks dos controles permanecem nativos. Veja [como criar grupos recolhíveis](docs/EXEMPLOS.md#grupos-recolhíveis).
 
 Na **3.13.0**, os dropdowns usam cartões em duas colunas quando há espaço, com marcação à direita e os modos **Escolha uma** e **Escolha várias**. O modo único substitui a seleção anterior e fecha; o múltiplo permite marcar/desmarcar e oferece Padrão, Limpar e Selecionar todos. O painel continua dentro da janela. O [exemplo completo](Example.luau) inclui Prioridade e Raridades para testar os dois modos.
 

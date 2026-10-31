@@ -19,7 +19,7 @@ end
 function Pane.new(window, control)
     if window._conexaoPanel then window._conexaoPanel:Close() end
     local self = {
-        window = window, tab = window.selectedTab, connections = {}, closed = false, __type = "DropdownPane",
+        window = window, control = control, tab = window.selectedTab, connections = {}, closed = false, __type = "DropdownPane",
         baseSize = window.elements.Size, basePosition = window.elements.Position,
         baseFadeSize = window.bottomFade.Size, baseFadePosition = window.bottomFade.Position,
     }

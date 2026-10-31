@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <roblox version="4"><Item class="ModuleScript"><Properties><string name="Name">ConexaoUI</string><ProtectedString name="Source">--!nonstrict
--- Conexão UI 3.13 — integration layer for the pinned Rayfield Gen2 fork.
+-- Conexão UI 3.14 — integration layer for the pinned Rayfield Gen2 fork.
 -- SPDX-License-Identifier: MPL-2.0
 local ExecutorAccess = require(script.Features.ExecutorAccess)
 ExecutorAccess.requireSupported()
@@ -28,6 +28,7 @@ local SliderInput = require(script.Features.SliderInput)
 local Feedback = require(script.Features.Feedback)
 local AccountStorage = require(script.Features.AccountStorage)
 local ControlNotifications = require(script.Features.ControlNotifications)
+local Collapsible = require(script.Features.Collapsible)
 
 export type Window = Gen2.Window &amp; {
     OpenSettings: (self: any, category: string?) -&gt; (),
@@ -48,6 +49,15 @@ export type WindowConfiguration = Gen2.WindowConfiguration &amp; { shareAcrossAc
 export type WindowProps = Gen2.WindowProps &amp; { Id: string?, rememberTheme: boolean?, sidebarIconsOnly: boolean?, configuration: WindowConfiguration? }
 export type Theme = Gen2.Theme
 export type Tab = Gen2.Tab
+export type GroupProps = Gen2.GroupProps &amp; {
+    name: string?, icon: (number | string)?, collapsible: boolean?, collapsed: boolean?,
+}
+export type CollapsibleGroup = Gen2.Group &amp; {
+    SetCollapsed: (self: any, collapsed: boolean) -&gt; (),
+    ToggleCollapsed: (self: any) -&gt; (),
+    IsCollapsed: (self: any) -&gt; boolean,
+    Expand: (self: any) -&gt; (), Collapse: (self: any) -&gt; (),
+}
 export type ControlNotificationProps = {
     notification: boolean?, notificationMessage: (string | (...any) -&gt; string)?,
     notificationTitle: string?, notificationType: ("info" | "success" | "warning" | "error")?, notificationDuration: number?,
@@ -62,7 +72,7 @@ export type SliderProps = Gen2.SliderProps &amp; ControlNotificationProps &amp; 
 export type NotifyProps = Gen2.NotifyProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 export type ToastProps = Gen2.ToastProps &amp; { type: ("info" | "success" | "warning" | "error")? }
 
-local Library = { Version = "3.13.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
+local Library = { Version = "3.14.0", UpstreamVersion = "1.2.1", Windows = {}, Themes = Themes.catalog, SupportedExecutors = ExecutorAccess.names() }
 local env = _G
 if type(getgenv) == "function" then
     local ok, value = pcall(getgenv)
@@ -105,6 +115,8 @@ local function adaptHost(host)
         if method then
             host["Create" .. kind] = function(self, props)
                 local mapped = properties(props)
+                local collapsible = kind == "Group" and (mapped.collapsible == true or mapped.Collapsible == true)
+                if collapsible and mapped.direction == nil and mapped.Direction == nil then mapped.direction = "column" end
                 if kind == "Slider" then SliderInput.prepare(mapped) end
                 if kind == "ColorPicker" and mapped.color == nil and mapped.Color == nil then mapped.color = mapped.value or mapped.Value end
                 local enableNotifications = ControlNotifications.prepare(self.window, kind, mapped)
@@ -113,7 +125,14 @@ local function adaptHost(host)
                 if control then
                     if kind == "Slider" then SliderInput.attach(control, mapped) end
                     Controls.attach(control)
-                    if kind == "Group" then adaptHost(control) end
+                    if kind == "Group" then
+                        adaptHost(control)
+                        if collapsible then
+                            local closed = mapped.collapsed
+                            if closed == nil then closed = mapped.Collapsed end
+                            Collapsible.attach(control, tostring(mapped.name or mapped.Name or "Grupo"), mapped.icon or mapped.Icon or "folder", closed)
+                        end
+                    end
                     if kind == "Dropdown" then DropdownPanel.attach(control, mapped) end
                     if control.Set then
                         control.SetValue = function(c, value) return c:Set(value) end
@@ -20660,6 +20679,8 @@ function Buttons.new(window, owner, parent, title, symbol, variant, z)
         part(9, 9, 15, 10, 0, true);part(9, 9, 4, 4, 0, true)
     elseif symbol == "performance" then
         part(9, 9, 14, 14, 0, true);line(10, 8, 8, -45);part(9, 10, 3, 3)
+    elseif symbol == "folder" then
+        part(9, 10, 14, 10, 0, true);part(5.5, 4.5, 7, 3, 0, true)
     else
         part(9, 9, 16, 12, 0, true)
         for _, at in ipairs({ { 5, 7 }, { 9, 7 }, { 13, 7 }, { 5, 11 } }) do part(at[1], at[2], 2, 2) end
@@ -21090,6 +21111,7 @@ local Buttons = require(script.Parent.ActionButton)
 local tweenService = game:GetService("TweenService")
 local Card = {}
 function Card.attach(group, title, icon, collapsed, onChange)
+    if group.Card then return group.Card end
     local window = group.window
     local self = { group = group, collapsed = collapsed == true, shown = not window.hidden, height = 58 }
     group.Card = self
@@ -21102,7 +21124,15 @@ function Card.attach(group, title, icon, collapsed, onChange)
     local body = window:Create("Frame", { Name = "CardContents", Parent = group.main, BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1, 0, 0, 0), Visible = not self.collapsed })
     self.body, group.tabPage = body, body
     group.layout.Parent = body
-    self.header = Buttons.new(window, group, group.main, title, icon, "tab", 12)
+    local customIcon = type(icon) == "number" or (type(icon) == "string" and (tonumber(icon) ~= nil or icon:find("://", 1, true) ~= nil))
+    self.header = Buttons.new(window, group, group.main, title, customIcon and "folder" or (icon or "folder"), "tab", 12)
+    if customIcon then
+        window:DestroySubtrees(self.header.icon:GetChildren())
+        local image = window:Create("ImageLabel", { Parent = self.header.icon, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 16,
+            Image = tonumber(icon) and ("rbxassetid://" .. tostring(icon)) or icon,
+        })
+        self.header.glyph = { { node = image, color = "ImageColor3", alpha = "ImageTransparency" } }
+    end
     self.header.label.TextTruncate = Enum.TextTruncate.AtEnd
     self.arrow = window:Create("TextLabel", { Name = "Expand", Parent = self.header.button, Text = "›", TextSize = 28,
         AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(24, 28), BackgroundTransparency = 1, ZIndex = 17,
@@ -21125,20 +21155,35 @@ function Card.attach(group, title, icon, collapsed, onChange)
         self.height = height
         local target = UDim2.new(group.main.Size.X.Scale, group.main.Size.X.Offset, 0, height)
         if self.tween then self.tween:Cancel() self.tween = nil end
+        if self.arrowTween then self.arrowTween:Cancel() self.arrowTween = nil end
         if animate then
             self.tween = tweenService:Create(group.main, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = target })
             self.tween:Play()
-            tweenService:Create(self.arrow, TweenInfo.new(0.2), { Rotation = self.collapsed and 0 or 90 }):Play()
+            self.arrowTween = tweenService:Create(self.arrow, TweenInfo.new(0.2), { Rotation = self.collapsed and 0 or 90 })
+            self.arrowTween:Play()
         else group.main.Size = target self.arrow.Rotation = self.collapsed and 0 or 90 end
         if self.onLayout then self.onLayout() end
     end
     function self:SetCollapsed(value)
+        if window.unloaded or not group.main.Parent then return end
+        if self.collapsed == (value == true) then return end
         self.collapsed = value == true
-        if self.collapsed and window._conexaoPanel then window._conexaoPanel:Close() end
+        if self.collapsed and window._conexaoPanel then
+            local pane = window._conexaoPanel
+            local at = pane.control and pane.control.main
+            while at and at ~= group.main do at = at.Parent end
+            if at == group.main then pane:Close() end
+        end
         show(group, self.shown and not self.collapsed, false)
-        self:Layout(true)
+        self:Layout(not window.hidden)
         if onChange then onChange(self.collapsed) end
     end
+    function group:SetCollapsed(value) self.Card:SetCollapsed(value) end
+    function group:ToggleCollapsed() self:SetCollapsed(not self.Card.collapsed) end
+    function group:IsCollapsed() return self.Card.collapsed end
+    function group:Expand() self:SetCollapsed(false) end
+    function group:Collapse() self:SetCollapsed(true) end
+    function group:Layout() self.Card:Layout(false) end
     function group:_setShown(shown, animate)
         self.Card.shown = shown
         show(self, shown and not self.Card.collapsed, animate)
@@ -21156,7 +21201,12 @@ function Card.attach(group, title, icon, collapsed, onChange)
     window:ConnectFor(group, group.main:GetPropertyChangedSignal("AbsoluteSize"), function()
         if group.main.AbsoluteSize.X ~= self.lastWidth then self:Layout(false) end
     end)
+    window:ConnectFor(group, group.main.Destroying, function()
+        if self.tween then self.tween:Cancel() end
+        if self.arrowTween then self.arrowTween:Cancel() end
+    end)
     self:Layout(false)
+    group:_setShown(self.shown, false)
     return self
 end
 return Card
@@ -21718,7 +21768,7 @@ end
 function Pane.new(window, control)
     if window._conexaoPanel then window._conexaoPanel:Close() end
     local self = {
-        window = window, tab = window.selectedTab, connections = {}, closed = false, __type = "DropdownPane",
+        window = window, control = control, tab = window.selectedTab, connections = {}, closed = false, __type = "DropdownPane",
         baseSize = window.elements.Size, basePosition = window.elements.Position,
         baseFadeSize = window.bottomFade.Size, baseFadePosition = window.bottomFade.Position,
     }

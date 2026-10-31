@@ -1,4 +1,4 @@
--- Teste completo da Conexão UI 3.13. Os controles deste arquivo pertencem ao script.
+-- Teste completo da Conexão UI 3.14. Os controles deste arquivo pertencem ao script.
 local UI = require(game:GetService("ReplicatedStorage"):WaitForChild("ConexaoUI"))
 local window = UI:CreateWindow({
     Id = "ConexaoDemo3", -- substitui a janela da demo inicial ao executar este exemplo
@@ -259,6 +259,22 @@ esquerda:CreateToggle({ name = "Toggle esquerdo", flag = "demo/esquerdo", value 
 direita:CreateButton({ name = "Botão direito", callback = function() notificar("Grupo direito", "O botão pertence à coluna direita.") end })
 direita:CreateToggle({ name = "Toggle direito", flag = "demo/direito", value = false,
     callback = function(valor) notificar("Grupo direito", valor and "Toggle ativado." or "Toggle desativado.") end,
+})
+
+-- GRUPO RECOLHÍVEL: clique no cabeçalho para abrir ou fechar os controles.
+dados:CreateSection({ name = "Grupos recolhíveis" })
+local ferramentas = dados:CreateGroup({ name = "Minhas ferramentas", collapsible = true, collapsed = true })
+ferramentas:CreateButton({ name = "Testar botão do grupo", callback = function()
+    notificar("Grupo recolhível", "O botão dentro do grupo executou seu callback.")
+end })
+ferramentas:CreateToggle({ name = "Ativar ferramenta", flag = "demo/grupo/ativo", value = false,
+    callback = function(valor) notificar("Ferramenta", valor and "Ativada." or "Desativada.") end,
+})
+ferramentas:CreateSlider({ name = "Quantidade da ferramenta", flag = "demo/grupo/quantidade", range = { 0, 100 }, value = 25,
+    callback = function(valor, arrastando) if not arrastando then notificar("Quantidade", tostring(valor)) end end,
+})
+ferramentas:CreateDropdown({ name = "Modo da ferramenta", flag = "demo/grupo/modo", options = { "Normal", "Rápido", "Preciso" }, value = "Normal",
+    callback = function(valor) notificar("Modo da ferramenta", valor) end,
 })
 
 -- Mantenha os primeiros testes visíveis antes dos mostradores mais altos.

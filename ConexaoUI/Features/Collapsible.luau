@@ -4,6 +4,7 @@ local Buttons = require(script.Parent.ActionButton)
 local tweenService = game:GetService("TweenService")
 local Card = {}
 function Card.attach(group, title, icon, collapsed, onChange)
+    if group.Card then return group.Card end
     local window = group.window
     local self = { group = group, collapsed = collapsed == true, shown = not window.hidden, height = 58 }
     group.Card = self
@@ -16,7 +17,15 @@ function Card.attach(group, title, icon, collapsed, onChange)
     local body = window:Create("Frame", { Name = "CardContents", Parent = group.main, BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1, 0, 0, 0), Visible = not self.collapsed })
     self.body, group.tabPage = body, body
     group.layout.Parent = body
-    self.header = Buttons.new(window, group, group.main, title, icon, "tab", 12)
+    local customIcon = type(icon) == "number" or (type(icon) == "string" and (tonumber(icon) ~= nil or icon:find("://", 1, true) ~= nil))
+    self.header = Buttons.new(window, group, group.main, title, customIcon and "folder" or (icon or "folder"), "tab", 12)
+    if customIcon then
+        window:DestroySubtrees(self.header.icon:GetChildren())
+        local image = window:Create("ImageLabel", { Parent = self.header.icon, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 16,
+            Image = tonumber(icon) and ("rbxassetid://" .. tostring(icon)) or icon,
+        })
+        self.header.glyph = { { node = image, color = "ImageColor3", alpha = "ImageTransparency" } }
+    end
     self.header.label.TextTruncate = Enum.TextTruncate.AtEnd
     self.arrow = window:Create("TextLabel", { Name = "Expand", Parent = self.header.button, Text = "›", TextSize = 28,
         AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.fromOffset(24, 28), BackgroundTransparency = 1, ZIndex = 17,
@@ -39,20 +48,35 @@ function Card.attach(group, title, icon, collapsed, onChange)
         self.height = height
         local target = UDim2.new(group.main.Size.X.Scale, group.main.Size.X.Offset, 0, height)
         if self.tween then self.tween:Cancel() self.tween = nil end
+        if self.arrowTween then self.arrowTween:Cancel() self.arrowTween = nil end
         if animate then
             self.tween = tweenService:Create(group.main, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = target })
             self.tween:Play()
-            tweenService:Create(self.arrow, TweenInfo.new(0.2), { Rotation = self.collapsed and 0 or 90 }):Play()
+            self.arrowTween = tweenService:Create(self.arrow, TweenInfo.new(0.2), { Rotation = self.collapsed and 0 or 90 })
+            self.arrowTween:Play()
         else group.main.Size = target self.arrow.Rotation = self.collapsed and 0 or 90 end
         if self.onLayout then self.onLayout() end
     end
     function self:SetCollapsed(value)
+        if window.unloaded or not group.main.Parent then return end
+        if self.collapsed == (value == true) then return end
         self.collapsed = value == true
-        if self.collapsed and window._conexaoPanel then window._conexaoPanel:Close() end
+        if self.collapsed and window._conexaoPanel then
+            local pane = window._conexaoPanel
+            local at = pane.control and pane.control.main
+            while at and at ~= group.main do at = at.Parent end
+            if at == group.main then pane:Close() end
+        end
         show(group, self.shown and not self.collapsed, false)
-        self:Layout(true)
+        self:Layout(not window.hidden)
         if onChange then onChange(self.collapsed) end
     end
+    function group:SetCollapsed(value) self.Card:SetCollapsed(value) end
+    function group:ToggleCollapsed() self:SetCollapsed(not self.Card.collapsed) end
+    function group:IsCollapsed() return self.Card.collapsed end
+    function group:Expand() self:SetCollapsed(false) end
+    function group:Collapse() self:SetCollapsed(true) end
+    function group:Layout() self.Card:Layout(false) end
     function group:_setShown(shown, animate)
         self.Card.shown = shown
         show(self, shown and not self.Card.collapsed, animate)
@@ -70,7 +94,12 @@ function Card.attach(group, title, icon, collapsed, onChange)
     window:ConnectFor(group, group.main:GetPropertyChangedSignal("AbsoluteSize"), function()
         if group.main.AbsoluteSize.X ~= self.lastWidth then self:Layout(false) end
     end)
+    window:ConnectFor(group, group.main.Destroying, function()
+        if self.tween then self.tween:Cancel() end
+        if self.arrowTween then self.arrowTween:Cancel() end
+    end)
     self:Layout(false)
+    group:_setShown(self.shown, false)
     return self
 end
 return Card

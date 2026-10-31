@@ -1,4 +1,4 @@
-# Exemplos da Conexão UI 3.13 · API Gen2
+# Exemplos da Conexão UI 3.14 · API Gen2
 
 Veja o [script completo](../Example.luau). Em cada exemplo abaixo, `window` é sua janela e `tab` é uma aba criada por ela.
 
@@ -97,6 +97,51 @@ input:Set("Criador")
 tab:CreateKeybind({ name = "Atalho", flag = "atalho", value = Enum.KeyCode.F6, callback = function(key) print(key) end })
 tab:CreateColorPicker({ name = "Cor", color = Color3.fromRGB(160, 100, 255), callback = function(color, alpha) print(color, alpha) end })
 ```
+
+## Grupos recolhíveis
+
+Use `collapsible = true` em `CreateGroup`. O grupo ganha um cabeçalho com nome e seta: clicar abre, clicar de novo fecha. Depois crie os controles usando a variável do grupo, para que eles apareçam dentro dele.
+
+```lua
+local grupo = tab:CreateGroup({
+    name = "Minhas ações",
+    collapsible = true,
+    collapsed = true, -- começa fechado; false começa aberto
+})
+
+grupo:CreateButton({
+    name = "Executar ação",
+    callback = function()
+        window:Notify({ title = "Funcionou!", content = "Você clicou no botão do grupo." })
+    end,
+})
+
+grupo:CreateToggle({
+    name = "Ativar recurso", flag = "grupo/recurso", value = false,
+    callback = function(ativo) print("Recurso:", ativo) end,
+})
+
+grupo:CreateSlider({
+    name = "Quantidade", flag = "grupo/quantidade",
+    range = { 0, 100 }, value = 25,
+})
+```
+
+`collapsed` define o estado inicial; se omitido, o grupo começa aberto. `icon` aceita um asset ID ou URI de imagem; sem ele, o cabeçalho usa uma pasta vetorial. `Name`, `Collapsible` e `Collapsed` também são aceitos. O conteúdo usa uma coluna por padrão; `direction = "row"` permite uma linha de controles compactos.
+
+Um grupo em coluna aceita botões, toggles, sliders, dropdowns, textos, seções, divisores, estatísticas e outros grupos. Inputs, teclas, cores, consoles e barras de progresso continuam sendo criados diretamente na aba. Recolher não apaga o conteúdo, não muda valores e não executa callbacks. As flags dos controles continuam no salvamento normal da conta. Grupos aninhados mantêm estados independentes; recolher o grupo de um dropdown aberto fecha a seleção desse dropdown.
+
+Também é possível abrir ou fechar pelo script:
+
+```lua
+grupo:Expand()             -- abre
+grupo:Collapse()           -- fecha
+grupo:ToggleCollapsed()    -- alterna
+grupo:SetCollapsed(false) -- abre; true fecha
+print(grupo:IsCollapsed())
+```
+
+No exemplo completo, abra **Dados e grupos → Minhas ferramentas** para testar a seta e seus controles.
 
 ## Grupos, texto, estatísticas, progresso e console
 
